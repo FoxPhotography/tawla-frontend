@@ -5,6 +5,7 @@ import StaffLogin from './apps/staff/StaffLogin';
 import StaffDashboard from './apps/staff/StaffDashboard';
 import AdminLogin from './apps/admin/AdminLogin';
 import AdminDashboard from './apps/admin/AdminDashboard';
+import Register from './apps/admin/Register';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         {/* Admin Dashboard Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/register" element={<Register />} />
 
         {/* Default Redirect to Staff Login */}
         <Route path="*" element={

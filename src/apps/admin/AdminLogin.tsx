@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Lock, Mail, ShieldAlert } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -102,6 +102,13 @@ export default function AdminLogin() {
               </button>
             </div>
           </form>
+          
+          <div className="text-center text-xs text-dark-400 mt-4">
+            ليس لديك مطعم مسجل؟{' '}
+            <Link to="/register" className="text-primary-500 hover:underline font-bold">
+              سجل مطعمك الآن
+            </Link>
+          </div>
         </div>
       </div>
     </div>
