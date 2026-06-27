@@ -1,29 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const getApiUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) return envUrl;
-
-  const base = import.meta.env.VITE_API_BASE;
-  if (base) {
-    const protocol = base.includes('localhost') ? 'http' : 'https';
-    const cleanBase = base.replace(/^(https?:\/\/)?/, '');
-    return `${protocol}://${cleanBase}/api`;
-  }
-
-  // Automatic runtime fallback based on hostname to bypass missing env build issues
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host.includes('tawla.netlify.app')) {
-      return 'https://tawla-backend-production.up.railway.app/api';
-    }
-  }
-
-  return 'http://localhost:5000/api';
-};
-
-const VITE_API_URL = getApiUrl();
+const VITE_API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const api = axios.create({
   baseURL: VITE_API_URL,
