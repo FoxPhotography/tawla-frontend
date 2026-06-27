@@ -12,6 +12,14 @@ const getApiUrl = (): string => {
     return `${protocol}://${cleanBase}/api`;
   }
 
+  // Automatic runtime fallback based on hostname to bypass missing env build issues
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.includes('tawla.netlify.app')) {
+      return 'https://tawla-backend-production.up.railway.app/api';
+    }
+  }
+
   return 'http://localhost:5000/api';
 };
 
