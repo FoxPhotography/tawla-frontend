@@ -14,7 +14,7 @@ const getSocketUrl = (): string => {
   // Automatic runtime fallback based on hostname to bypass missing env build issues
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    if (host.includes('tawla.netlify.app')) {
+    if (host.includes('tawla.netlify.app') || host.includes('vercel.app')) {
       return 'https://tawla-backend-production.up.railway.app';
     }
   }
