@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Coffee, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { User as UserIcon, Lock, Coffee, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
@@ -11,13 +11,13 @@ export default function StaffLogin() {
   const navigate = useNavigate();
   const loginStore = useAuthStore(state => state.login);
 
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: async () => {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { username, password });
       return response.data.data;
     },
     onSuccess: (data) => {
@@ -38,7 +38,7 @@ export default function StaffLogin() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!username || !password) {
       toast.error('يرجى ملء جميع الحقول.');
       return;
     }
@@ -86,19 +86,19 @@ export default function StaffLogin() {
           className="bg-staff-bg-elevated border border-staff-border rounded-xl p-8 space-y-6 shadow-staff-card"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
+            {/* Username */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-staff-text-secondary">البريد الإلكتروني</label>
+              <label className="block text-sm font-semibold text-staff-text-secondary">اسم المستخدم</label>
               <div className="relative group">
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@restaurant.com"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="اسم المستخدم الخاص بك"
                   className="w-full bg-staff-bg-base border border-staff-border text-staff-text-primary rounded-xl px-4 py-3.5 pr-11 text-right text-sm transition-all focus:border-staff-accent focus:outline-none placeholder:text-staff-text-muted"
                 />
-                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-staff-text-muted group-focus-within:text-staff-accent transition-colors" />
+                <UserIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-staff-text-muted group-focus-within:text-staff-accent transition-colors" />
               </div>
             </div>
 

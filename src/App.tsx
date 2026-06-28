@@ -8,6 +8,7 @@ import StaffDashboard from './apps/staff/StaffDashboard';
 import AdminLogin from './apps/admin/AdminLogin';
 import AdminDashboard from './apps/admin/AdminDashboard';
 import Register from './apps/admin/Register';
+import SuperAdminDashboard from './apps/super-admin/SuperAdminDashboard';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/super-admin" element={<SuperAdminDashboard />} />
 
         {/* 404 Not Found */}
         <Route path="*" element={

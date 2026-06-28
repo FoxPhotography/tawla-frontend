@@ -7,7 +7,7 @@ import {
   Calendar, ShoppingBag, 
   MapPin, BarChart3, LogOut, ArrowUp, ArrowDown, X, 
   ImagePlus, QrCode, Clock, Flame, Star, Crown,
-  Sliders, ZoomIn, ZoomOut
+  Sliders, ZoomIn, ZoomOut, ShieldAlert
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer 
@@ -355,9 +355,37 @@ const generateHeatmapMatrix = (peakHours: any[]) => {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, restaurant, logout } = useAuthStore();
+  const { user, restaurant, logout, updateRestaurant } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription'>('categories');
+
+  // Subscription states
+  const [activationKey, setActivationKey] = useState('');
+
+  const activateMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/subscriptions/activate', { key: activationKey });
+      return response.data.data;
+    },
+    onSuccess: (data) => {
+      toast.success('تم تجديد وتفعيل اشتراك مطعمك بنجاح!');
+      setActivationKey('');
+      updateRestaurant(data);
+      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'كود التفعيل غير صالح أو مستخدم بالفعل.');
+    },
+  });
+
+  const handleActivateKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activationKey) {
+      toast.error('يرجى كتابة كود التفعيل.');
+      return;
+    }
+    activateMutation.mutate();
+  };
 
   // Categories states
   const [catName, setCatName] = useState('');
@@ -805,12 +833,16 @@ export default function AdminDashboard() {
 
   if (!user || !restaurant) return null;
 
+  const expires = restaurant.subscription.expiresAt ? new Date(restaurant.subscription.expiresAt) : null;
+  const isSubscriptionExpired = expires ? (expires < new Date() || restaurant.subscription.status === 'expired') : false;
+
   const tabs = [
     { key: 'categories' as const, label: 'الأقسام', icon: FolderPlus, count: categories.length },
     { key: 'products' as const, label: 'المنتجات', icon: ShoppingBag, count: products.length },
     { key: 'tables' as const, label: 'الطاولات', icon: MapPin, count: tables.length },
     { key: 'orders' as const, label: 'الطلبات', icon: Calendar },
     { key: 'analytics' as const, label: 'التحليلات', icon: BarChart3 },
+    { key: 'subscription' as const, label: 'الاشتراك والدعم', icon: Crown },
   ];
 
   return (
@@ -876,6 +908,22 @@ export default function AdminDashboard() {
 
         {/* Main Content */}
         <main className="flex-1 min-w-0">
+          {isSubscriptionExpired && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-650 px-6 py-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-sm" dir="rtl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-500/20 rounded-lg flex-shrink-0">
+                  <ShieldAlert className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-sm text-red-700">تنبيه: اشتراك المنصة منتهي الصلاحية!</h4>
+                  <p className="text-xs text-red-600/80 mt-0.5 font-medium">قائمتك الرقمية (QR Menu) محجوبة حالياً عن الزبائن. يرجى التجديد فوراً لتفعيل الخدمة.</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveTab('subscription')} className="px-4 py-2 bg-red-600 hover:bg-red-550 text-white font-bold text-xs rounded-lg transition-colors whitespace-nowrap">
+                تجديد الاشتراك الآن
+              </button>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -1709,6 +1757,122 @@ export default function AdminDashboard() {
                       </div>
                     );
                   })()}
+                </div>
+              )}
+
+              {/* ==================== SUBSCRIPTION TAB ==================== */}
+              {activeTab === 'subscription' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-extrabold text-admin-text-primary">اشتراك المنصة والدعم الفني</h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    {/* Subscription Status Card */}
+                    <div className="md:col-span-2 bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card space-y-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div>
+                          <span className="text-xs text-admin-text-secondary font-bold block mb-1.5">باقة الاشتراك الحالية</span>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-admin-accent-light text-admin-accent border border-admin-border">
+                              <Crown className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-black text-admin-text-primary">
+                                {restaurant.subscription.plan === 'pro' && 'الباقة الاحترافية (PRO)'}
+                                {restaurant.subscription.plan === 'basic' && 'الباقة الأساسية (BASIC)'}
+                                {restaurant.subscription.plan === 'trial' && 'الفترة التجريبية (TRIAL)'}
+                              </h3>
+                              <span className="text-xs text-admin-text-muted font-semibold">Tably OS Premium Platform</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border self-start ${
+                          isSubscriptionExpired
+                            ? 'bg-red-500/10 text-red-600 border-red-500/20'
+                            : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                          <span>{isSubscriptionExpired ? 'منتهي الصلاحية' : 'نشط'}</span>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-admin-bg-base border border-admin-border rounded-xl text-sm">
+                        <div>
+                          <span className="text-xs text-admin-text-muted font-semibold block mb-1">تاريخ انتهاء الاشتراك</span>
+                          <span className={`font-mono font-bold text-sm ${isSubscriptionExpired ? 'text-red-650' : 'text-admin-text-primary'}`}>
+                            {expires ? expires.toLocaleDateString('ar-EG', { dateStyle: 'long' }) : 'غير محدد'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-admin-text-muted font-semibold block mb-1">حالة ظهور المنيو للزبائن</span>
+                          <span className={`font-bold text-sm ${isSubscriptionExpired ? 'text-red-500' : 'text-emerald-600'}`}>
+                            {isSubscriptionExpired ? 'محجوب ومخفي' : 'ظاهر ومتاح للطلب'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Activate Key Form */}
+                      <form onSubmit={handleActivateKey} className="space-y-4 pt-4 border-t border-admin-border">
+                        <h4 className="text-xs font-black text-admin-text-primary">تجديد الاشتراك أو ترقية الباقة</h4>
+                        <p className="text-xs text-admin-text-secondary leading-relaxed font-medium">
+                          أدخل كود التفعيل المكون من 16 خانة (المستلم من مسؤول النظام بعد الدفع) لتجديد اشتراكك أو الانتقال لباقة أعلى فوراً.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <input
+                            type="text"
+                            required
+                            value={activationKey}
+                            onChange={(e) => setActivationKey(e.target.value.toUpperCase().trim())}
+                            placeholder="TAWLA-XXXX-XXXX-XXXX"
+                            className="flex-1 bg-admin-bg-base border border-admin-border text-admin-text-primary font-mono text-sm rounded-lg px-4 py-3 focus:border-admin-accent focus:outline-none transition-colors text-center"
+                            dir="ltr"
+                          />
+                          <motion.button
+                            type="submit"
+                            disabled={activateMutation.isPending}
+                            whileTap={{ scale: 0.97 }}
+                            className="py-3 px-6 bg-admin-accent text-white font-bold text-xs rounded-lg hover:opacity-95 transition-opacity flex items-center justify-center gap-2 shadow-admin-accent whitespace-nowrap"
+                          >
+                            {activateMutation.isPending ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <span>تفعيل كود التجديد</span>
+                            )}
+                          </motion.button>
+                        </div>
+                      </form>
+                    </div>
+
+                    {/* Support & Contact Card */}
+                    <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card flex flex-col justify-between">
+                      <div className="space-y-4">
+                        <h3 className="font-extrabold text-admin-text-primary text-sm">الدعم الفني والمبيعات</h3>
+                        <p className="text-xs text-admin-text-secondary leading-relaxed font-medium">
+                          لتجديد اشتراكك، أو ترقية باقتك الحالية، أو في حال مواجهة أي مشاكل تقنية بالنظام، يرجى التواصل مع الإدارة الفنية.
+                        </p>
+                        
+                        <div className="space-y-2 text-xs text-admin-text-secondary">
+                          <div className="flex justify-between py-1.5 border-b border-admin-border">
+                            <span>طريقة التجديد:</span>
+                            <span className="font-bold text-admin-text-primary">عبر السيريال كود</span>
+                          </div>
+                          <div className="flex justify-between py-1.5 border-b border-admin-border">
+                            <span>دعم فني وتواصل:</span>
+                            <span className="font-bold text-admin-accent font-mono">support@tably.com</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 bg-admin-accent-light border border-admin-border rounded-lg text-[11px] text-admin-text-secondary mt-4 leading-relaxed font-medium">
+                        قيمة باقة <strong className="text-admin-accent">BASIC</strong> تمكنك من تشغيل كافة ميزات المنيو وتلقي الطلبات والدعم. باقة <strong className="text-admin-accent">PRO</strong> تفتح ميزات التقارير المتقدمة والتحليلات البيعية.
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
               )}
             </motion.div>

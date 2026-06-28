@@ -9,7 +9,7 @@ export interface Restaurant {
     publicId: string;
   };
   subscription: {
-    plan: 'trial' | 'starter' | 'pro';
+    plan: 'trial' | 'basic' | 'pro';
     status: 'active' | 'inactive' | 'expired';
     expiresAt: string;
   };
@@ -84,9 +84,22 @@ export interface Order {
 
 export interface User {
   id: string;
-  restaurantId: string;
+  restaurantId?: string;
   name: string;
-  email: string;
-  role: 'admin' | 'cashier' | 'waiter';
+  username: string;
+  role: 'super_admin' | 'admin' | 'cashier' | 'waiter';
   isActive: boolean;
+}
+
+export interface SerialKey {
+  id: string;
+  key: string;
+  plan: 'trial' | 'basic' | 'pro';
+  durationDays: number;
+  isUsed: boolean;
+  usedByRestaurantId?: string;
+  usedByRestaurantName?: string;
+  usedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }

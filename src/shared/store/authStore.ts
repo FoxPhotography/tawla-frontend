@@ -9,6 +9,7 @@ interface AuthState {
   login: (token: string, user: User, restaurant: Restaurant) => void;
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
+  updateRestaurant: (restaurant: Partial<Restaurant>) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -20,6 +21,7 @@ export const useAuthStore = create<AuthState>()(
       login: (token, user, restaurant) => set({ token, user, restaurant }),
       logout: () => set({ token: null, user: null, restaurant: null }),
       updateUser: (user) => set((state) => ({ user: state.user ? { ...state.user, ...user } : null })),
+      updateRestaurant: (restaurant) => set((state) => ({ restaurant: state.restaurant ? { ...state.restaurant, ...restaurant } : null })),
     }),
     {
       name: 'qr-menu-auth-session',
