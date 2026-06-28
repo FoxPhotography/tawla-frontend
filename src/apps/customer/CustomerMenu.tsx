@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ShoppingCart, Bell, Receipt, Plus, Minus, 
-  Trash2, X, CheckCircle2, UtensilsCrossed, MessageSquare, Clock
+  Trash2, X, CheckCircle2, UtensilsCrossed, MessageSquare, Clock, FolderPlus, ShoppingBag
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
+import { socket } from '../../shared/services/socket.js';
 import type { Product, Category, Restaurant } from '../../shared/types';
 
 // ============ Framer Motion Animations ============
@@ -58,6 +59,8 @@ export default function CustomerMenu() {
   const { restaurantSlug, tableNumber } = useParams<{ restaurantSlug: string; tableNumber: string }>();
   const navigate = useNavigate();
 
+  const queryClient = useQueryClient();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -92,6 +95,30 @@ export default function CustomerMenu() {
   const restaurant = menuData?.restaurant;
   const categories = menuData?.categories || [];
   const products = menuData?.products || [];
+
+  const popularProducts = useMemo(() => {
+    return products.filter(p => p.isAvailable).slice(0, 5);
+  }, [products]);
+
+  // Real-time Socket.io menu updates listener
+  useEffect(() => {
+    if (!restaurant?.id) return;
+    
+    if (!socket.connected) {
+      socket.connect();
+    }
+    
+    socket.emit('join_menu', restaurant.id);
+    
+    socket.on('menu_updated', () => {
+      console.log('Menu updated via socket, invalidating queries...');
+      queryClient.invalidateQueries({ queryKey: ['menu', restaurantSlug] });
+    });
+    
+    return () => {
+      socket.off('menu_updated');
+    };
+  }, [restaurant?.id, restaurantSlug, queryClient]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -282,23 +309,123 @@ export default function CustomerMenu() {
         />
       </div>
 
-      {/* ===== Category Tabs ===== */}
-      <div className="cat-tabs relative z-10">
-        <div
-          onClick={() => setSelectedCategory('all')}
-          className={`cat-tab ${selectedCategory === 'all' ? 'active' : ''}`}
-        >
-          الكل
-        </div>
-        {categories.map((cat) => (
-          <div
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`cat-tab ${selectedCategory === cat.id ? 'active' : ''}`}
-          >
-            {cat.name}
+      {/* ===== Most Popular Carousel ===== */}
+      {!searchQuery && popularProducts.length > 0 && (
+        <div className="mt-6 mb-2 relative z-10 px-4 max-w-[428px] mx-auto">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-extrabold text-customer-text-primary text-sm flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-customer-accent animate-pulse" />
+              الأكثر طلباً 🔥
+            </h3>
+            <span className="text-[10px] text-customer-text-muted font-medium">اسحب للمزيد</span>
           </div>
-        ))}
+          
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide direction-rtl -mx-4 px-4">
+            {popularProducts.map((prod) => {
+              const inCartItem = cart.find(i => i.product.id === prod.id);
+              
+              return (
+                <div 
+                  key={prod.id}
+                  onClick={() => addToCart(prod)}
+                  className={`flex-shrink-0 w-36 bg-customer-bg-elevated border rounded-2xl p-3 flex flex-col justify-between shadow-customer-card relative overflow-hidden cursor-pointer transition-all ${
+                    inCartItem 
+                      ? 'border-customer-accent ring-1 ring-customer-accent/20' 
+                      : 'border-customer-border hover:border-customer-accent/40'
+                  }`}
+                >
+                  <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-2 bg-customer-bg-base border border-customer-border flex items-center justify-center">
+                    {prod.image?.url ? (
+                      <img src={prod.image.url} alt={prod.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <ShoppingBag className="w-5 h-5 text-customer-text-muted" />
+                    )}
+                  </div>
+                  
+                  <div className="min-w-0 mb-2.5">
+                    <h4 className="font-bold text-customer-text-primary text-xs truncate">{prod.name}</h4>
+                    <span className="text-[11px] font-bold text-customer-accent block mt-0.5">{prod.price} ج.م</span>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToCart(prod);
+                    }}
+                    className={`w-full py-1.5 rounded-xl border text-[10px] font-bold transition-all flex items-center justify-center gap-1 ${
+                      inCartItem
+                        ? 'bg-customer-accent text-customer-bg-base border-customer-accent'
+                        : 'bg-customer-accent/10 border-customer-accent/20 text-customer-accent hover:bg-customer-accent hover:text-customer-bg-base'
+                    }`}
+                  >
+                    {inCartItem ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>تمت الإضافة</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-3 h-3" />
+                        <span>إضافة</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Category Circles Selector ===== */}
+      <div className="relative z-10 max-w-[428px] mx-auto mt-5 mb-2">
+        <h3 className="font-extrabold text-customer-text-primary text-sm px-4 mb-3">الأقسام</h3>
+        <div className="flex gap-4 overflow-x-auto py-2 px-4 scrollbar-hide direction-rtl">
+          <div 
+            onClick={() => setSelectedCategory('all')}
+            className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
+          >
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center border transition-all ${
+              selectedCategory === 'all' 
+                ? 'border-customer-accent bg-customer-accent/15 scale-105 ring-2 ring-customer-accent/20' 
+                : 'border-customer-border bg-customer-bg-elevated hover:border-customer-accent/50'
+            }`}>
+              <UtensilsCrossed className={`w-5 h-5 ${selectedCategory === 'all' ? 'text-customer-accent' : 'text-customer-text-muted'}`} />
+            </div>
+            <span className={`text-[10px] font-bold transition-colors ${
+              selectedCategory === 'all' ? 'text-customer-accent' : 'text-customer-text-secondary'
+            }`}>
+              الكل
+            </span>
+          </div>
+          {categories.map((cat) => (
+            <div 
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
+            >
+              <div className={`w-14 h-14 rounded-full overflow-hidden border transition-all flex items-center justify-center bg-customer-bg-elevated ${
+                selectedCategory === cat.id 
+                  ? 'border-customer-accent scale-105 ring-2 ring-customer-accent/20' 
+                  : 'border-customer-border hover:border-customer-accent/50'
+              }`}>
+                {cat.image?.url ? (
+                  <img src={cat.image.url} alt={cat.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-customer-text-muted">
+                    <FolderPlus className="w-5 h-5" />
+                  </div>
+                )}
+              </div>
+              <span className={`text-[10px] font-bold transition-colors ${
+                selectedCategory === cat.id ? 'text-customer-accent' : 'text-customer-text-secondary'
+              }`}>
+                {cat.name}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ===== Products List ===== */}
