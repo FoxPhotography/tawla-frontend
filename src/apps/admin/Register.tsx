@@ -93,58 +93,58 @@ export default function Register() {
   ];
 
   return (
-    <div className="min-h-screen bg-dark-950 flex items-center justify-center relative overflow-hidden" dir="rtl">
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center relative overflow-hidden noise" dir="rtl">
       <Toaster position="top-center" toastOptions={{
-        style: { background: '#1e293b', color: '#f1f5f9', border: '1px solid rgba(148,163,184,0.1)' }
+        style: { background: '#ffffff', color: '#1c1917', border: '1px solid rgba(120,113,108,0.15)' }
       }} />
 
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/3 -left-1/4 w-[700px] h-[700px] rounded-full bg-accent-emerald/[0.02] blur-3xl" />
-        <div className="absolute -bottom-1/4 -right-1/4 w-[800px] h-[800px] rounded-full bg-primary-500/[0.03] blur-3xl" />
+        <div className="glow-blob bg-emerald-200 top-1/4 -left-1/4 w-[500px] h-[500px]" />
+        <div className="glow-blob bg-orange-200 bottom-1/4 -right-1/4 w-[500px] h-[500px] animation-delay-2000" />
         <div className="absolute inset-0 dot-pattern" />
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.5 }}
         className="relative z-10 w-full max-w-lg mx-4 my-8"
       >
         {/* Brand Header */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-emerald/20 to-accent-emerald/5 border border-accent-emerald/20 flex items-center justify-center mb-5">
-            <ShieldCheck className="w-8 h-8 text-accent-emerald" />
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-5 shadow-sm">
+            <ShieldCheck className="w-8 h-8 text-emerald-800" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white mb-2">تسجيل مطعم جديد</h1>
-          <p className="text-dark-400 text-sm flex items-center justify-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-primary-500" />
+          <h1 className="text-3xl font-extrabold text-stone-900 mb-2">تسجيل مطعم جديد</h1>
+          <p className="text-stone-600 text-sm flex items-center justify-center gap-1.5 font-medium">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
             <span>ابدأ منصة الـ QR الخاصة بك في دقائق معدودة</span>
           </p>
         </motion.div>
 
         {/* Register Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="glass-card rounded-3xl p-8 space-y-6"
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="organic-card rounded-3xl p-8 space-y-6"
         >
           <form onSubmit={handleSubmit} className="space-y-4">
             {fields.map((field, idx) => (
               <motion.div
                 key={field.label}
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + idx * 0.05, duration: 0.4 }}
+                transition={{ delay: 0.2 + idx * 0.05, duration: 0.3 }}
                 className="space-y-1.5"
               >
-                <label className="block text-sm font-medium text-dark-300">{field.label}</label>
+                <label className="block text-sm font-semibold text-stone-700">{field.label}</label>
                 <div className="relative group">
                   <input
                     type={field.type}
@@ -155,22 +155,22 @@ export default function Register() {
                     dir={field.dir}
                     className={`input-premium pr-11 ${field.dir === 'ltr' ? 'text-left font-mono text-sm' : 'text-right'}`}
                   />
-                  <field.icon className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500 group-focus-within:text-primary-500 transition-colors" />
+                  <field.icon className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-focus-within:text-emerald-700 transition-colors" />
                 </div>
                 {field.hint && (
-                  <p className="text-[11px] text-dark-500 mr-1">{field.hint}</p>
+                  <p className="text-[11px] text-stone-500 mr-1 font-medium">{field.hint}</p>
                 )}
               </motion.div>
             ))}
 
             {/* Password Field */}
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4, duration: 0.4 }}
+              transition={{ delay: 0.4, duration: 0.3 }}
               className="space-y-1.5"
             >
-              <label className="block text-sm font-medium text-dark-300">كلمة المرور</label>
+              <label className="block text-sm font-semibold text-stone-700">كلمة المرور</label>
               <div className="relative group">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -180,11 +180,11 @@ export default function Register() {
                   placeholder="••••••••"
                   className="input-premium pr-11 pl-11 text-right"
                 />
-                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500 group-focus-within:text-primary-500 transition-colors" />
+                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-focus-within:text-emerald-700 transition-colors" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300 transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -196,10 +196,10 @@ export default function Register() {
               type="submit"
               disabled={registerMutation.isPending}
               whileTap={{ scale: 0.97 }}
-              className="btn-primary w-full py-3.5 mt-2 flex items-center justify-center gap-2.5"
+              className="btn-primary w-full py-3.5 mt-4 flex items-center justify-center gap-2.5"
             >
               {registerMutation.isPending ? (
-                <div className="w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
@@ -211,16 +211,16 @@ export default function Register() {
 
           {/* Divider */}
           <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-dark-800/60" />
-            <span className="text-xs text-dark-500">أو</span>
-            <div className="flex-1 h-px bg-dark-800/60" />
+            <div className="flex-1 h-px bg-stone-200" />
+            <span className="text-xs text-stone-550">أو</span>
+            <div className="flex-1 h-px bg-stone-200" />
           </div>
 
           {/* Login Link */}
           <div className="text-center">
-            <p className="text-sm text-dark-400">
+            <p className="text-sm text-stone-600 font-medium">
               لديك مطعم بالفعل؟{' '}
-              <Link to="/admin/login" className="text-primary-500 hover:text-primary-400 font-bold transition-colors">
+              <Link to="/admin/login" className="text-emerald-700 hover:text-emerald-800 font-bold transition-colors">
                 تسجيل دخول المدير
               </Link>
             </p>

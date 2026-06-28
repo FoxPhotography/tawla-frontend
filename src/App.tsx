@@ -28,29 +28,29 @@ export default function App() {
 
         {/* 404 Not Found */}
         <Route path="*" element={
-          <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden" dir="rtl">
+          <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden noise" dir="rtl">
             {/* Background */}
             <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute -top-1/3 -left-1/4 w-[500px] h-[500px] rounded-full bg-primary-500/[0.02] blur-3xl" />
+              <div className="glow-blob bg-emerald-200 top-1/4 -right-1/4 w-[400px] h-[400px]" />
               <div className="absolute inset-0 dot-pattern" />
             </div>
 
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.5 }}
               className="relative z-10"
             >
               <motion.div
                 animate={{ y: [0, -8, 0] }}
                 transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                className="w-20 h-20 rounded-2xl bg-dark-800/40 border border-dark-700/20 flex items-center justify-center mx-auto mb-6"
+                className="w-20 h-20 rounded-2xl bg-white border border-stone-200 flex items-center justify-center mx-auto mb-6 shadow-sm"
               >
-                <Ghost className="w-9 h-9 text-dark-500" />
+                <Ghost className="w-9 h-9 text-stone-400" />
               </motion.div>
               
-              <h2 className="text-2xl font-bold text-white mb-2">الصفحة غير موجودة</h2>
-              <p className="text-dark-500 text-sm mb-8 max-w-sm mx-auto">
+              <h2 className="text-2xl font-bold text-stone-900 mb-2">الصفحة غير موجودة</h2>
+              <p className="text-stone-600 text-sm mb-8 max-w-sm mx-auto">
                 تأكد من كتابة الرابط بشكل صحيح أو مسح رمز الطاولة مرة أخرى
               </p>
               

@@ -44,49 +44,49 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-950 flex items-center justify-center relative overflow-hidden" dir="rtl">
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center relative overflow-hidden noise" dir="rtl">
       <Toaster position="top-center" toastOptions={{
-        style: { background: '#1e293b', color: '#f1f5f9', border: '1px solid rgba(148,163,184,0.1)' }
+        style: { background: '#ffffff', color: '#1c1917', border: '1px solid rgba(120,113,108,0.15)' }
       }} />
 
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] rounded-full bg-primary-500/[0.03] blur-3xl" />
-        <div className="absolute -bottom-1/3 -left-1/4 w-[600px] h-[600px] rounded-full bg-accent-violet/[0.02] blur-3xl" />
+        <div className="glow-blob bg-emerald-200 top-1/4 -right-1/4 w-[500px] h-[500px]" />
+        <div className="glow-blob bg-orange-200 bottom-1/4 -left-1/4 w-[400px] h-[400px] animation-delay-2000" />
         <div className="absolute inset-0 dot-pattern" />
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.5 }}
         className="relative z-10 w-full max-w-md mx-4"
       >
         {/* Brand Header */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-600/10 border border-primary-500/20 flex items-center justify-center mb-5 shadow-glow-sm">
-            <ShieldAlert className="w-8 h-8 text-primary-500" />
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-5 shadow-sm">
+            <ShieldAlert className="w-8 h-8 text-emerald-800" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white mb-2">بوابة المدير</h1>
-          <p className="text-dark-400 text-sm">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>
+          <h1 className="text-3xl font-extrabold text-stone-900 mb-2">بوابة المدير</h1>
+          <p className="text-stone-600 text-sm font-medium">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>
         </motion.div>
 
         {/* Login Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="glass-card rounded-3xl p-8 space-y-6"
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="organic-card rounded-3xl p-8 space-y-6"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-dark-300">البريد الإلكتروني</label>
+              <label className="block text-sm font-semibold text-stone-700">البريد الإلكتروني</label>
               <div className="relative group">
                 <input
                   type="email"
@@ -96,13 +96,13 @@ export default function AdminLogin() {
                   placeholder="admin@restaurant.com"
                   className="input-premium pr-11 text-right"
                 />
-                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-dark-500 group-focus-within:text-primary-500 transition-colors" />
+                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-stone-400 group-focus-within:text-emerald-700 transition-colors" />
               </div>
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-dark-300">كلمة المرور</label>
+              <label className="block text-sm font-semibold text-stone-700">كلمة المرور</label>
               <div className="relative group">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -112,11 +112,11 @@ export default function AdminLogin() {
                   placeholder="••••••••"
                   className="input-premium pr-11 pl-11 text-right"
                 />
-                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-dark-500 group-focus-within:text-primary-500 transition-colors" />
+                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-stone-400 group-focus-within:text-emerald-700 transition-colors" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300 transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -131,7 +131,7 @@ export default function AdminLogin() {
               className="btn-primary w-full py-3.5 flex items-center justify-center gap-2.5"
             >
               {loginMutation.isPending ? (
-                <div className="w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <ArrowLeft className="w-4 h-4" />
@@ -143,16 +143,16 @@ export default function AdminLogin() {
 
           {/* Divider */}
           <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-dark-800/60" />
-            <span className="text-xs text-dark-500">أو</span>
-            <div className="flex-1 h-px bg-dark-800/60" />
+            <div className="flex-1 h-px bg-stone-200" />
+            <span className="text-xs text-stone-550">أو</span>
+            <div className="flex-1 h-px bg-stone-200" />
           </div>
 
           {/* Register Link */}
           <div className="text-center">
-            <p className="text-sm text-dark-400">
+            <p className="text-sm text-stone-600 font-medium">
               ليس لديك مطعم مسجل؟{' '}
-              <Link to="/register" className="text-primary-500 hover:text-primary-400 font-bold transition-colors">
+              <Link to="/register" className="text-emerald-700 hover:text-emerald-800 font-bold transition-colors">
                 سجّل مطعمك الآن
               </Link>
             </p>
@@ -163,10 +163,10 @@ export default function AdminLogin() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
           className="text-center mt-6"
         >
-          <Link to="/staff/login" className="text-xs text-dark-500 hover:text-dark-300 transition-colors">
+          <Link to="/staff/login" className="text-xs text-stone-500 hover:text-stone-700 transition-colors font-semibold">
             دخول كموظف (كاشير / ويتر) →
           </Link>
         </motion.div>
