@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FolderPlus, Edit2, Check, Trash2, Download, ToggleLeft, 
   ToggleRight, DollarSign, Calendar, TrendingUp, ShoppingBag, 
-  MapPin, BarChart3, LogOut, ArrowUp, ArrowDown, Upload, X, 
+  MapPin, BarChart3, LogOut, ArrowUp, ArrowDown, X, 
   ImagePlus, QrCode, Clock, Flame, Star
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
