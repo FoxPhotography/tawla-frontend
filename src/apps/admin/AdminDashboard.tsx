@@ -880,7 +880,7 @@ export default function AdminDashboard() {
         {/* Sidebar */}
         <aside className="w-full md:w-60 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible scrollbar-hide pb-2 md:pb-0">
           <div className="hidden md:block font-display font-bold text-lg text-admin-text-primary px-3 mb-4">
-            Tably OS
+            Tawla OS
           </div>
           {tabs.map((tab) => (
             <motion.button
@@ -1784,7 +1784,7 @@ export default function AdminDashboard() {
                                 {restaurant.subscription.plan === 'basic' && 'الباقة الأساسية (BASIC)'}
                                 {restaurant.subscription.plan === 'trial' && 'الفترة التجريبية (TRIAL)'}
                               </h3>
-                              <span className="text-xs text-admin-text-muted font-semibold">Tably OS Premium Platform</span>
+                              <span className="text-xs text-admin-text-muted font-semibold">Tawla OS Premium Platform</span>
                             </div>
                           </div>
                         </div>
@@ -1862,7 +1862,7 @@ export default function AdminDashboard() {
                           </div>
                           <div className="flex justify-between py-1.5 border-b border-admin-border">
                             <span>دعم فني وتواصل:</span>
-                            <span className="font-bold text-admin-accent font-mono">support@tably.com</span>
+                            <span className="font-bold text-admin-accent font-mono">support@tawla.com</span>
                           </div>
                         </div>
                       </div>

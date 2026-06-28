@@ -369,8 +369,8 @@ export default function OrderTrack() {
       <div className="fixed bottom-0 inset-x-0 bottom-nav z-40 max-w-[430px] mx-auto rounded-t-2xl shadow-customer-elevated">
         <button
           onClick={() => {
-            const cachedSlug = localStorage.getItem('tably_restaurant_slug') || 'demo';
-            const cachedTable = localStorage.getItem('tably_table_number') || '1';
+            const cachedSlug = localStorage.getItem('tawla_restaurant_slug') || 'demo';
+            const cachedTable = localStorage.getItem('tawla_table_number') || '1';
             navigate(`/menu/${cachedSlug}/table/${cachedTable}`);
           }}
           className="bottom-nav-item"

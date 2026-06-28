@@ -33,7 +33,7 @@ export default function Register() {
           </div>
           <h1 className="text-2xl font-extrabold text-admin-text-primary mb-2">التسجيل المباشر غير متاح</h1>
           <p className="text-admin-text-secondary text-sm font-medium">
-            Tably OS - نظام إدارة المطاعم الذكي
+            Tawla OS - نظام إدارة المطاعم الذكي
           </p>
         </motion.div>
 

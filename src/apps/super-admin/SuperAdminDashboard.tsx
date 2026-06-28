@@ -281,7 +281,7 @@ export default function SuperAdminDashboard() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black tracking-wide bg-gradient-to-r from-indigo-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                Tably OS SuperAdmin
+                Tawla OS SuperAdmin
               </h1>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
                 لوحة تحكم المطور

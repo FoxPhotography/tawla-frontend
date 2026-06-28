@@ -65,7 +65,7 @@ export default function CustomerMenu() {
   const [specialNotes, setSpecialNotes] = useState('');
   const [activeItemNotes, setActiveItemNotes] = useState<{ productId: string; text: string } | null>(null);
   
-  // Custom states for Tably Luxury navigation
+  // Custom states for Tawla Luxury navigation
   const [isServiceOpen, setIsServiceOpen] = useState(false);
   const [isNoOrderModalOpen, setIsNoOrderModalOpen] = useState(false);
   const [submittedOrder, setSubmittedOrder] = useState<any | null>(null);
@@ -73,8 +73,8 @@ export default function CustomerMenu() {
   // Cache restaurant details for navigation back from order tracking
   useEffect(() => {
     if (restaurantSlug && tableNumber) {
-      localStorage.setItem('tably_restaurant_slug', restaurantSlug);
-      localStorage.setItem('tably_table_number', tableNumber);
+      localStorage.setItem('tawla_restaurant_slug', restaurantSlug);
+      localStorage.setItem('tawla_table_number', tableNumber);
     }
   }, [restaurantSlug, tableNumber]);
 
@@ -167,7 +167,7 @@ export default function CustomerMenu() {
     },
     onSuccess: (order) => {
       toast.success('تم إرسال طلبك للمطبخ بنجاح');
-      localStorage.setItem('tably_active_order_id', order.id);
+      localStorage.setItem('tawla_active_order_id', order.id);
       setCart([]);
       setIsCartOpen(false);
       setSubmittedOrder(order);
@@ -581,7 +581,7 @@ export default function CustomerMenu() {
 
         <button
           onClick={() => {
-            const activeOrderId = localStorage.getItem('tably_active_order_id');
+            const activeOrderId = localStorage.getItem('tawla_active_order_id');
             if (activeOrderId) {
               navigate(`/order/${activeOrderId}/track`);
             } else {
