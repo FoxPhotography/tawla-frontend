@@ -7,7 +7,7 @@ import {
   Calendar, ShoppingBag, 
   MapPin, BarChart3, LogOut, ArrowUp, ArrowDown, 
   QrCode, Clock, Flame, Star, Crown,
-  Sliders, ShieldAlert, Users, Eye, EyeOff, GripVertical
+  Sliders, ShieldAlert, Users, Eye, EyeOff, GripVertical, Search
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer 
@@ -54,6 +54,7 @@ export default function AdminDashboard() {
   const [draggedType, setDraggedType] = useState<'category' | 'product' | null>(null);
   const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
   const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null);
+  const [prodSearchQuery, setProdSearchQuery] = useState('');
 
   // Staff states
   const [staffName, setStaffName] = useState('');
@@ -905,7 +906,7 @@ export default function AdminDashboard() {
                           layout
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.05 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                           draggable={true}
                           onDragStart={(e: any) => handleDragStart(e, idx, 'category')}
                           onDragOver={(e: any) => handleDragOver(e)}
@@ -1059,10 +1060,28 @@ export default function AdminDashboard() {
 
                   {/* Products Grouped by Category */}
                   <div className="space-y-6">
-                    <h3 className="font-extrabold text-admin-text-primary text-sm">المنتجات الحالية</h3>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-admin-border">
+                      <h3 className="font-extrabold text-admin-text-primary text-sm">المنتجات الحالية</h3>
+                      <div className="relative max-w-xs w-full">
+                        <Search className="w-4 h-4 text-admin-text-muted absolute right-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="ابحث عن منتج بالاسم..."
+                          value={prodSearchQuery}
+                          onChange={(e) => setProdSearchQuery(e.target.value)}
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg pr-9 pl-3 py-1.5 text-xs focus:border-admin-accent focus:outline-none placeholder-admin-text-muted/40 font-medium transition-colors"
+                        />
+                      </div>
+                    </div>
+
                     {categories.map((category) => {
                       const categoryProducts = products
                         .filter((p) => p.categoryId === category.id)
+                        .filter((p) => {
+                          if (!prodSearchQuery) return true;
+                          return p.name.toLowerCase().includes(prodSearchQuery.toLowerCase()) || 
+                                 (p.description && p.description.toLowerCase().includes(prodSearchQuery.toLowerCase()));
+                        })
                         .sort((a, b) => a.order - b.order);
 
                       return (
@@ -1086,138 +1105,139 @@ export default function AdminDashboard() {
 
                           {categoryProducts.length === 0 ? (
                             <div className="text-center py-6 text-xs text-admin-text-muted border border-dashed border-admin-border rounded-lg">
-                              لا توجد منتجات في هذا القسم حالياً.
+                              لا توجد منتجات مطابقة في هذا القسم حالياً.
                             </div>
                           ) : (
-                            <div className="bg-admin-bg-elevated border border-admin-border rounded-lg overflow-hidden shadow-admin-card">
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-right text-sm">
-                                  <thead>
-                                    <tr className="bg-admin-bg-subtle border-b border-admin-border">
-                                      <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">المنتج</th>
-                                      <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">السعر</th>
-                                      <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">الحالة</th>
-                                      <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider text-left">التحكم</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {categoryProducts.map((prod, idx) => {
-                                      const isEditingPrice = inlinePriceEdit?.id === prod.id;
+                            <div className="bg-admin-bg-elevated border border-admin-border rounded-lg overflow-hidden shadow-admin-card text-right text-sm">
+                              {/* Header row */}
+                              <div className="grid grid-cols-12 gap-4 items-center bg-admin-bg-subtle border-b border-admin-border px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">
+                                <div className="col-span-5 md:col-span-6">المنتج</div>
+                                <div className="col-span-3 md:col-span-2">السعر</div>
+                                <div className="col-span-2">الحالة</div>
+                                <div className="col-span-2 text-left">التحكم</div>
+                              </div>
+                              
+                              {/* Product rows */}
+                              <div className="divide-y divide-admin-border">
+                                <AnimatePresence initial={false}>
+                                  {categoryProducts.map((prod) => {
+                                    const isEditingPrice = inlinePriceEdit?.id === prod.id;
 
-                                      return (
-                                        <motion.tr 
-                                          key={prod.id}
-                                          initial={{ opacity: 0 }}
-                                          animate={{ opacity: 1 }}
-                                          transition={{ delay: idx * 0.03 }}
-                                          draggable={true}
-                                          onDragStart={(e: any) => handleDragStartProduct(e, prod.id, category.id)}
-                                          onDragOver={(e: any) => handleDragOver(e)}
-                                          onDrop={(e: any) => handleDropProduct(e, prod.id, category.id)}
-                                          className={`border-b border-admin-border hover:bg-admin-bg-subtle transition-colors cursor-move ${
-                                            draggedProductId === prod.id ? 'bg-admin-accent/5 opacity-50 border-dashed border-2 border-admin-accent' : ''
-                                          }`}
-                                        >
-                                          <td className="px-5 py-4">
-                                            <div className="flex items-center gap-3">
-                                              <div className="text-admin-text-muted cursor-grab active:cursor-grabbing flex-shrink-0">
-                                                <GripVertical className="w-4 h-4" />
-                                              </div>
-                                              {prod.image?.url ? (
-                                                <img src={prod.image.url} alt={prod.name} className="w-10 h-10 rounded-lg object-cover border border-admin-border" />
-                                              ) : (
-                                                <div className="w-10 h-10 rounded-lg bg-admin-bg-base border border-admin-border flex items-center justify-center">
-                                                  <ShoppingBag className="w-4 h-4 text-admin-text-muted" />
-                                                </div>
-                                              )}
-                                              <div>
-                                                <span className="font-bold text-admin-text-primary block text-sm">{prod.name}</span>
-                                                <span className="text-[11px] text-admin-text-secondary line-clamp-1 font-medium">{prod.description}</span>
-                                              </div>
+                                    return (
+                                      <motion.div 
+                                        key={prod.id}
+                                        layout
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                        draggable={true}
+                                        onDragStart={(e: any) => handleDragStartProduct(e, prod.id, category.id)}
+                                        onDragOver={(e: any) => handleDragOver(e)}
+                                        onDrop={(e: any) => handleDropProduct(e, prod.id, category.id)}
+                                        className={`grid grid-cols-12 gap-4 items-center px-5 py-4 hover:bg-admin-bg-subtle/40 transition-all cursor-move ${
+                                          draggedProductId === prod.id ? 'bg-admin-accent/5 opacity-50 border-dashed border-2 border-admin-accent' : ''
+                                        }`}
+                                      >
+                                        <div className="col-span-5 md:col-span-6 min-w-0">
+                                          <div className="flex items-center gap-3">
+                                            <div className="text-admin-text-muted cursor-grab active:cursor-grabbing flex-shrink-0">
+                                              <GripVertical className="w-4 h-4" />
                                             </div>
-                                          </td>
-                                          
-                                          {/* Inline Price edit */}
-                                          <td className="px-5 py-4">
-                                            {isEditingPrice ? (
-                                              <div className="flex items-center gap-2 max-w-[120px]" onClick={(e) => e.stopPropagation()}>
-                                                <input
-                                                  type="number"
-                                                  value={inlinePriceEdit.price}
-                                                  onChange={(e) => setInlinePriceEdit({ id: prod.id, price: e.target.value })}
-                                                  className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-2 py-1 text-xs focus:border-admin-accent focus:outline-none"
-                                                />
-                                                <button 
-                                                  onClick={() => inlinePriceMutation.mutate({ id: prod.id, price: Number(inlinePriceEdit.price) })} 
-                                                  className="text-admin-accent hover:opacity-85 font-bold"
-                                                >
-                                                  <Check className="w-4 h-4" />
-                                                </button>
-                                              </div>
+                                            {prod.image?.url ? (
+                                              <img src={prod.image.url} alt={prod.name} className="w-10 h-10 rounded-lg object-cover border border-admin-border flex-shrink-0" />
                                             ) : (
-                                              <div className="flex items-center gap-1.5 group" onClick={(e) => e.stopPropagation()}>
-                                                <span className="font-bold text-admin-accent">{prod.price} ج.م</span>
-                                                <button 
-                                                  onClick={() => setInlinePriceEdit({ id: prod.id, price: String(prod.price) })} 
-                                                  className="opacity-0 group-hover:opacity-100 text-admin-text-muted hover:text-admin-text-primary transition-opacity"
-                                                >
-                                                  <Edit2 className="w-3 h-3" />
-                                                </button>
+                                              <div className="w-10 h-10 rounded-lg bg-admin-bg-base border border-admin-border flex items-center justify-center flex-shrink-0">
+                                                <ShoppingBag className="w-4 h-4 text-admin-text-muted" />
                                               </div>
                                             )}
-                                          </td>
-
-                                          {/* Availability Toggle */}
-                                          <td className="px-5 py-4">
-                                            <button 
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleProdMutation.mutate(prod.id);
-                                              }} 
-                                              className="transition-colors"
-                                            >
-                                              {prod.isAvailable ? (
-                                                <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                                                  <span>متاح</span>
-                                                </span>
-                                              ) : (
-                                                <span className="inline-flex items-center gap-1.5 bg-red-500/10 text-red-650 border border-red-500/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                  <span>نفد</span>
-                                                </span>
-                                              )}
-                                            </button>
-                                          </td>
-
-                                          <td className="px-5 py-4 text-left">
-                                            <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-                                              <button
-                                                onClick={() => {
-                                                  setEditingProdId(prod.id);
-                                                  setProdName(prod.name);
-                                                  setProdDesc(prod.description || '');
-                                                  setProdPrice(String(prod.price));
-                                                  setProdCatId(prod.categoryId);
-                                                  setProdImagePreview(prod.image?.url || null);
-                                                }}
-                                                className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors"
-                                              >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                              </button>
+                                            <div className="min-w-0">
+                                              <span className="font-bold text-admin-text-primary block text-sm truncate">{prod.name}</span>
+                                              <span className="text-[11px] text-admin-text-secondary line-clamp-1 font-medium">{prod.description}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Inline Price edit */}
+                                        <div className="col-span-3 md:col-span-2">
+                                          {isEditingPrice ? (
+                                            <div className="flex items-center gap-2 max-w-[120px]" onClick={(e) => e.stopPropagation()}>
+                                              <input
+                                                type="number"
+                                                value={inlinePriceEdit.price}
+                                                onChange={(e) => setInlinePriceEdit({ id: prod.id, price: e.target.value })}
+                                                className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-2 py-1 text-xs focus:border-admin-accent focus:outline-none"
+                                              />
                                               <button 
-                                                onClick={() => { if(confirm('حذف هذا المنتج؟')) deleteProdMutation.mutate(prod.id); }} 
-                                                className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-red-650 transition-colors"
+                                                onClick={() => inlinePriceMutation.mutate({ id: prod.id, price: Number(inlinePriceEdit.price) })} 
+                                                className="text-admin-accent hover:opacity-85 font-bold"
                                               >
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <Check className="w-4 h-4" />
                                               </button>
                                             </div>
-                                          </td>
-                                        </motion.tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
+                                          ) : (
+                                            <div className="flex items-center gap-1.5 group" onClick={(e) => e.stopPropagation()}>
+                                              <span className="font-bold text-admin-accent">{prod.price} ج.م</span>
+                                              <button 
+                                                onClick={() => setInlinePriceEdit({ id: prod.id, price: String(prod.price) })} 
+                                                className="opacity-0 group-hover:opacity-100 text-admin-text-muted hover:text-admin-text-primary transition-opacity"
+                                              >
+                                                <Edit2 className="w-3 h-3" />
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Availability Toggle */}
+                                        <div className="col-span-2">
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleProdMutation.mutate(prod.id);
+                                            }} 
+                                            className="transition-colors"
+                                          >
+                                            {prod.isAvailable ? (
+                                              <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                                                <span>متاح</span>
+                                              </span>
+                                            ) : (
+                                              <span className="inline-flex items-center gap-1.5 bg-red-500/10 text-red-650 border border-red-500/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                <span>نفد</span>
+                                              </span>
+                                            )}
+                                          </button>
+                                        </div>
+
+                                        <div className="col-span-2 text-left">
+                                          <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                              onClick={() => {
+                                                setEditingProdId(prod.id);
+                                                setProdName(prod.name);
+                                                setProdDesc(prod.description || '');
+                                                setProdPrice(String(prod.price));
+                                                setProdCatId(prod.categoryId);
+                                                setProdImagePreview(prod.image?.url || null);
+                                              }}
+                                              className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors"
+                                            >
+                                              <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                              onClick={() => { if(confirm('حذف هذا المنتج؟')) deleteProdMutation.mutate(prod.id); }} 
+                                              className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-red-650 transition-colors"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    );
+                                  })}
+                                </AnimatePresence>
                               </div>
                             </div>
                           )}
@@ -1226,7 +1246,13 @@ export default function AdminDashboard() {
                     })}
 
                     {/* Uncategorized products if any */}
-                    {products.filter(p => !p.categoryId || !categories.find(c => c.id === p.categoryId)).length > 0 && (
+                    {products
+                      .filter(p => !p.categoryId || !categories.find(c => c.id === p.categoryId))
+                      .filter((p) => {
+                        if (!prodSearchQuery) return true;
+                        return p.name.toLowerCase().includes(prodSearchQuery.toLowerCase()) || 
+                               (p.description && p.description.toLowerCase().includes(prodSearchQuery.toLowerCase()));
+                      }).length > 0 && (
                       <div className="space-y-3 bg-admin-bg-elevated/40 border border-admin-border rounded-xl p-4 shadow-sm">
                         <div className="flex items-center gap-2 pb-2 border-b border-admin-border">
                           <div className="w-8 h-8 rounded-lg bg-admin-bg-subtle flex items-center justify-center text-admin-text-muted">
@@ -1237,117 +1263,121 @@ export default function AdminDashboard() {
                             {products.filter(p => !p.categoryId || !categories.find(c => c.id === p.categoryId)).length} منتجات
                           </span>
                         </div>
-                        <div className="bg-admin-bg-elevated border border-admin-border rounded-lg overflow-hidden shadow-admin-card">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-right text-sm">
-                              <thead>
-                                <tr className="bg-admin-bg-subtle border-b border-admin-border">
-                                  <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">المنتج</th>
-                                  <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">السعر</th>
-                                  <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">الحالة</th>
-                                  <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider text-left">التحكم</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {products.filter(p => !p.categoryId || !categories.find(c => c.id === p.categoryId)).map((prod) => {
-                                  const isEditingPrice = inlinePriceEdit?.id === prod.id;
-                                  return (
-                                    <tr 
-                                      key={prod.id}
-                                      className="border-b border-admin-border hover:bg-admin-bg-subtle transition-colors"
-                                    >
-                                      <td className="px-5 py-4">
-                                        <div className="flex items-center gap-3">
-                                          {prod.image?.url ? (
-                                            <img src={prod.image.url} alt={prod.name} className="w-10 h-10 rounded-lg object-cover border border-admin-border" />
-                                          ) : (
-                                            <div className="w-10 h-10 rounded-lg bg-admin-bg-base border border-admin-border flex items-center justify-center">
-                                              <ShoppingBag className="w-4 h-4 text-admin-text-muted" />
-                                            </div>
-                                          )}
-                                          <div>
-                                            <span className="font-bold text-admin-text-primary block text-sm">{prod.name}</span>
-                                            <span className="text-[11px] text-admin-text-secondary line-clamp-1 font-medium">{prod.description}</span>
-                                          </div>
-                                        </div>
-                                      </td>
-                                      <td className="px-5 py-4">
-                                        {isEditingPrice ? (
-                                          <div className="flex items-center gap-2 max-w-[120px]" onClick={(e) => e.stopPropagation()}>
-                                            <input
-                                              type="number"
-                                              value={inlinePriceEdit.price}
-                                              onChange={(e) => setInlinePriceEdit({ id: prod.id, price: e.target.value })}
-                                              className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-2 py-1 text-xs focus:border-admin-accent focus:outline-none"
-                                            />
-                                            <button 
-                                              onClick={() => inlinePriceMutation.mutate({ id: prod.id, price: Number(inlinePriceEdit.price) })} 
-                                              className="text-admin-accent hover:opacity-85 font-bold"
-                                            >
-                                              <Check className="w-4 h-4" />
-                                            </button>
-                                          </div>
+                        <div className="bg-admin-bg-elevated border border-admin-border rounded-lg overflow-hidden shadow-admin-card text-right text-sm">
+                          {/* Header row */}
+                          <div className="grid grid-cols-12 gap-4 items-center bg-admin-bg-subtle border-b border-admin-border px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">
+                            <div className="col-span-5 md:col-span-6">المنتج</div>
+                            <div className="col-span-3 md:col-span-2">السعر</div>
+                            <div className="col-span-2">الحالة</div>
+                            <div className="col-span-2 text-left">التحكم</div>
+                          </div>
+                          
+                          {/* Product rows */}
+                          <div className="divide-y divide-admin-border">
+                            {products
+                              .filter(p => !p.categoryId || !categories.find(c => c.id === p.categoryId))
+                              .filter((p) => {
+                                if (!prodSearchQuery) return true;
+                                return p.name.toLowerCase().includes(prodSearchQuery.toLowerCase()) || 
+                                       (p.description && p.description.toLowerCase().includes(prodSearchQuery.toLowerCase()));
+                              })
+                              .map((prod) => {
+                                const isEditingPrice = inlinePriceEdit?.id === prod.id;
+                                return (
+                                  <div 
+                                    key={prod.id}
+                                    className="grid grid-cols-12 gap-4 items-center px-5 py-4 hover:bg-admin-bg-subtle/40 transition-colors"
+                                  >
+                                    <div className="col-span-5 md:col-span-6 min-w-0">
+                                      <div className="flex items-center gap-3">
+                                        {prod.image?.url ? (
+                                          <img src={prod.image.url} alt={prod.name} className="w-10 h-10 rounded-lg object-cover border border-admin-border flex-shrink-0" />
                                         ) : (
-                                          <div className="flex items-center gap-1.5 group" onClick={(e) => e.stopPropagation()}>
-                                            <span className="font-bold text-admin-accent">{prod.price} ج.م</span>
-                                            <button 
-                                              onClick={() => setInlinePriceEdit({ id: prod.id, price: String(prod.price) })} 
-                                              className="opacity-0 group-hover:opacity-100 text-admin-text-muted hover:text-admin-text-primary transition-opacity"
-                                            >
-                                              <Edit2 className="w-3 h-3" />
-                                            </button>
+                                          <div className="w-10 h-10 rounded-lg bg-admin-bg-base border border-admin-border flex items-center justify-center flex-shrink-0">
+                                            <ShoppingBag className="w-4 h-4 text-admin-text-muted" />
                                           </div>
                                         )}
-                                      </td>
-                                      <td className="px-5 py-4">
-                                        <button 
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleProdMutation.mutate(prod.id);
-                                          }} 
-                                          className="transition-colors"
-                                        >
-                                          {prod.isAvailable ? (
-                                            <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
-                                              <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                                              <span>متاح</span>
-                                            </span>
-                                          ) : (
-                                            <span className="inline-flex items-center gap-1.5 bg-red-500/10 text-red-650 border border-red-500/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
-                                              <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                              <span>نفد</span>
-                                            </span>
-                                          )}
-                                        </button>
-                                      </td>
-                                      <td className="px-5 py-4 text-left">
-                                        <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-                                          <button
-                                            onClick={() => {
-                                              setEditingProdId(prod.id);
-                                              setProdName(prod.name);
-                                              setProdDesc(prod.description || '');
-                                              setProdPrice(String(prod.price));
-                                              setProdCatId(prod.categoryId);
-                                              setProdImagePreview(prod.image?.url || null);
-                                            }}
-                                            className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors"
-                                          >
-                                            <Edit2 className="w-3.5 h-3.5" />
-                                          </button>
+                                        <div className="min-w-0">
+                                          <span className="font-bold text-admin-text-primary block text-sm truncate">{prod.name}</span>
+                                          <span className="text-[11px] text-admin-text-secondary line-clamp-1 font-medium">{prod.description}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="col-span-3 md:col-span-2">
+                                      {isEditingPrice ? (
+                                        <div className="flex items-center gap-2 max-w-[120px]" onClick={(e) => e.stopPropagation()}>
+                                          <input
+                                            type="number"
+                                            value={inlinePriceEdit.price}
+                                            onChange={(e) => setInlinePriceEdit({ id: prod.id, price: e.target.value })}
+                                            className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-2 py-1 text-xs focus:border-admin-accent focus:outline-none"
+                                          />
                                           <button 
-                                            onClick={() => { if(confirm('حذف هذا المنتج؟')) deleteProdMutation.mutate(prod.id); }} 
-                                            className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-red-650 transition-colors"
+                                            onClick={() => inlinePriceMutation.mutate({ id: prod.id, price: Number(inlinePriceEdit.price) })} 
+                                            className="text-admin-accent hover:opacity-85 font-bold"
                                           >
-                                            <Trash2 className="w-3.5 h-3.5" />
+                                            <Check className="w-4 h-4" />
                                           </button>
                                         </div>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5 group" onClick={(e) => e.stopPropagation()}>
+                                          <span className="font-bold text-admin-accent">{prod.price} ج.م</span>
+                                          <button 
+                                            onClick={() => setInlinePriceEdit({ id: prod.id, price: String(prod.price) })} 
+                                            className="opacity-0 group-hover:opacity-100 text-admin-text-muted hover:text-admin-text-primary transition-opacity"
+                                          >
+                                            <Edit2 className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="col-span-2">
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleProdMutation.mutate(prod.id);
+                                        }} 
+                                        className="transition-colors"
+                                      >
+                                        {prod.isAvailable ? (
+                                          <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                                            <span>متاح</span>
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1.5 bg-red-500/10 text-red-650 border border-red-500/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                            <span>نفد</span>
+                                          </span>
+                                        )}
+                                      </button>
+                                    </div>
+                                    <div className="col-span-2 text-left">
+                                      <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                          onClick={() => {
+                                            setEditingProdId(prod.id);
+                                            setProdName(prod.name);
+                                            setProdDesc(prod.description || '');
+                                            setProdPrice(String(prod.price));
+                                            setProdCatId(prod.categoryId);
+                                            setProdImagePreview(prod.image?.url || null);
+                                          }}
+                                          className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors"
+                                        >
+                                          <Edit2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button 
+                                          onClick={() => { if(confirm('حذف هذا المنتج؟')) deleteProdMutation.mutate(prod.id); }} 
+                                          className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-red-650 transition-colors"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                           </div>
                         </div>
                       </div>
