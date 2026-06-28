@@ -152,7 +152,7 @@ export default function StaffDashboard() {
   // Status Mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, nextStatus }: { orderId: string; nextStatus: string }) => {
-      await api.put(`/orders/${orderId}/status`, { status: nextStatus });
+      await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
     },
     onSuccess: () => {
       toast.success('تم تحديث حالة الطلب.');
@@ -166,7 +166,7 @@ export default function StaffDashboard() {
   // Empty Table
   const emptyTableMutation = useMutation({
     mutationFn: async ({ tableId }: { tableId: string }) => {
-      await api.post(`/tables/${tableId}/empty`);
+      await api.patch(`/tables/${tableId}/status`, { status: 'empty', currentOrderId: null });
     },
     onSuccess: () => {
       toast.success('تم تفريغ الطاولة.');
