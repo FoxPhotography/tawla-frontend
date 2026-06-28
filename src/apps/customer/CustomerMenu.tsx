@@ -97,8 +97,20 @@ export default function CustomerMenu() {
   const products = menuData?.products || [];
 
   const popularProducts = useMemo(() => {
-    return products.filter(p => p.isAvailable).slice(0, 5);
-  }, [products]);
+    const available = products.filter(p => p.isAvailable);
+    return available.sort((a, b) => {
+      const catA = categories.find(c => c.id === a.categoryId);
+      const catB = categories.find(c => c.id === b.categoryId);
+      
+      const orderCatA = catA ? catA.order : 9999;
+      const orderCatB = catB ? catB.order : 9999;
+
+      if (orderCatA !== orderCatB) {
+        return orderCatA - orderCatB;
+      }
+      return a.order - b.order;
+    }).slice(0, 5);
+  }, [products, categories]);
 
   // Real-time Socket.io menu updates listener
   useEffect(() => {
@@ -121,13 +133,26 @@ export default function CustomerMenu() {
   }, [restaurant?.id, restaurantSlug, queryClient]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    const filtered = products.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
         (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
       return matchesSearch && matchesCategory && product.isAvailable;
     });
-  }, [products, searchQuery, selectedCategory]);
+
+    return filtered.sort((a, b) => {
+      const catA = categories.find(c => c.id === a.categoryId);
+      const catB = categories.find(c => c.id === b.categoryId);
+      
+      const orderCatA = catA ? catA.order : 9999;
+      const orderCatB = catB ? catB.order : 9999;
+
+      if (orderCatA !== orderCatB) {
+        return orderCatA - orderCatB;
+      }
+      return a.order - b.order;
+    });
+  }, [products, categories, searchQuery, selectedCategory]);
 
   // Cart Actions
   const addToCart = (product: Product) => {
