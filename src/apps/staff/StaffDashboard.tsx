@@ -763,29 +763,54 @@ export default function StaffDashboard() {
       {printingOrder && (
         <>
           <style dangerouslySetInnerHTML={{__html: `
+            @page {
+              margin: 0 !important;
+            }
             @media print {
-              body { background: white !important; color: black !important; font-family: monospace !important; margin: 0 !important; padding: 0 !important; }
-              #root, header, aside, main, footer, .toast, .no-print { display: none !important; }
-              .print-receipt-container { display: block !important; width: 80mm !important; margin: 0 auto !important; padding: 10px !important; box-sizing: border-box !important; }
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                color: black !important;
+                font-family: 'Courier New', Courier, monospace !important;
+                width: 80mm !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              .print-receipt-container, .print-receipt-container * {
+                visibility: visible !important;
+              }
+              .print-receipt-container {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 80mm !important;
+                margin: 0 !important;
+                padding: 8mm 5mm !important;
+                box-sizing: border-box !important;
+                background: white !important;
+                display: block !important;
+              }
             }
           `}} />
-          <div className="print-receipt-container hidden print:block text-black bg-white p-4 font-mono text-sm leading-relaxed" dir="rtl">
+          <div className="print-receipt-container hidden print:block text-black bg-white font-mono text-[12px] leading-normal" dir="rtl">
             {/* Logo if active */}
             {restaurant?.receiptSettings?.showLogo && restaurant?.logo?.url && (
               <div className="text-center mb-2">
-                <img src={restaurant.logo.url} alt="logo" className="mx-auto max-h-14 object-contain" />
+                <img src={restaurant.logo.url} alt="logo" className="mx-auto max-h-12 object-contain" />
               </div>
             )}
 
             {/* Restaurant Name */}
-            <h2 className="text-center text-base font-black mb-1">{restaurant?.name}</h2>
+            <h2 className="text-center text-sm font-black mb-1">{restaurant?.name}</h2>
             
             {/* Header Text */}
             {restaurant?.receiptSettings?.headerText && (
-              <p className="text-center text-[11px] text-stone-600 mb-2 leading-tight">{restaurant.receiptSettings.headerText}</p>
+              <p className="text-center text-[10px] text-zinc-700 mb-2 leading-tight">{restaurant.receiptSettings.headerText}</p>
             )}
 
-            <div className="border-t border-dashed border-stone-400 my-2 pt-2 text-[11px] space-y-0.5">
+            <div className="border-t border-dashed border-black my-2 pt-2 text-[10px] space-y-0.5">
               <div><strong>رقم الطلب:</strong> #{printingOrder.id.slice(-6).toUpperCase()}</div>
               <div><strong>رقم الطاولة:</strong> طاولة {printingOrder.tableNumber}</div>
               <div><strong>التاريخ:</strong> {new Date(printingOrder.createdAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}</div>
@@ -801,9 +826,9 @@ export default function StaffDashboard() {
             </div>
 
             {/* Items Table */}
-            <table className="w-full text-right text-[11px] my-2.5 border-t border-b border-dashed border-stone-400 py-1">
+            <table className="w-full text-right text-[10px] my-2 border-t border-b border-dashed border-black py-1">
               <thead>
-                <tr className="border-b border-dashed border-stone-300">
+                <tr className="border-b border-dashed border-black">
                   <th className="pb-1 text-right">الصنف</th>
                   <th className="pb-1 text-center w-12">الكمية</th>
                   <th className="pb-1 text-left w-20">السعر</th>
@@ -811,7 +836,7 @@ export default function StaffDashboard() {
               </thead>
               <tbody>
                 {printingOrder.items.map((item: any, idx: number) => (
-                  <tr key={idx} className="font-semibold">
+                  <tr key={idx} className="font-bold">
                     <td className="py-1 leading-tight">{item.name}</td>
                     <td className="py-1 text-center font-mono">{item.quantity}</td>
                     <td className="py-1 text-left font-mono">{item.price * item.quantity} ج.م</td>
@@ -821,24 +846,24 @@ export default function StaffDashboard() {
             </table>
 
             {/* Totals */}
-            <div className="text-[11px] space-y-1 font-semibold pr-1">
+            <div className="text-[10px] space-y-1 font-bold pr-1">
               <div className="flex justify-between">
                 <span>الإجمالي الفرعي:</span>
                 <span className="font-mono">{printingOrder.totalAmount} ج.م</span>
               </div>
               {(restaurant?.receiptSettings?.taxRate ?? 0) > 0 && (
-                <div className="flex justify-between text-stone-700">
+                <div className="flex justify-between text-zinc-800">
                   <span>ضريبة القيمة المضافة ({restaurant?.receiptSettings?.taxRate}%):</span>
                   <span className="font-mono">{(printingOrder.totalAmount * ((restaurant?.receiptSettings?.taxRate || 0) / 100)).toFixed(1)} ج.م</span>
                 </div>
               )}
               {(restaurant?.receiptSettings?.serviceRate ?? 0) > 0 && (
-                <div className="flex justify-between text-stone-700">
+                <div className="flex justify-between text-zinc-800">
                   <span>رسوم الخدمة ({restaurant?.receiptSettings?.serviceRate}%):</span>
                   <span className="font-mono">{(printingOrder.totalAmount * ((restaurant?.receiptSettings?.serviceRate || 0) / 100)).toFixed(1)} ج.م</span>
                 </div>
               )}
-              <div className="flex justify-between text-xs font-black border-t border-dashed border-stone-400 pt-1.5 mt-1.5">
+              <div className="flex justify-between text-xs font-black border-t border-dashed border-black pt-1.5 mt-1.5">
                 <span>الإجمالي الكلي:</span>
                 <span className="font-mono">
                   {(
@@ -852,7 +877,7 @@ export default function StaffDashboard() {
 
             {/* Footer Text */}
             {restaurant?.receiptSettings?.footerText && (
-              <p className="text-center text-[10px] text-stone-500 border-t border-dashed border-stone-400 pt-2.5 mt-3.5 leading-snug">
+              <p className="text-center text-[9px] text-zinc-700 border-t border-dashed border-black pt-2 mt-3 leading-snug">
                 {restaurant.receiptSettings.footerText}
               </p>
             )}
