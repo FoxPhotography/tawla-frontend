@@ -206,6 +206,9 @@ export default function StaffDashboard() {
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
 
+    // Provide authentication token
+    socket.auth = { token: useAuthStore.getState().token };
+
     if (!socket.connected) {
       socket.connect();
     } else {

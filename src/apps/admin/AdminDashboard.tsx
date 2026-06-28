@@ -627,6 +627,9 @@ export default function AdminDashboard() {
 
     socket.on('connect', handleConnect);
 
+    // Provide authentication token
+    socket.auth = { token: useAuthStore.getState().token };
+
     if (!socket.connected) {
       socket.connect();
     } else {
