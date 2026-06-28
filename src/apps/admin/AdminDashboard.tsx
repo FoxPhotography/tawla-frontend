@@ -6,7 +6,8 @@ import {
   FolderPlus, Edit2, Check, Trash2, Download, 
   Calendar, ShoppingBag, 
   MapPin, BarChart3, LogOut, ArrowUp, ArrowDown, X, 
-  ImagePlus, QrCode, Clock, Flame, Star, Crown
+  ImagePlus, QrCode, Clock, Flame, Star, Crown,
+  Sliders, ZoomIn, ZoomOut
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer 
@@ -61,7 +62,7 @@ function ImageUploadZone({
       />
       {preview ? (
         <div className="relative group p-1.5">
-          <img src={preview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+          <img src={preview} alt="Preview" className="aspect-square w-full max-w-[180px] mx-auto object-cover rounded-lg" />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-3">
             <button
               type="button"
@@ -92,71 +93,259 @@ function ImageUploadZone({
   );
 }
 
-// ============ Recharts Timeline and Heatmap Helpers ============
-const getRechartsTimeline = (total: number, period: 'day' | 'week' | 'month' | 'year') => {
-  const data: any[] = [];
-  const now = new Date();
-  
-  if (period === 'day') {
-    const hours = ['12 ص', '6 ص', '12 م', '6 م'];
-    const partVal = total / 4;
-    hours.forEach((h, i) => {
-      data.push({
-        label: h,
-        amount: Math.round(partVal * (0.6 + i * 0.2 + Math.random() * 0.15)),
-        orders: Math.round(i * 3 + 2)
+// ===== IMAGE CROPPER MODAL COMPONENT =====
+function ImageCropperModal({
+  src,
+  file,
+  onConfirm,
+  onCancel
+}: {
+  src: string;
+  file: File;
+  onConfirm: (croppedFile: File) => void;
+  onCancel: () => void;
+}) {
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  // Pan limit constraints
+  const limitPan = (x: number, y: number, currentZoom: number) => {
+    if (!dimensions.width || !dimensions.height) return { x, y };
+    const W_crop = 288;
+    const wScaled = dimensions.width * currentZoom;
+    const hScaled = dimensions.height * currentZoom;
+
+    const maxX = Math.max(0, (wScaled - W_crop) / 2);
+    const minX = -maxX;
+    const maxY = Math.max(0, (hScaled - W_crop) / 2);
+    const minY = -maxY;
+
+    return {
+      x: Math.min(maxX, Math.max(minX, x)),
+      y: Math.min(maxY, Math.max(minY, y))
+    };
+  };
+
+  // Adjust pan when zoom or dimensions change to keep image inside crop window
+  useEffect(() => {
+    setPan(prev => limitPan(prev.x, prev.y, zoom));
+  }, [zoom, dimensions]);
+
+  // Mouse pan handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    setPan(limitPan(newX, newY, zoom));
+  };
+
+  const handleMouseUpOrLeave = () => {
+    setIsDragging(false);
+  };
+
+  // Touch pan handlers (mobile/tablet support)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    if (e.touches && e.touches[0]) {
+      setDragStart({
+        x: e.touches[0].clientX - pan.x,
+        y: e.touches[0].clientY - pan.y
       });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    if (e.touches && e.touches[0]) {
+      const newX = e.touches[0].clientX - dragStart.x;
+      const newY = e.touches[0].clientY - dragStart.y;
+      setPan(limitPan(newX, newY, zoom));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const W_crop = 288;
+    // Calculate fit scale so the image covers the crop window
+    const fitScale = Math.max(W_crop / img.naturalWidth, W_crop / img.naturalHeight);
+    setDimensions({
+      width: img.naturalWidth * fitScale,
+      height: img.naturalHeight * fitScale
     });
-  } else if (period === 'week') {
-    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    const partVal = total / 7;
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(now.getDate() - i);
-      const dayLabel = days[d.getDay()];
-      data.push({
-        label: dayLabel,
-        amount: Math.round(partVal * (0.8 + Math.sin(i) * 0.2 + Math.random() * 0.1)),
-        orders: Math.round(5 + Math.random() * 8)
-      });
+  };
+
+  const handleSave = () => {
+    if (!imageRef.current || !dimensions.width || !dimensions.height) return;
+    setIsProcessing(true);
+    const img = imageRef.current;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 800;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      setIsProcessing(false);
+      return;
     }
-  } else if (period === 'month') {
-    const partVal = total / 4;
-    for (let i = 1; i <= 4; i++) {
-      data.push({
-        label: `أسبوع ${i}`,
-        amount: Math.round(partVal * (0.7 + i * 0.15 + Math.random() * 0.1)),
-        orders: Math.round(20 + i * 5)
-      });
-    }
-  } else {
-    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    const partVal = total / 12;
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(now.getMonth() - i);
-      const monthLabel = months[d.getMonth()];
-      data.push({
-        label: monthLabel,
-        amount: Math.round(partVal * (0.6 + Math.cos(i) * 0.3 + Math.random() * 0.15)),
-        orders: Math.round(60 + Math.random() * 40)
-      });
-    }
-  }
-  return data;
-};
+    
+    const W_crop = 288;
+    const W_out = 800;
+    const canvasScale = W_out / W_crop;
+    
+    const wScaled = dimensions.width * zoom;
+    const hScaled = dimensions.height * zoom;
+    
+    const left = (W_crop - wScaled) / 2 + pan.x;
+    const top = (W_crop - hScaled) / 2 + pan.y;
+    
+    const dx = left * canvasScale;
+    const dy = top * canvasScale;
+    const dw = wScaled * canvasScale;
+    const dh = hScaled * canvasScale;
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W_out, W_out);
+    ctx.drawImage(img, dx, dy, dw, dh);
+    
+    canvas.toBlob((blob) => {
+      setIsProcessing(false);
+      if (blob) {
+        // Output file as compressed jpeg
+        const cleanName = file.name.replace(/\.[^/.]+$/, "") + '.jpg';
+        const croppedFile = new File([blob], cleanName, { type: 'image/jpeg' });
+        onConfirm(croppedFile);
+      }
+    }, 'image/jpeg', 0.85); // Compress to 85% JPEG
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="w-full max-w-md bg-white border border-admin-border rounded-2xl shadow-2xl p-6 flex flex-col items-center gap-5 text-right"
+        dir="rtl"
+      >
+        <div className="w-full flex justify-between items-center pb-3 border-b border-admin-border">
+          <h3 className="font-extrabold text-admin-text-primary text-sm flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-admin-accent" />
+            <span>قص وتعديل الصورة (1:1)</span>
+          </h3>
+          <button 
+            type="button"
+            onClick={onCancel}
+            className="p-1 rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-base transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Cropping viewport */}
+        <div className="relative w-72 h-72 overflow-hidden rounded-xl border border-admin-border bg-stone-100 flex items-center justify-center cursor-move select-none shadow-inner">
+          <img
+            ref={imageRef}
+            src={src}
+            alt="To Crop"
+            onLoad={handleImageLoad}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUpOrLeave}
+            onMouseLeave={handleMouseUpOrLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{
+              width: dimensions.width ? `${dimensions.width}px` : 'auto',
+              height: dimensions.height ? `${dimensions.height}px` : 'auto',
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: 'center',
+              maxWidth: 'none',
+              maxHeight: 'none',
+            }}
+            draggable={false}
+          />
+          {/* Overlay grid / frame */}
+          <div className="absolute inset-0 pointer-events-none border-2 border-admin-accent rounded-xl shadow-[0_0_0_999px_rgba(255,255,255,0.4)]" />
+        </div>
+        
+        <p className="text-[10px] text-admin-text-muted text-center leading-relaxed">
+          اسحب الصورة لضبط الزاوية، واستخدم شريط التكبير بالأسفل للتحجيم.
+        </p>
+
+        {/* Zoom controls */}
+        <div className="w-full flex items-center gap-3 px-2">
+          <ZoomOut className="w-4 h-4 text-admin-text-muted flex-shrink-0" />
+          <input
+            type="range"
+            min="1"
+            max="3"
+            step="0.05"
+            value={zoom}
+            onChange={(e) => setZoom(parseFloat(e.target.value))}
+            className="w-full accent-admin-accent bg-admin-bg-base rounded-lg appearance-none h-1.5 cursor-pointer"
+          />
+          <ZoomIn className="w-4 h-4 text-admin-text-muted flex-shrink-0" />
+        </div>
+
+        {/* Action buttons */}
+        <div className="w-full flex gap-3 pt-3 border-t border-admin-border">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-3 px-4 rounded-lg border border-admin-border text-admin-text-secondary font-bold text-xs hover:bg-admin-bg-base transition-colors"
+          >
+            إلغاء
+          </button>
+          <motion.button
+            type="button"
+            disabled={isProcessing}
+            onClick={handleSave}
+            whileTap={{ scale: 0.97 }}
+            className="flex-1 py-3 px-4 rounded-lg bg-admin-accent text-white font-bold text-xs hover:opacity-95 transition-opacity flex items-center justify-center gap-2 shadow-sm"
+          >
+            {isProcessing ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <span>قص وحفظ الصورة</span>
+            )}
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ============ Recharts Timeline Helpers ============
 
 const generateHeatmapMatrix = (peakHours: any[]) => {
   const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
   return days.map((day, dayIdx) => {
+    // MongoDB $dayOfWeek: 1 = Sunday, 2 = Monday, ..., 7 = Saturday
+    const targetDayOfWeek = dayIdx + 1;
     return {
       day,
       hours: Array.from({ length: 24 }).map((_, hour) => {
-        const peakMatched = peakHours.find((h: any) => h.hour === hour);
-        const baseVal = peakMatched ? peakMatched.ordersCount : 0;
-        const multiplier = dayIdx === 4 || dayIdx === 5 ? 1.5 : dayIdx === 0 ? 0.8 : 1.1;
-        const density = Math.round(baseVal * multiplier * (0.7 + Math.sin(dayIdx + hour) * 0.3));
-        return Math.max(0, density);
+        const peakMatched = peakHours ? peakHours.find(
+          (h: any) => h.dayOfWeek === targetDayOfWeek && h.hour === hour
+        ) : null;
+        return peakMatched ? peakMatched.ordersCount : 0;
       })
     };
   });
@@ -198,6 +387,11 @@ export default function AdminDashboard() {
 
   // Analytics Period
   const [salesPeriod, setSalesPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
+
+  // Image Cropper States
+  const [cropperTarget, setCropperTarget] = useState<'category' | 'product' | null>(null);
+  const [cropperFile, setCropperFile] = useState<File | null>(null);
+  const [cropperSrc, setCropperSrc] = useState<string | null>(null);
 
   // Audio Preloader and Player
   const playNewOrderChime = () => {
@@ -497,17 +691,44 @@ export default function AdminDashboard() {
   const handleCatImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setCatImage(file);
-      setCatImagePreview(URL.createObjectURL(file));
+      setCropperTarget('category');
+      setCropperFile(file);
+      setCropperSrc(URL.createObjectURL(file));
+      // Reset input value to allow selecting same file again
+      e.target.value = '';
     }
   };
 
   const handleProdImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setProdImage(file);
-      setProdImagePreview(URL.createObjectURL(file));
+      setCropperTarget('product');
+      setCropperFile(file);
+      setCropperSrc(URL.createObjectURL(file));
+      // Reset input value to allow selecting same file again
+      e.target.value = '';
     }
+  };
+
+  const handleCropConfirm = (croppedFile: File) => {
+    if (cropperTarget === 'category') {
+      setCatImage(croppedFile);
+      setCatImagePreview(URL.createObjectURL(croppedFile));
+    } else if (cropperTarget === 'product') {
+      setProdImage(croppedFile);
+      setProdImagePreview(URL.createObjectURL(croppedFile));
+    }
+    setCropperTarget(null);
+    setCropperFile(null);
+    if (cropperSrc) URL.revokeObjectURL(cropperSrc);
+    setCropperSrc(null);
+  };
+
+  const handleCropCancel = () => {
+    setCropperTarget(null);
+    setCropperFile(null);
+    if (cropperSrc) URL.revokeObjectURL(cropperSrc);
+    setCropperSrc(null);
   };
 
   const resetCatForm = () => {
@@ -1261,7 +1482,7 @@ export default function AdminDashboard() {
                     const activeTablesCount = tables.filter(t => t.status !== 'empty').length;
                     const occupancyRate = tables.length ? Math.round((activeTablesCount / tables.length) * 100) : 0;
 
-                    const chartData = getRechartsTimeline(salesStats.total || 0, salesPeriod);
+                    const chartData = salesStats.timeline || [];
 
                     return (
                       <div className="space-y-6">
@@ -1435,7 +1656,7 @@ export default function AdminDashboard() {
                                 <div className="flex items-center gap-1.5 mr-[64px] pb-1 border-b border-admin-border/30">
                                   {Array.from({ length: 24 }).map((_, hour) => (
                                     <div key={hour} className="flex-1 text-center text-[9px] font-mono text-admin-text-muted">
-                                      {hour === 0 ? '12أ' : hour === 12 ? '12م' : hour > 12 ? `${hour - 12}` : `${hour}`}
+                                      {hour === 0 ? '12ص' : hour === 12 ? '12م' : hour > 12 ? `${hour - 12}م` : `${hour}ص`}
                                     </div>
                                   ))}
                                 </div>
@@ -1474,11 +1695,11 @@ export default function AdminDashboard() {
                                 <div className="flex justify-end gap-3 pt-4 text-[10px] text-admin-text-muted font-semibold items-center">
                                   <span>أقل نشاطاً</span>
                                   <div className="w-3.5 h-3.5 rounded-sm bg-[#f1f3f5]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#d0ebff]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#a5d8ff]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#74c0fc]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#339af0]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#1c7ed6]" />
+                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#fdf6e2]" />
+                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#f7e7c4]" />
+                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#f3d492]" />
+                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#e5b95a]" />
+                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#c5a85c]" />
                                   <span>أكثر نشاطاً</span>
                                 </div>
                               </div>
@@ -1494,6 +1715,14 @@ export default function AdminDashboard() {
           </AnimatePresence>
         </main>
       </div>
+      {cropperTarget && cropperSrc && cropperFile && (
+        <ImageCropperModal
+          src={cropperSrc}
+          file={cropperFile}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
