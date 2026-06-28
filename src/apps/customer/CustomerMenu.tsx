@@ -1,14 +1,52 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ShoppingCart, Bell, Receipt, Plus, Minus, 
-  Trash2, X, CheckCircle2, UtensilsCrossed, MessageSquare
+  Trash2, X, CheckCircle2, UtensilsCrossed, MessageSquare, Clock
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import type { Product, Category, Restaurant } from '../../shared/types';
+
+// ============ Framer Motion Animations ============
+const productCardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.055,
+      duration: 0.38,
+      ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number]
+    }
+  })
+};
+
+const addButtonTap = {
+  scale: [1, 0.88, 1.05, 1],
+  transition: { duration: 0.3, ease: "easeOut" as const }
+};
+
+const fabVariants = {
+  hidden: { y: 40, opacity: 0, scale: 0.9 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    scale: 1,
+    transition: { type: "spring" as const, stiffness: 400, damping: 28 }
+  }
+};
+
+const confirmationVariants = {
+  hidden: { scale: 0.85, opacity: 0 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    transition: { type: "spring" as const, stiffness: 300, damping: 24 }
+  }
+};
 
 interface CartItem {
   product: Product;
@@ -26,6 +64,19 @@ export default function CustomerMenu() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [specialNotes, setSpecialNotes] = useState('');
   const [activeItemNotes, setActiveItemNotes] = useState<{ productId: string; text: string } | null>(null);
+  
+  // Custom states for Tably Luxury navigation
+  const [isServiceOpen, setIsServiceOpen] = useState(false);
+  const [isNoOrderModalOpen, setIsNoOrderModalOpen] = useState(false);
+  const [submittedOrder, setSubmittedOrder] = useState<any | null>(null);
+
+  // Cache restaurant details for navigation back from order tracking
+  useEffect(() => {
+    if (restaurantSlug && tableNumber) {
+      localStorage.setItem('tably_restaurant_slug', restaurantSlug);
+      localStorage.setItem('tably_table_number', tableNumber);
+    }
+  }, [restaurantSlug, tableNumber]);
 
   // Fetch Menu
   const { data: menuData, isLoading, error } = useQuery({
@@ -60,7 +111,7 @@ export default function CustomerMenu() {
           item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      toast.success(`تم إضافة ${product.name} للسلة`, { icon: '🛒' });
+      toast.success(`تم إضافة ${product.name} للسلة`);
       return [...prev, { product, quantity: 1, notes: '' }];
     });
   };
@@ -115,10 +166,11 @@ export default function CustomerMenu() {
       return response.data.data;
     },
     onSuccess: (order) => {
-      toast.success('تم إرسال طلبك للمطبخ! 🎉');
+      toast.success('تم إرسال طلبك للمطبخ بنجاح');
+      localStorage.setItem('tably_active_order_id', order.id);
       setCart([]);
       setIsCartOpen(false);
-      navigate(`/order/${order.id}/track`);
+      setSubmittedOrder(order);
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'فشل إرسال الطلب. حاول مجدداً.');
@@ -132,7 +184,7 @@ export default function CustomerMenu() {
       });
     },
     onSuccess: () => {
-      toast.success('تم استدعاء الويتر، وجاري الحضور إليك. 🔔');
+      toast.success('تم استدعاء الويتر، وجاري الحضور إليك');
     },
     onError: () => {
       toast.error('فشل استدعاء الويتر. يرجى المحاولة لاحقاً.');
@@ -146,7 +198,7 @@ export default function CustomerMenu() {
       });
     },
     onSuccess: () => {
-      toast.success('تم طلب الحساب، الكاشير هيحضرلك فوراً. 💳');
+      toast.success('تم طلب الحساب، الكاشير هيحضرلك فوراً');
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'فشل طلب الحساب.');
@@ -156,246 +208,210 @@ export default function CustomerMenu() {
   // Loading
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center">
-        <div className="w-14 h-14 border-3 border-emerald-700 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-stone-500 text-sm animate-pulse">جاري تحميل المنيو...</p>
+      <div className="min-h-screen bg-customer-bg-base flex flex-col items-center justify-center text-customer-text-primary">
+        <div className="w-12 h-12 border-2 border-customer-accent border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-customer-text-secondary text-sm animate-pulse">جاري تحميل المنيو...</p>
       </div>
     );
   }
 
   if (error || !restaurant) {
     return (
-      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center text-center px-6">
-        <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-4 border border-red-100 shadow-sm">
-          <UtensilsCrossed className="w-7 h-7 text-red-500" />
+      <div className="min-h-screen bg-customer-bg-base flex flex-col items-center justify-center text-center px-6 text-customer-text-primary">
+        <div className="w-16 h-16 rounded-2xl bg-customer-bg-elevated flex items-center justify-center mb-4 border border-customer-border shadow-customer-card">
+          <UtensilsCrossed className="w-7 h-7 text-customer-accent" />
         </div>
-        <h2 className="text-xl font-bold text-stone-900 mb-2">عذراً، حدث خطأ ما</h2>
-        <p className="text-stone-600 text-sm">لم نتمكن من الوصول للمنيو. يرجى إعادة مسح الـ QR Code.</p>
+        <h2 className="text-xl font-bold text-customer-text-primary mb-2">عذراً، حدث خطأ ما</h2>
+        <p className="text-customer-text-secondary text-sm">لم نتمكن من الوصول للمنيو. يرجى إعادة مسح الـ QR Code.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 pb-28 relative overflow-hidden noise" dir="rtl">
+    <div className="min-h-screen bg-customer-bg-base text-customer-text-primary pb-28 relative overflow-hidden noise" dir="rtl">
       {/* Premium floating background glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="glow-blob bg-emerald-100 top-1/4 -right-1/4 w-[400px] h-[400px]" />
-        <div className="glow-blob bg-stone-200 bottom-1/4 -left-1/4 w-[350px] h-[350px]" />
-        <div className="absolute inset-0 dot-pattern opacity-60" />
+        <div className="glow-blob bg-customer-accent-glow top-1/4 -right-1/4 w-[400px] h-[400px]" />
+        <div className="glow-blob bg-customer-accent-subtle bottom-1/4 -left-1/4 w-[350px] h-[350px]" />
+        <div className="absolute inset-0 dot-pattern animate-pulse" />
       </div>
 
       <Toaster position="top-center" toastOptions={{
-        style: { background: '#ffffff', color: '#1c1917', border: '1px solid rgba(120,113,108,0.15)', fontSize: '14px' }
+        style: { background: '#1a1a1e', color: '#f5f5f0', border: '1px solid rgba(255,255,255,0.08)', fontSize: '14px' }
       }} />
 
       {/* ===== Hero Header ===== */}
-      <div className="relative overflow-hidden z-10">
-        {/* Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-stone-200/40 via-stone-100/70 to-stone-50" />
-        {restaurant.logo?.url && (
-          <div className="absolute inset-0 bg-cover bg-center opacity-[0.03]" style={{ backgroundImage: `url(${restaurant.logo.url})` }} />
-        )}
-        
-        <div className="relative px-5 pt-8 pb-6 flex items-center gap-4 z-10">
-          {restaurant.logo?.url ? (
-            <motion.img 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              src={restaurant.logo.url} 
-              alt={restaurant.name} 
-              className="w-16 h-16 rounded-2xl object-cover border border-stone-200 shadow-sm animate-float" 
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-800 text-2xl font-extrabold shadow-sm">
-              {restaurant.name.charAt(0)}
-            </div>
-          )}
-          <div>
-            <motion.h1 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-xl font-extrabold text-stone-900 mb-0.5"
-            >
-              {restaurant.name}
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-xs text-stone-500 font-bold"
-            >
-              طاولة رقم <span className="text-emerald-800 font-extrabold text-sm">{tableNumber}</span>
-            </motion.p>
-          </div>
+      <div className="hero relative overflow-hidden z-10">
+        <div className="table-badge">
+          <UtensilsCrossed className="w-3 h-3" />
+          <span>طاولة {tableNumber}</span>
         </div>
+        <h1 className="restaurant-name">{restaurant.name}</h1>
+        <div className="restaurant-sub">أهلاً بك في تجربة طعام فاخرة ومميزة</div>
       </div>
 
-      {/* ===== Action Buttons ===== */}
-      <div className="grid grid-cols-2 gap-3 px-4 py-3 relative z-10">
+      {/* ===== Quick Action Row ===== */}
+      <div className="action-row relative z-10">
         <motion.button 
+          whileTap={{ scale: 0.97 }}
           onClick={() => callWaiterMutation.mutate()}
-          whileTap={{ scale: 0.95 }}
-          className="organic-surface flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-sm font-bold text-emerald-800 hover:border-emerald-600/50 transition-all bg-white"
+          className="action-btn"
         >
-          <Bell className="w-4 h-4 text-emerald-700" />
+          <Bell className="w-4 h-4" />
           <span>استدعاء ويتر</span>
         </motion.button>
         <motion.button 
+          whileTap={{ scale: 0.97 }}
           onClick={() => requestBillMutation.mutate()}
-          whileTap={{ scale: 0.95 }}
-          className="organic-surface flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-sm font-bold text-emerald-800 hover:border-emerald-600/50 transition-all bg-white"
+          className="action-btn"
         >
-          <Receipt className="w-4 h-4 text-emerald-700" />
+          <Receipt className="w-4 h-4" />
           <span>طلب الحساب</span>
         </motion.button>
       </div>
 
       {/* ===== Search ===== */}
-      <div className="px-4 mb-4 relative z-10">
-        <div className="relative group">
-          <input
-            type="text"
-            placeholder="ابحث عن مشروب أو أكلة..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input-premium pr-11 text-right text-sm"
-          />
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-stone-400 group-focus-within:text-emerald-700 transition-colors" />
-        </div>
+      <div className="search-box relative z-10">
+        <Search className="w-4 h-4" />
+        <input
+          type="text"
+          placeholder="ابحث عن مشروب أو أكلة..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
       </div>
 
       {/* ===== Category Tabs ===== */}
-      <div className="overflow-x-auto whitespace-nowrap px-4 mb-5 scrollbar-hide relative z-10">
-        <div className="flex gap-2">
-          <motion.button
-            onClick={() => setSelectedCategory('all')}
-            whileTap={{ scale: 0.95 }}
-            className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
-              selectedCategory === 'all'
-                ? 'bg-emerald-800 text-white shadow-sm font-bold'
-                : 'organic-surface text-stone-600 hover:text-stone-900 hover:bg-stone-100/50 bg-white'
-            }`}
-          >
-            الكل
-          </motion.button>
-          {categories.map((cat) => (
-            <motion.button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              whileTap={{ scale: 0.95 }}
-              className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${
-                selectedCategory === cat.id
-                  ? 'bg-emerald-800 text-white shadow-sm font-bold'
-                  : 'organic-surface text-stone-600 hover:text-stone-900 hover:bg-stone-100/50 bg-white'
-              }`}
-            >
-              {cat.image?.url && (
-                <img src={cat.image.url} alt="" className="w-5 h-5 rounded-full object-cover" />
-              )}
-              {cat.name}
-            </motion.button>
-          ))}
+      <div className="cat-tabs relative z-10">
+        <div
+          onClick={() => setSelectedCategory('all')}
+          className={`cat-tab ${selectedCategory === 'all' ? 'active' : ''}`}
+        >
+          الكل
         </div>
+        {categories.map((cat) => (
+          <div
+            key={cat.id}
+            onClick={() => setSelectedCategory(cat.id)}
+            className={`cat-tab ${selectedCategory === cat.id ? 'active' : ''}`}
+          >
+            {cat.name}
+          </div>
+        ))}
       </div>
 
-      {/* ===== Products Grid ===== */}
-      <div className="px-4 space-y-3 relative z-10">
+      {/* ===== Products List ===== */}
+      <div className="px-4 py-4 space-y-3.5 relative z-10 max-w-[428px] mx-auto">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto mb-3 border border-stone-200">
-              <Search className="w-6 h-6 text-stone-400" />
+            <div className="w-14 h-14 rounded-2xl bg-customer-bg-elevated flex items-center justify-center mx-auto mb-3 border border-customer-border shadow-customer-card">
+              <Search className="w-6 h-6 text-customer-text-muted" />
             </div>
-            <p className="text-stone-500 text-sm font-medium">لا توجد منتجات مطابقة للبحث.</p>
+            <p className="text-customer-text-secondary text-sm font-medium">لا توجد منتجات مطابقة للبحث.</p>
           </div>
         ) : (
-          filteredProducts.map((product, idx) => (
-            <motion.div
-              layout
-              key={product.id}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.04 }}
-              className="border-glow-gold rounded-3xl overflow-hidden flex gap-0 relative z-10 bg-white"
-            >
-              {/* Product Image */}
-              {product.image?.url ? (
-                <img 
-                  src={product.image.url} 
-                  alt={product.name} 
-                  className="w-28 h-28 object-cover flex-shrink-0" 
-                />
-              ) : (
-                <div className="w-28 h-28 bg-stone-100 flex items-center justify-center flex-shrink-0 border-l border-stone-200">
-                  <UtensilsCrossed className="w-6 h-6 text-stone-400" />
-                </div>
-              )}
+          filteredProducts.map((product, idx) => {
+            const inCartItem = cart.find(i => i.product.id === product.id);
+            const isAvailable = product.isAvailable;
+            
+            return (
+              <motion.div
+                layout
+                key={product.id}
+                variants={productCardVariants}
+                initial="hidden"
+                animate="visible"
+                custom={idx}
+                onClick={() => isAvailable && addToCart(product)}
+                className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''}`}
+              >
+                {/* Image on the Right (First child in RTL) */}
+                {product.image?.url ? (
+                  <img 
+                    src={product.image.url} 
+                    alt={product.name} 
+                    className="product-img" 
+                  />
+                ) : (
+                  <div className="product-img-placeholder">
+                    <UtensilsCrossed className="w-5.5 h-5.5" />
+                  </div>
+                )}
 
-              {/* Product Info */}
-              <div className="flex-1 p-3.5 flex flex-col justify-between min-w-0">
-                <div>
-                  <h3 className="font-extrabold text-stone-900 text-[15px] mb-1 truncate">{product.name}</h3>
-                  {product.description && (
-                    <p className="text-[12px] text-stone-500 line-clamp-2 leading-relaxed font-medium">{product.description}</p>
-                  )}
-                </div>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="font-bold text-emerald-800 text-base">
-                    {product.price} <span className="text-[11px] font-normal text-stone-500">ج.م</span>
-                  </span>
+                {/* Text Info on the Left (Second child in RTL) */}
+                <div className="product-info">
+                  <div>
+                    <h3 className="product-name">{product.name}</h3>
+                    {product.description && (
+                      <p className="product-desc">{product.description}</p>
+                    )}
+                  </div>
+                  <div className="product-footer">
+                    <span className="product-price">
+                      {product.price}
+                      <span className="currency">ج.م</span>
+                    </span>
 
-                  {/* Check if in cart */}
-                  {cart.find(i => i.product.id === product.id) ? (
-                    <div className="flex items-center gap-2 bg-stone-50 rounded-xl p-1 border border-stone-200">
-                      <button onClick={() => updateQuantity(product.id, -1)} className="p-1.5 text-stone-600 hover:text-stone-950 transition-colors">
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="text-sm font-extrabold text-stone-900 min-w-[16px] text-center">
-                        {cart.find(i => i.product.id === product.id)?.quantity}
-                      </span>
-                      <button onClick={() => updateQuantity(product.id, 1)} className="p-1.5 text-stone-600 hover:text-stone-950 transition-colors">
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
+                    {/* Quantity Adjustment / Add button */}
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      {inCartItem ? (
+                        <div className="flex items-center gap-2 bg-customer-bg-overlay rounded-full p-0.5 border border-customer-border">
+                          <button onClick={() => updateQuantity(product.id, -1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="text-xs font-bold text-customer-text-primary min-w-[12px] text-center">
+                            {inCartItem.quantity}
+                          </span>
+                          <button onClick={() => updateQuantity(product.id, 1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <motion.div
+                          whileTap={addButtonTap}
+                          onClick={() => addToCart(product)}
+                          className="add-btn"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </motion.div>
+                      )}
                     </div>
-                  ) : (
-                    <motion.button
-                      onClick={() => addToCart(product)}
-                      whileTap={{ scale: 0.85 }}
-                      className="p-2.5 bg-emerald-800 text-white rounded-xl shadow-sm hover:bg-emerald-700"
-                    >
-                      <Plus className="w-4.5 h-4.5" />
-                    </motion.button>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))
+
+                {!isAvailable && (
+                  <div className="out-of-stock-tag">نفد</div>
+                )}
+              </motion.div>
+            );
+          })
         )}
       </div>
 
-      {/* ===== Floating Cart Bar ===== */}
+      {/* ===== Floating Cart FAB ===== */}
       <AnimatePresence>
         {cart.length > 0 && !isCartOpen && (
           <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 inset-x-0 p-4 z-40"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={fabVariants}
+            className="fixed bottom-[84px] inset-x-0 px-4 z-35 pointer-events-none flex justify-center"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-stone-50 via-stone-50/90 to-transparent pointer-events-none" />
-            <motion.button
+            <button
               onClick={() => setIsCartOpen(true)}
-              whileTap={{ scale: 0.98 }}
-              className="relative w-full bg-emerald-800 text-white py-4 px-6 rounded-2xl font-bold flex justify-between items-center shadow-lg hover:bg-emerald-700 transition-colors"
+              className="cart-fab pointer-events-auto"
             >
               <div className="flex items-center gap-2.5">
-                <ShoppingCart className="w-5 h-5" />
-                <span className="bg-white text-emerald-800 text-xs w-6 h-6 rounded-full flex items-center justify-center font-extrabold">
+                <ShoppingCart className="w-4.5 h-4.5" />
+                <span className="count-badge">
                   {cartCount}
                 </span>
               </div>
-              <span className="text-sm font-bold">عرض السلة وتأكيد الطلب</span>
-              <span className="text-base font-extrabold">{cartTotal} ج.م</span>
-            </motion.button>
+              <span>عرض السلة وتأكيد الطلب</span>
+              <span className="font-extrabold">{cartTotal} ج.م</span>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -406,26 +422,26 @@ export default function CustomerMenu() {
           <>
             <motion.div
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.4 }}
+              animate={{ opacity: 0.6 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-stone-900/40 z-50 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 200 }}
-              className="fixed bottom-0 inset-x-0 bg-white rounded-t-3xl z-50 max-h-[92vh] flex flex-col border-t border-stone-200 shadow-xl"
+              className="fixed bottom-0 inset-x-0 bg-customer-bg-overlay rounded-t-3xl z-50 max-h-[92vh] flex flex-col border-t border-customer-border shadow-customer-elevated max-w-[430px] mx-auto"
             >
               {/* Cart Header */}
-              <div className="p-5 border-b border-stone-200 flex justify-between items-center flex-shrink-0">
+              <div className="p-5 border-b border-customer-border flex justify-between items-center flex-shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <ShoppingCart className="w-5 h-5 text-emerald-800" />
-                  <h2 className="text-lg font-extrabold text-stone-900">سلة المشتريات</h2>
-                  <span className="badge-neutral">{cartCount} عنصر</span>
+                  <ShoppingCart className="w-5 h-5 text-customer-accent" />
+                  <h2 className="text-lg font-extrabold text-customer-text-primary">سلة المشتريات</h2>
+                  <span className="badge bg-customer-accent/10 border border-customer-accent/20 text-customer-accent px-2 py-0.5 rounded-full text-xs font-bold">{cartCount} عنصر</span>
                 </div>
-                <button onClick={() => setIsCartOpen(false)} className="btn-icon">
+                <button onClick={() => setIsCartOpen(false)} className="bg-customer-bg-elevated border border-customer-border text-customer-text-secondary hover:text-customer-text-primary p-2 rounded-xl">
                   <X className="w-4.5 h-4.5" />
                 </button>
               </div>
@@ -436,35 +452,35 @@ export default function CustomerMenu() {
                   <motion.div
                     key={item.product.id}
                     layout
-                    className="organic-surface rounded-2xl p-4 space-y-3 bg-white"
+                    className="bg-customer-bg-elevated border border-customer-border rounded-xl p-4 space-y-3"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
                         {item.product.image?.url ? (
                           <img src={item.product.image.url} alt="" className="w-12 h-12 rounded-lg object-cover" />
                         ) : (
-                          <div className="w-12 h-12 rounded-lg bg-stone-100 border border-stone-200 flex items-center justify-center">
-                            <UtensilsCrossed className="w-4 h-4 text-stone-400" />
+                          <div className="w-12 h-12 rounded-lg bg-customer-bg-overlay border border-customer-border flex items-center justify-center">
+                            <UtensilsCrossed className="w-4 h-4 text-customer-text-muted" />
                           </div>
                         )}
                         <div>
-                          <h4 className="font-extrabold text-stone-900 text-sm">{item.product.name}</h4>
-                          <span className="text-xs text-emerald-800 font-extrabold">{item.product.price} ج.م</span>
+                          <h4 className="font-extrabold text-customer-text-primary text-sm">{item.product.name}</h4>
+                          <span className="text-xs text-customer-accent font-extrabold">{item.product.price} ج.م</span>
                         </div>
                       </div>
-                      <button onClick={() => removeFromCart(item.product.id)} className="text-stone-400 hover:text-red-600 transition-colors">
+                      <button onClick={() => removeFromCart(item.product.id)} className="text-customer-text-muted hover:text-red-500 transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
                     <div className="flex justify-between items-center">
                       {/* Quantity */}
-                      <div className="flex items-center gap-3 bg-stone-50 p-1.5 rounded-xl border border-stone-200">
-                        <button onClick={() => updateQuantity(item.product.id, -1)} className="p-1.5 text-stone-500 hover:text-stone-900 transition-colors">
+                      <div className="flex items-center gap-3 bg-customer-bg-overlay p-1.5 rounded-xl border border-customer-border">
+                        <button onClick={() => updateQuantity(item.product.id, -1)} className="p-1.5 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-sm font-extrabold text-stone-900 min-w-4 text-center">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.product.id, 1)} className="p-1.5 text-stone-500 hover:text-stone-900 transition-colors">
+                        <span className="text-sm font-extrabold text-customer-text-primary min-w-4 text-center">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.product.id, 1)} className="p-1.5 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
                           <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -482,21 +498,21 @@ export default function CustomerMenu() {
                             }}
                             onBlur={() => setActiveItemNotes(null)}
                             autoFocus
-                            className="input-premium text-xs py-2"
+                            className="w-full bg-customer-bg-overlay border border-customer-border text-customer-text-primary rounded-xl px-3 py-1.5 text-xs focus:border-customer-accent focus:outline-none"
                           />
                         </div>
                       ) : (
                         <button
                           onClick={() => setActiveItemNotes({ productId: item.product.id, text: item.notes })}
-                          className="flex items-center gap-1 text-xs text-stone-500 hover:text-emerald-700 border border-stone-200 rounded-lg px-2.5 py-1.5 transition-colors bg-white font-medium"
+                          className="flex items-center gap-1 text-xs text-customer-text-secondary hover:text-customer-accent border border-customer-border rounded-lg px-2.5 py-1.5 transition-colors bg-customer-bg-overlay font-medium"
                         >
-                          <MessageSquare className="w-3 h-3 text-emerald-750" />
-                          {item.notes ? `${item.notes}` : 'ملاحظة'}
+                          <MessageSquare className="w-3 h-3 text-customer-accent" />
+                          <span>{item.notes ? `${item.notes}` : 'ملاحظة'}</span>
                         </button>
                       )}
 
                       {/* Subtotal */}
-                      <span className="text-sm font-extrabold text-stone-900">
+                      <span className="text-sm font-extrabold text-customer-text-primary">
                         {item.product.price * item.quantity} ج.م
                       </span>
                     </div>
@@ -505,31 +521,31 @@ export default function CustomerMenu() {
 
                 {/* Special Notes */}
                 <div className="mt-2">
-                  <label className="block text-xs text-stone-600 mb-2 font-bold">ملاحظات إضافية على الطلب بالكامل</label>
+                  <label className="block text-xs text-customer-text-secondary mb-2 font-bold">ملاحظات إضافية على الطلب بالكامل</label>
                   <textarea
                     rows={2}
                     placeholder="مثال: سرعة تحضير، التوصيل دفعة واحدة..."
                     value={specialNotes}
                     onChange={(e) => setSpecialNotes(e.target.value)}
-                    className="input-premium text-sm text-right resize-none bg-white"
+                    className="w-full bg-customer-bg-elevated border border-customer-border text-customer-text-primary rounded-xl p-3 text-sm text-right resize-none focus:border-customer-accent focus:outline-none placeholder:text-customer-text-muted"
                   />
                 </div>
               </div>
 
               {/* Checkout Footer */}
-              <div className="p-5 border-t border-stone-200 space-y-4 flex-shrink-0">
+              <div className="p-5 border-t border-customer-border space-y-4 flex-shrink-0">
                 <div className="flex justify-between items-center">
-                  <span className="text-stone-600 font-bold">الإجمالي</span>
-                  <span className="text-2xl font-extrabold text-emerald-800">{cartTotal} ج.م</span>
+                  <span className="text-customer-text-secondary font-bold">الإجمالي</span>
+                  <span className="text-2xl font-extrabold text-customer-accent">{cartTotal} ج.م</span>
                 </div>
                 <motion.button
                   onClick={() => submitOrderMutation.mutate()}
                   disabled={submitOrderMutation.isPending}
                   whileTap={{ scale: 0.97 }}
-                  className="btn-primary w-full py-4 text-base flex items-center justify-center gap-2.5"
+                  className="w-full py-4 text-base font-bold bg-customer-accent text-customer-bg-base rounded-xl flex items-center justify-center gap-2.5 hover:opacity-95 transition-opacity"
                 >
                   {submitOrderMutation.isPending ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-customer-bg-base border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5" />
@@ -540,6 +556,189 @@ export default function CustomerMenu() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* ===== persistent Bottom Navigation Bar ===== */}
+      <div className="fixed bottom-0 inset-x-0 bottom-nav z-40 max-w-[430px] mx-auto rounded-t-2xl shadow-customer-elevated">
+        <button
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="bottom-nav-item active"
+        >
+          <UtensilsCrossed />
+          <span>المنيو</span>
+        </button>
+
+        <button
+          onClick={() => setIsServiceOpen(true)}
+          className="bottom-nav-item"
+        >
+          <Bell />
+          <span>الخدمات</span>
+        </button>
+
+        <button
+          onClick={() => {
+            const activeOrderId = localStorage.getItem('tably_active_order_id');
+            if (activeOrderId) {
+              navigate(`/order/${activeOrderId}/track`);
+            } else {
+              setIsNoOrderModalOpen(true);
+            }
+          }}
+          className="bottom-nav-item"
+        >
+          <Clock />
+          <span>طلباتي</span>
+        </button>
+      </div>
+
+      {/* ===== Service Drawer ===== */}
+      <AnimatePresence>
+        {isServiceOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsServiceOpen(false)}
+              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 200 }}
+              className="fixed bottom-0 inset-x-0 bg-customer-bg-overlay rounded-t-3xl z-50 p-6 border-t border-customer-border shadow-customer-elevated max-w-[430px] mx-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-extrabold text-customer-text-primary text-base flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-customer-accent" />
+                  <span>طلب خدمة أو مساعدة</span>
+                </h3>
+                <button 
+                  onClick={() => setIsServiceOpen(false)} 
+                  className="w-8 h-8 rounded-full bg-customer-bg-elevated border border-customer-border flex items-center justify-center text-customer-text-secondary hover:text-customer-text-primary"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <motion.button
+                  onClick={() => {
+                    callWaiterMutation.mutate();
+                    setIsServiceOpen(false);
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-customer-bg-elevated border border-customer-border hover:border-customer-accent/30 flex flex-col items-center justify-center gap-3 py-6 px-4 rounded-2xl text-sm font-bold text-customer-accent transition-colors shadow-customer-card"
+                >
+                  <div className="w-12 h-12 rounded-full bg-customer-accent/10 border border-customer-accent/20 flex items-center justify-center">
+                    <Bell className="w-6 h-6 text-customer-accent" />
+                  </div>
+                  <span>استدعاء ويتر</span>
+                </motion.button>
+                <motion.button
+                  onClick={() => {
+                    requestBillMutation.mutate();
+                    setIsServiceOpen(false);
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-customer-bg-elevated border border-customer-border hover:border-customer-accent/30 flex flex-col items-center justify-center gap-3 py-6 px-4 rounded-2xl text-sm font-bold text-customer-accent transition-colors shadow-customer-card"
+                >
+                  <div className="w-12 h-12 rounded-full bg-customer-accent/10 border border-customer-accent/20 flex items-center justify-center">
+                    <Receipt className="w-6 h-6 text-customer-accent" />
+                  </div>
+                  <span>طلب الحساب</span>
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Empty Active Order Warning Drawer ===== */}
+      <AnimatePresence>
+        {isNoOrderModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsNoOrderModalOpen(false)}
+              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 200 }}
+              className="fixed bottom-0 inset-x-0 bg-customer-bg-overlay rounded-t-3xl z-50 p-6 border-t border-customer-border shadow-customer-elevated text-center max-w-[430px] mx-auto"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-customer-bg-elevated border border-customer-border flex items-center justify-center mx-auto mb-4 shadow-customer-card">
+                <Clock className="w-7 h-7 text-customer-accent" />
+              </div>
+              <h3 className="font-extrabold text-customer-text-primary text-base mb-2">لا توجد طلبات نشطة حالياً</h3>
+              <p className="text-xs text-customer-text-secondary leading-relaxed mb-6 max-w-xs mx-auto">
+                يمكنك تتبع حالة طعامك ونداء الخدمات فور إرسال أول طلب للمطبخ من المنيو.
+              </p>
+              <button
+                onClick={() => setIsNoOrderModalOpen(false)}
+                className="w-full bg-customer-accent text-customer-bg-base font-bold py-3.5 rounded-xl hover:opacity-95 transition-opacity"
+              >
+                فهمت، تصفح المنيو
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Order Confirmation Screen ===== */}
+      <AnimatePresence>
+        {submittedOrder && (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={confirmationVariants}
+            className="order-confirmation"
+          >
+            <div className="confirm-icon">
+              <CheckCircle2 className="w-10 h-10 text-customer-accent" />
+            </div>
+            
+            <h2 className="confirm-title">تم إرسال طلبك للمطبخ</h2>
+            <p className="confirm-sub">الشيف بدأ في تحضير طعامك وسيكون جاهزاً قريباً</p>
+            
+            {/* Order Number */}
+            <div className="order-number">
+              <div className="order-number-label">رقم الطلب</div>
+              <div className="order-number-value">
+                #{submittedOrder.id.slice(-6).toUpperCase()}
+              </div>
+            </div>
+            
+            {/* Status steps tracker */}
+            <div className="order-steps mb-8 max-w-[280px] mx-auto">
+              <div className="order-step done" />
+              <div className="order-step active" />
+              <div className="order-step" />
+              <div className="order-step" />
+            </div>
+            
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                const orderId = submittedOrder.id;
+                setSubmittedOrder(null);
+                navigate(`/order/${orderId}/track`);
+              }}
+              className="w-full max-w-[280px] py-3.5 text-sm font-bold bg-[#D4A853] text-[#0A0A0B] rounded-full shadow-gold hover:opacity-95 transition-opacity"
+            >
+              متابعة حالة الطلب
+            </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

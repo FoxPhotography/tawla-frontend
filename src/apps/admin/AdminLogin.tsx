@@ -44,16 +44,14 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center relative overflow-hidden noise" dir="rtl">
+    <div className="min-h-screen bg-admin-bg-base text-admin-text-primary flex items-center justify-center relative overflow-hidden" dir="rtl">
       <Toaster position="top-center" toastOptions={{
-        style: { background: '#ffffff', color: '#1c1917', border: '1px solid rgba(120,113,108,0.15)' }
+        style: { background: '#ffffff', color: '#0f0f10', border: '1px solid rgba(0,0,0,0.08)' }
       }} />
 
       {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="glow-blob bg-emerald-200 top-1/4 -right-1/4 w-[500px] h-[500px]" />
-        <div className="glow-blob bg-orange-200 bottom-1/4 -left-1/4 w-[400px] h-[400px] animation-delay-2000" />
-        <div className="absolute inset-0 dot-pattern" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 dot-pattern-dark opacity-60" />
       </div>
 
       <motion.div
@@ -69,11 +67,11 @@ export default function AdminLogin() {
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-5 shadow-sm">
-            <ShieldAlert className="w-8 h-8 text-emerald-800" />
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-admin-accent-light border border-admin-border flex items-center justify-center mb-5 shadow-admin-card text-admin-accent">
+            <ShieldAlert className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-extrabold text-stone-900 mb-2">بوابة المدير</h1>
-          <p className="text-stone-600 text-sm font-medium">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>
+          <h1 className="text-3xl font-extrabold text-admin-text-primary mb-2">بوابة المدير</h1>
+          <p className="text-admin-text-secondary text-sm font-medium">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>
         </motion.div>
 
         {/* Login Card */}
@@ -81,12 +79,12 @@ export default function AdminLogin() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.4 }}
-          className="organic-card rounded-3xl p-8 space-y-6"
+          className="bg-admin-bg-elevated border border-admin-border rounded-xl p-8 space-y-6 shadow-admin-card"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-stone-700">البريد الإلكتروني</label>
+              <label className="block text-sm font-semibold text-admin-text-secondary">البريد الإلكتروني</label>
               <div className="relative group">
                 <input
                   type="email"
@@ -94,15 +92,15 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@restaurant.com"
-                  className="input-premium pr-11 text-right"
+                  className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3.5 pr-11 text-right text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted"
                 />
-                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-stone-400 group-focus-within:text-emerald-700 transition-colors" />
+                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-admin-text-muted group-focus-within:text-admin-accent transition-colors" />
               </div>
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-stone-700">كلمة المرور</label>
+              <label className="block text-sm font-semibold text-admin-text-secondary">كلمة المرور</label>
               <div className="relative group">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -110,13 +108,13 @@ export default function AdminLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="input-premium pr-11 pl-11 text-right"
+                  className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3.5 pr-11 pl-11 text-right text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted"
                 />
-                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-stone-400 group-focus-within:text-emerald-700 transition-colors" />
+                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-admin-text-muted group-focus-within:text-admin-accent transition-colors" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-admin-text-muted hover:text-admin-text-primary transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -128,7 +126,7 @@ export default function AdminLogin() {
               type="submit"
               disabled={loginMutation.isPending}
               whileTap={{ scale: 0.97 }}
-              className="btn-primary w-full py-3.5 flex items-center justify-center gap-2.5"
+              className="w-full py-3.5 bg-admin-accent text-white font-bold rounded-lg flex items-center justify-center gap-2.5 shadow-admin-accent hover:opacity-95 transition-opacity"
             >
               {loginMutation.isPending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -143,16 +141,16 @@ export default function AdminLogin() {
 
           {/* Divider */}
           <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-stone-200" />
-            <span className="text-xs text-stone-550">أو</span>
-            <div className="flex-1 h-px bg-stone-200" />
+            <div className="flex-1 h-px bg-admin-border" />
+            <span className="text-xs text-admin-text-muted">أو</span>
+            <div className="flex-1 h-px bg-admin-border" />
           </div>
 
           {/* Register Link */}
           <div className="text-center">
-            <p className="text-sm text-stone-600 font-medium">
+            <p className="text-sm text-admin-text-secondary font-medium">
               ليس لديك مطعم مسجل؟{' '}
-              <Link to="/register" className="text-emerald-700 hover:text-emerald-800 font-bold transition-colors">
+              <Link to="/register" className="text-admin-accent hover:opacity-85 font-bold transition-colors">
                 سجّل مطعمك الآن
               </Link>
             </p>
@@ -166,7 +164,7 @@ export default function AdminLogin() {
           transition={{ delay: 0.3, duration: 0.4 }}
           className="text-center mt-6"
         >
-          <Link to="/staff/login" className="text-xs text-stone-500 hover:text-stone-700 transition-colors font-semibold">
+          <Link to="/staff/login" className="text-xs text-admin-text-muted hover:text-admin-text-primary transition-colors font-semibold">
             دخول كموظف (كاشير / ويتر) →
           </Link>
         </motion.div>
