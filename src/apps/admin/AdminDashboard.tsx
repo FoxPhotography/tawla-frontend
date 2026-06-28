@@ -893,7 +893,7 @@ export default function AdminDashboard() {
     { key: 'tables' as const, label: 'الطاولات', icon: MapPin, count: tables.length },
     { key: 'orders' as const, label: 'الطلبات', icon: Calendar },
     { key: 'analytics' as const, label: 'التحليلات', icon: BarChart3 },
-    { key: 'subscription' as const, label: 'الاشتراك والدعم', icon: Crown },
+    { key: 'subscription' as const, label: 'إعدادات الفاتورة والاشتراك', icon: Sliders },
   ];
 
   return (
@@ -1815,7 +1815,7 @@ export default function AdminDashboard() {
               {activeTab === 'subscription' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-extrabold text-admin-text-primary">اشتراك المنصة والدعم الفني</h2>
+                    <h2 className="text-xl font-extrabold text-admin-text-primary">إعدادات الفواتير واشتراك المنصة</h2>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
