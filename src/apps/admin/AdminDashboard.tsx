@@ -1075,8 +1075,8 @@ export default function AdminDashboard() {
                     </div>
 
                     {categories.map((category) => {
-                      const categoryProducts = products
-                        .filter((p) => p.categoryId === category.id)
+                      const allCategoryProducts = products.filter((p) => p.categoryId === category.id);
+                      const categoryProducts = allCategoryProducts
                         .filter((p) => {
                           if (!prodSearchQuery) return true;
                           return p.name.toLowerCase().includes(prodSearchQuery.toLowerCase()) || 
@@ -1097,15 +1097,15 @@ export default function AdminDashboard() {
                               )}
                               <h4 className="font-extrabold text-admin-text-primary text-sm">{category.name}</h4>
                               <span className="text-xs bg-admin-bg-subtle text-admin-text-secondary px-2 py-0.5 rounded-full font-bold">
-                                {categoryProducts.length} منتجات
+                                {categoryProducts.length} من {allCategoryProducts.length} منتجات
                               </span>
                             </div>
                             <span className="text-[10px] text-admin-text-secondary font-medium">اسحب لترتيب منتجات هذا القسم</span>
                           </div>
 
-                          {categoryProducts.length === 0 ? (
+                          {allCategoryProducts.length === 0 ? (
                             <div className="text-center py-6 text-xs text-admin-text-muted border border-dashed border-admin-border rounded-lg">
-                              لا توجد منتجات مطابقة في هذا القسم حالياً.
+                              لا توجد منتجات في هذا القسم حالياً.
                             </div>
                           ) : (
                             <div className="bg-admin-bg-elevated border border-admin-border rounded-lg overflow-hidden shadow-admin-card text-right text-sm">
@@ -1118,7 +1118,7 @@ export default function AdminDashboard() {
                               </div>
                               
                               {/* Product rows */}
-                              <div className="divide-y divide-admin-border">
+                              <div className="divide-y divide-admin-border relative">
                                 <AnimatePresence initial={false}>
                                   {categoryProducts.map((prod) => {
                                     const isEditingPrice = inlinePriceEdit?.id === prod.id;
@@ -1129,7 +1129,7 @@ export default function AdminDashboard() {
                                         layout
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        exit={{ opacity: 0, y: -10, scale: 0.98, transition: { duration: 0.15 } }}
                                         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                                         draggable={true}
                                         onDragStart={(e: any) => handleDragStartProduct(e, prod.id, category.id)}
@@ -1237,6 +1237,17 @@ export default function AdminDashboard() {
                                       </motion.div>
                                     );
                                   })}
+
+                                  {categoryProducts.length === 0 && (
+                                    <motion.div
+                                      initial={{ opacity: 0, y: 5 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0 }}
+                                      className="text-center py-6 text-xs text-admin-text-muted font-medium"
+                                    >
+                                      لا توجد منتجات مطابقة للبحث في هذا القسم.
+                                    </motion.div>
+                                  )}
                                 </AnimatePresence>
                               </div>
                             </div>
