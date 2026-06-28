@@ -6,10 +6,17 @@ const VITE_API_URL = import.meta.env.VITE_API_URL || '/api';
 export const api = axios.create({
   baseURL: VITE_API_URL,
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
+
+// Dynamically set Content-Type: skip for FormData so the browser sets multipart boundary
+api.interceptors.request.use(
+  (config) => {
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    return config;
+  }
+);
 
 // Request Interceptor: Attach access token and tenant header
 api.interceptors.request.use(

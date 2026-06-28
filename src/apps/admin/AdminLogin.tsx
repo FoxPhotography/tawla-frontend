@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { Lock, Mail, ShieldAlert } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Lock, Mail, ShieldAlert, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
@@ -12,6 +13,7 @@ export default function AdminLogin() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: async () => {
@@ -42,75 +44,133 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-right" dir="rtl">
-      <Toaster position="top-center" />
+    <div className="min-h-screen bg-dark-950 flex items-center justify-center relative overflow-hidden" dir="rtl">
+      <Toaster position="top-center" toastOptions={{
+        style: { background: '#1e293b', color: '#f1f5f9', border: '1px solid rgba(148,163,184,0.1)' }
+      }} />
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-2xl bg-primary-500/10 border border-primary-500/20 text-primary-500">
-          <ShieldAlert className="w-7 h-7" />
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">بوابة مدير النظام</h2>
-        <p className="mt-2 text-center text-sm text-dark-400">
-          إدارة المنيو، الترابيزات، المبيعات والتحليلات
-        </p>
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] rounded-full bg-primary-500/[0.03] blur-3xl" />
+        <div className="absolute -bottom-1/3 -left-1/4 w-[600px] h-[600px] rounded-full bg-accent-violet/[0.02] blur-3xl" />
+        <div className="absolute inset-0 dot-pattern" />
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="glassmorphism-card py-8 px-6 rounded-3xl shadow-xl space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 w-full max-w-md mx-4"
+      >
+        {/* Brand Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="text-center mb-8"
+        >
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-600/10 border border-primary-500/20 flex items-center justify-center mb-5 shadow-glow-sm">
+            <ShieldAlert className="w-8 h-8 text-primary-500" />
+          </div>
+          <h1 className="text-3xl font-extrabold text-white mb-2">بوابة المدير</h1>
+          <p className="text-dark-400 text-sm">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>
+        </motion.div>
+
+        {/* Login Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="glass-card rounded-3xl p-8 space-y-6"
+        >
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">بريد المدير الإلكتروني</label>
-              <div className="relative">
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-dark-300">البريد الإلكتروني</label>
+              <div className="relative group">
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@restaurant.com"
-                  className="w-full bg-dark-950 border border-dark-800 text-white rounded-xl py-3 pr-11 pl-4 focus:outline-none focus:border-primary-500 transition-colors text-right"
+                  className="input-premium pr-11 text-right"
                 />
-                <Mail className="absolute right-4 top-3.5 w-5 h-5 text-dark-500" />
+                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-dark-500 group-focus-within:text-primary-500 transition-colors" />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">كلمة المرور</label>
-              <div className="relative">
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-dark-300">كلمة المرور</label>
+              <div className="relative group">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-dark-950 border border-dark-800 text-white rounded-xl py-3 pr-11 pl-4 focus:outline-none focus:border-primary-500 transition-colors text-right"
+                  className="input-premium pr-11 pl-11 text-right"
                 />
-                <Lock className="absolute right-4 top-3.5 w-5 h-5 text-dark-500" />
+                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-dark-500 group-focus-within:text-primary-500 transition-colors" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loginMutation.isPending}
-                className="w-full bg-primary-500 text-dark-950 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary-400 active:scale-95 transition-all disabled:opacity-50"
-              >
-                {loginMutation.isPending ? (
-                  <div className="w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
+            {/* Submit Button */}
+            <motion.button
+              type="submit"
+              disabled={loginMutation.isPending}
+              whileTap={{ scale: 0.97 }}
+              className="btn-primary w-full py-3.5 flex items-center justify-center gap-2.5"
+            >
+              {loginMutation.isPending ? (
+                <div className="w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <ArrowLeft className="w-4 h-4" />
                   <span>دخول لوحة التحكم</span>
-                )}
-              </button>
-            </div>
+                </>
+              )}
+            </motion.button>
           </form>
-          
-          <div className="text-center text-xs text-dark-400 mt-4">
-            ليس لديك مطعم مسجل؟{' '}
-            <Link to="/register" className="text-primary-500 hover:underline font-bold">
-              سجل مطعمك الآن
-            </Link>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-dark-800/60" />
+            <span className="text-xs text-dark-500">أو</span>
+            <div className="flex-1 h-px bg-dark-800/60" />
           </div>
-        </div>
-      </div>
+
+          {/* Register Link */}
+          <div className="text-center">
+            <p className="text-sm text-dark-400">
+              ليس لديك مطعم مسجل؟{' '}
+              <Link to="/register" className="text-primary-500 hover:text-primary-400 font-bold transition-colors">
+                سجّل مطعمك الآن
+              </Link>
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Staff Login Link */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-center mt-6"
+        >
+          <Link to="/staff/login" className="text-xs text-dark-500 hover:text-dark-300 transition-colors">
+            دخول كموظف (كاشير / ويتر) →
+          </Link>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

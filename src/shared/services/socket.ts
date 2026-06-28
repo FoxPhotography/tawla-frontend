@@ -27,5 +27,5 @@ const VITE_SOCKET_URL = getSocketUrl();
 export const socket = io(VITE_SOCKET_URL, {
   autoConnect: false,
   withCredentials: true,
-  transports: ['websocket'],
+  transports: ['polling', 'websocket'],
 });
