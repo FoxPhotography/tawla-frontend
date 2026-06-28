@@ -209,11 +209,7 @@ export default function StaffDashboard() {
     // Provide authentication token
     socket.auth = { token: useAuthStore.getState().token };
 
-    if (!socket.connected) {
-      socket.connect();
-    } else {
-      handleConnect();
-    }
+    socket.disconnect().connect();
 
     socket.on('new_order', (data: { order: Order }) => {
       queryClient.setQueryData(['staff-orders'], (old: any) => {

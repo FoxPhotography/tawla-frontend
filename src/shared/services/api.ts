@@ -80,9 +80,7 @@ api.interceptors.response.use(
           const { accessToken, user } = response.data.data;
           const { login, restaurant } = useAuthStore.getState();
           
-          if (restaurant) {
-            login(accessToken, user, restaurant);
-          }
+          login(accessToken, user, restaurant || null);
 
           api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
