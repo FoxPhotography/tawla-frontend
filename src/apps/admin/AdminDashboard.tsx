@@ -474,7 +474,7 @@ export default function AdminDashboard() {
 
   const reorderCatMutation = useMutation({
     mutationFn: async (payload: { id: string; order: number }[]) => {
-      await api.put('/categories/reorder', { categories: payload });
+      await api.put('/categories/reorder', { items: payload });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
@@ -510,7 +510,7 @@ export default function AdminDashboard() {
 
   const reorderProdMutation = useMutation({
     mutationFn: async (payload: { id: string; order: number }[]) => {
-      await api.put('/products/reorder', { products: payload });
+      await api.put('/products/reorder', { items: payload });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
