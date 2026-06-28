@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Coffee, LogOut, Bell, LayoutGrid, MapPin, 
-  Check, CheckCheck, Play, XCircle, CreditCard, Clock, Sparkles
+  Check, CheckCheck, Play, XCircle, CreditCard, Clock, Sparkles, Printer
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -49,6 +49,17 @@ export default function StaffDashboard() {
   const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
   const [orderFilter, setOrderFilter] = useState<'active' | 'archived'>('active');
   const [alerts, setAlerts] = useState<LiveAlert[]>([]);
+
+  // Receipt Printing State
+  const [printingOrder, setPrintingOrder] = useState<any | null>(null);
+
+  const handlePrintReceipt = (order: any) => {
+    setPrintingOrder(order);
+    setTimeout(() => {
+      window.print();
+      setPrintingOrder(null);
+    }, 250);
+  };
 
   // Toast Notification States
   const [showNewOrderToast, setShowNewOrderToast] = useState(false);
@@ -637,6 +648,14 @@ export default function StaffDashboard() {
                                 <div className="flex items-center justify-between pt-3 border-t border-staff-border">
                                   <span className="font-extrabold text-staff-accent text-lg">{order.totalAmount} ج.م</span>
                                   <div className="flex gap-2">
+                                    <motion.button
+                                      onClick={() => handlePrintReceipt(order)}
+                                      whileTap={{ scale: 0.9 }}
+                                      className="p-2.5 rounded-xl border border-staff-border bg-staff-bg-base text-indigo-400 hover:text-indigo-300 hover:border-indigo-500/30 transition-colors"
+                                      title="طباعة الفاتورة"
+                                    >
+                                      <Printer className="w-4.5 h-4.5" />
+                                    </motion.button>
                                     {orderFilter === 'active' ? (
                                       <>
                                         <motion.button
@@ -740,6 +759,106 @@ export default function StaffDashboard() {
           </div>
         </div>
       </div>
+      {/* PRINT RECEIPT TEMPLATE */}
+      {printingOrder && (
+        <>
+          <style dangerouslySetInnerHTML={{__html: `
+            @media print {
+              body { background: white !important; color: black !important; font-family: monospace !important; margin: 0 !important; padding: 0 !important; }
+              #root, header, aside, main, footer, .toast, .no-print { display: none !important; }
+              .print-receipt-container { display: block !important; width: 80mm !important; margin: 0 auto !important; padding: 10px !important; box-sizing: border-box !important; }
+            }
+          `}} />
+          <div className="print-receipt-container hidden print:block text-black bg-white p-4 font-mono text-sm leading-relaxed" dir="rtl">
+            {/* Logo if active */}
+            {restaurant?.receiptSettings?.showLogo && restaurant?.logo?.url && (
+              <div className="text-center mb-2">
+                <img src={restaurant.logo.url} alt="logo" className="mx-auto max-h-14 object-contain" />
+              </div>
+            )}
+
+            {/* Restaurant Name */}
+            <h2 className="text-center text-base font-black mb-1">{restaurant?.name}</h2>
+            
+            {/* Header Text */}
+            {restaurant?.receiptSettings?.headerText && (
+              <p className="text-center text-[11px] text-stone-600 mb-2 leading-tight">{restaurant.receiptSettings.headerText}</p>
+            )}
+
+            <div className="border-t border-dashed border-stone-400 my-2 pt-2 text-[11px] space-y-0.5">
+              <div><strong>رقم الطلب:</strong> #{printingOrder.id.slice(-6).toUpperCase()}</div>
+              <div><strong>رقم الطاولة:</strong> طاولة {printingOrder.tableNumber}</div>
+              <div><strong>التاريخ:</strong> {new Date(printingOrder.createdAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}</div>
+              {restaurant?.receiptSettings?.phone && (
+                <div><strong>الهاتف:</strong> {restaurant.receiptSettings.phone}</div>
+              )}
+              {restaurant?.receiptSettings?.address && (
+                <div><strong>العنوان:</strong> {restaurant.receiptSettings.address}</div>
+              )}
+              {restaurant?.receiptSettings?.taxNumber && (
+                <div><strong>الرقم الضريبي:</strong> {restaurant.receiptSettings.taxNumber}</div>
+              )}
+            </div>
+
+            {/* Items Table */}
+            <table className="w-full text-right text-[11px] my-2.5 border-t border-b border-dashed border-stone-400 py-1">
+              <thead>
+                <tr className="border-b border-dashed border-stone-300">
+                  <th className="pb-1 text-right">الصنف</th>
+                  <th className="pb-1 text-center w-12">الكمية</th>
+                  <th className="pb-1 text-left w-20">السعر</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printingOrder.items.map((item: any, idx: number) => (
+                  <tr key={idx} className="font-semibold">
+                    <td className="py-1 leading-tight">{item.name}</td>
+                    <td className="py-1 text-center font-mono">{item.quantity}</td>
+                    <td className="py-1 text-left font-mono">{item.price * item.quantity} ج.م</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Totals */}
+            <div className="text-[11px] space-y-1 font-semibold pr-1">
+              <div className="flex justify-between">
+                <span>الإجمالي الفرعي:</span>
+                <span className="font-mono">{printingOrder.totalAmount} ج.م</span>
+              </div>
+              {(restaurant?.receiptSettings?.taxRate ?? 0) > 0 && (
+                <div className="flex justify-between text-stone-700">
+                  <span>ضريبة القيمة المضافة ({restaurant?.receiptSettings?.taxRate}%):</span>
+                  <span className="font-mono">{(printingOrder.totalAmount * ((restaurant?.receiptSettings?.taxRate || 0) / 100)).toFixed(1)} ج.م</span>
+                </div>
+              )}
+              {(restaurant?.receiptSettings?.serviceRate ?? 0) > 0 && (
+                <div className="flex justify-between text-stone-700">
+                  <span>رسوم الخدمة ({restaurant?.receiptSettings?.serviceRate}%):</span>
+                  <span className="font-mono">{(printingOrder.totalAmount * ((restaurant?.receiptSettings?.serviceRate || 0) / 100)).toFixed(1)} ج.م</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs font-black border-t border-dashed border-stone-400 pt-1.5 mt-1.5">
+                <span>الإجمالي الكلي:</span>
+                <span className="font-mono">
+                  {(
+                    printingOrder.totalAmount +
+                    (printingOrder.totalAmount * ((restaurant?.receiptSettings?.taxRate || 0) / 100)) +
+                    (printingOrder.totalAmount * ((restaurant?.receiptSettings?.serviceRate || 0) / 100))
+                  ).toFixed(1)} ج.م
+                </span>
+              </div>
+            </div>
+
+            {/* Footer Text */}
+            {restaurant?.receiptSettings?.footerText && (
+              <p className="text-center text-[10px] text-stone-500 border-t border-dashed border-stone-400 pt-2.5 mt-3.5 leading-snug">
+                {restaurant.receiptSettings.footerText}
+              </p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

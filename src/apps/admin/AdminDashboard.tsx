@@ -378,6 +378,57 @@ export default function AdminDashboard() {
     },
   });
 
+  // Receipt settings states
+  const [receiptPhone, setReceiptPhone] = useState(restaurant?.receiptSettings?.phone || restaurant?.phone || '');
+  const [receiptAddress, setReceiptAddress] = useState(restaurant?.receiptSettings?.address || restaurant?.address || '');
+  const [receiptTaxNumber, setReceiptTaxNumber] = useState(restaurant?.receiptSettings?.taxNumber || '');
+  const [receiptTaxRate, setReceiptTaxRate] = useState(restaurant?.receiptSettings?.taxRate || 0);
+  const [receiptServiceRate, setReceiptServiceRate] = useState(restaurant?.receiptSettings?.serviceRate || 0);
+  const [receiptHeaderText, setReceiptHeaderText] = useState(restaurant?.receiptSettings?.headerText || '');
+  const [receiptFooterText, setReceiptFooterText] = useState(restaurant?.receiptSettings?.footerText || '');
+  const [showLogo, setShowLogo] = useState(restaurant?.receiptSettings?.showLogo !== false);
+
+  useEffect(() => {
+    if (restaurant) {
+      setReceiptPhone(restaurant.receiptSettings?.phone || restaurant.phone || '');
+      setReceiptAddress(restaurant.receiptSettings?.address || restaurant.address || '');
+      setReceiptTaxNumber(restaurant.receiptSettings?.taxNumber || '');
+      setReceiptTaxRate(restaurant.receiptSettings?.taxRate || 0);
+      setReceiptServiceRate(restaurant.receiptSettings?.serviceRate || 0);
+      setReceiptHeaderText(restaurant.receiptSettings?.headerText || '');
+      setReceiptFooterText(restaurant.receiptSettings?.footerText || '');
+      setShowLogo(restaurant.receiptSettings?.showLogo !== false);
+    }
+  }, [restaurant]);
+
+  const saveReceiptSettingsMutation = useMutation({
+    mutationFn: async (settings: any) => {
+      const response = await api.put('/subscriptions/settings', settings);
+      return response.data.data;
+    },
+    onSuccess: (data) => {
+      toast.success('تم حفظ إعدادات الفاتورة بنجاح!');
+      updateRestaurant(data);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل حفظ إعدادات الفاتورة.');
+    }
+  });
+
+  const handleSaveReceiptSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveReceiptSettingsMutation.mutate({
+      showLogo,
+      phone: receiptPhone,
+      address: receiptAddress,
+      taxNumber: receiptTaxNumber,
+      taxRate: Number(receiptTaxRate),
+      serviceRate: Number(receiptServiceRate),
+      headerText: receiptHeaderText,
+      footerText: receiptFooterText,
+    });
+  };
+
   const handleActivateKey = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activationKey) {
@@ -1872,6 +1923,124 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
+                  </div>
+
+                  {/* Receipt Settings Section */}
+                  <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card space-y-6">
+                    <div>
+                      <h3 className="font-extrabold text-admin-text-primary text-base">إعدادات طباعة الفواتير</h3>
+                      <p className="text-xs text-admin-text-secondary mt-1">قم بتعديل وتخصيص البيانات التي تظهر على الفاتورة الحرارية المطبوعة للعملاء.</p>
+                    </div>
+
+                    <form onSubmit={handleSaveReceiptSettings} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">هاتف الفاتورة</label>
+                          <input
+                            type="text"
+                            value={receiptPhone}
+                            onChange={(e) => setReceiptPhone(e.target.value)}
+                            placeholder="مثال: 01012345678"
+                            className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">عنوان الفاتورة</label>
+                          <input
+                            type="text"
+                            value={receiptAddress}
+                            onChange={(e) => setReceiptAddress(e.target.value)}
+                            placeholder="مثال: القاهرة، مصر"
+                            className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">الرقم الضريبي (إن وجد)</label>
+                          <input
+                            type="text"
+                            value={receiptTaxNumber}
+                            onChange={(e) => setReceiptTaxNumber(e.target.value)}
+                            placeholder="مثال: 123-456-789"
+                            className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">نسبة ضريبة القيمة المضافة (%)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={receiptTaxRate}
+                            onChange={(e) => setReceiptTaxRate(Number(e.target.value))}
+                            className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">نسبة الخدمة (%)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={receiptServiceRate}
+                            onChange={(e) => setReceiptServiceRate(Number(e.target.value))}
+                            className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">كلام ترحيبي في بداية الفاتورة (Header)</label>
+                        <input
+                          type="text"
+                          value={receiptHeaderText}
+                          onChange={(e) => setReceiptHeaderText(e.target.value)}
+                          placeholder="مثال: أهلاً بكم في مطعمنا"
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">كلام في نهاية الفاتورة (Footer)</label>
+                        <input
+                          type="text"
+                          value={receiptFooterText}
+                          onChange={(e) => setReceiptFooterText(e.target.value)}
+                          placeholder="مثال: شكراً لزيارتكم! نرجو أن نراكم قريباً."
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <input
+                          type="checkbox"
+                          id="showLogo"
+                          checked={showLogo}
+                          onChange={(e) => setShowLogo(e.target.checked)}
+                          className="w-4 h-4 text-admin-accent bg-admin-bg-base border-admin-border rounded focus:ring-admin-accent"
+                        />
+                        <label htmlFor="showLogo" className="text-xs text-admin-text-secondary font-bold select-none cursor-pointer">
+                          عرض شعار (لوجو) المطعم في الفاتورة
+                        </label>
+                      </div>
+
+                      <div className="flex justify-end pt-3">
+                        <motion.button
+                          type="submit"
+                          disabled={saveReceiptSettingsMutation.isPending}
+                          whileTap={{ scale: 0.97 }}
+                          className="py-2.5 px-6 bg-admin-accent text-white font-bold text-xs rounded-lg hover:opacity-95 transition-opacity flex items-center gap-2 shadow-admin-accent"
+                        >
+                          {saveReceiptSettingsMutation.isPending ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <span>حفظ إعدادات الفاتورة</span>
+                          )}
+                        </motion.button>
+                      </div>
+                    </form>
                   </div>
                 </div>
               )}

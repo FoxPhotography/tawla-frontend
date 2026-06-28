@@ -18,6 +18,16 @@ export interface Restaurant {
     language: 'ar' | 'en';
     timezone: string;
   };
+  receiptSettings?: {
+    showLogo: boolean;
+    phone?: string;
+    address?: string;
+    taxNumber?: string;
+    taxRate: number;
+    serviceRate: number;
+    headerText?: string;
+    footerText?: string;
+  };
 }
 
 export interface Category {
