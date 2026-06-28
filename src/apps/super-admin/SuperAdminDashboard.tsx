@@ -822,7 +822,7 @@ export default function SuperAdminDashboard() {
                                       </span>
                                       {item.usedAt && (
                                         <span className="block text-[9px] text-slate-500 font-bold">
-                                          تاريخ التفعيل: {new Date(item.usedAt).toLocaleDateString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
+                                          تاريخ التفعيل: {new Date(item.usedAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
                                         </span>
                                       )}
                                     </div>
