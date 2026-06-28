@@ -272,7 +272,16 @@ export default function StaffDashboard() {
   }, [user, restaurant, queryClient]);
 
   useEffect(() => {
-    if (!user) navigate('/staff/login');
+    if (!user) {
+      navigate('/staff/login');
+    } else if (user.role !== 'cashier' && user.role !== 'waiter') {
+      toast.error('أنت غير مصرح لك بدخول صفحة الموظفين.');
+      if (user.role === 'super_admin') {
+        navigate('/super-admin');
+      } else if (user.role === 'admin') {
+        navigate('/admin');
+      }
+    }
   }, [user, navigate]);
 
   const handleLogout = () => {
@@ -580,7 +589,7 @@ export default function StaffDashboard() {
                                 initial="hidden"
                                 animate="visible"
                                 custom={idx}
-                                className={`bg-staff-bg-elevated border rounded-lg p-5 flex flex-col justify-between gap-4 border-r-4 ${cardBorderColor} shadow-staff-card transition-all duration-300 ${
+                                className={`bg-staff-bg-elevated border border-staff-border rounded-lg p-5 flex flex-col justify-between gap-4 border-r-4 ${cardBorderColor} shadow-staff-card transition-all duration-300 ${
                                   isPending ? 'animate-pending-pulse bg-gradient-to-br from-staff-bg-elevated to-amber-500/[0.03]' : ''
                                 }`}
                               >

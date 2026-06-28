@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Key, Plus, Copy, Check, LogOut, RefreshCw, 
   Coffee, ShieldAlert, Sliders, Calendar, Globe, Eye, EyeOff,
-  Sparkles, Activity, Trash2, Edit3, Lock, ShieldCheck
+  Sparkles, Activity, Trash2, Lock, ShieldCheck, Users
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { SerialKey } from '../../shared/types';
+import logoImg from '../../assets/logo.png';
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ export default function SuperAdminDashboard() {
 
   // Form states - Edit Restaurant Modal
   const [editingRest, setEditingRest] = useState<any | null>(null);
+  const [selectedRest, setSelectedRest] = useState<any | null>(null);
   const [editName, setEditName] = useState('');
   const [editSlug, setEditSlug] = useState('');
   const [editPhone, setEditPhone] = useState('');
@@ -54,16 +56,21 @@ export default function SuperAdminDashboard() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Redirect if not super_admin
+  useEffect(() => {
+    if (!user) {
+      navigate('/admin/login');
+    } else if (user.role !== 'super_admin') {
+      toast.error('غير مصرح لك بدخول لوحة تحكم مطور النظام.');
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/staff');
+      }
+    }
+  }, [user, navigate]);
+
   if (!user || user.role !== 'super_admin') {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white" dir="rtl">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4 animate-bounce" />
-        <h1 className="text-xl font-bold">غير مصرح لك بدخول هذه الصفحة</h1>
-        <button onClick={() => navigate('/admin/login')} className="mt-4 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors font-bold text-sm">
-          ذهاب لتسجيل الدخول
-        </button>
-      </div>
-    );
+    return null;
   }
 
   const handleLogout = () => {
@@ -78,6 +85,16 @@ export default function SuperAdminDashboard() {
       const response = await api.get('/super-admin/restaurants');
       return response.data.data;
     },
+  });
+
+  const { data: restStaff = [], isLoading: loadingRestStaff } = useQuery({
+    queryKey: ['super-admin-restaurant-staff', selectedRest?.id],
+    queryFn: async () => {
+      if (!selectedRest?.id) return [];
+      const response = await api.get(`/super-admin/restaurants/${selectedRest.id}/staff`);
+      return response.data.data;
+    },
+    enabled: !!selectedRest?.id,
   });
 
   const { data: serialKeys = [], isLoading: loadingSerials } = useQuery({
@@ -136,11 +153,13 @@ export default function SuperAdminDashboard() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async () => {
-      if (!resettingUser) return;
-      return api.put(`/super-admin/restaurants/${resettingUser.id}/password`, { password: newPassword });
+      const targetId = resettingUser?.id || selectedRest?.adminUserId;
+      if (!targetId) return;
+      return api.put(`/super-admin/restaurants/${targetId}/password`, { password: newPassword });
     },
     onSuccess: () => {
-      toast.success(`تم تحديث كلمة المرور لـ ${resettingUser?.name} بنجاح!`);
+      const targetName = resettingUser?.name || selectedRest?.adminName;
+      toast.success(`تم تحديث كلمة المرور لـ ${targetName} بنجاح!`);
       setResettingUser(null);
       setNewPassword('');
     },
@@ -152,7 +171,8 @@ export default function SuperAdminDashboard() {
   // Edit Restaurant
   const updateRestMutation = useMutation({
     mutationFn: async () => {
-      if (!editingRest) return;
+      const target = editingRest || selectedRest;
+      if (!target) return;
       const payload = {
         name: editName,
         slug: editSlug.toLowerCase().trim().replace(/\s+/g, '-'),
@@ -163,12 +183,13 @@ export default function SuperAdminDashboard() {
         plan: editPlan,
         expiresAt: editExpiresAt,
       };
-      return api.put(`/super-admin/restaurants/${editingRest.id}`, payload);
+      return api.put(`/super-admin/restaurants/${target.id}`, payload);
     },
     onSuccess: () => {
       toast.success('تم تعديل بيانات المطعم واشتراكه بنجاح!');
       queryClient.invalidateQueries({ queryKey: ['super-admin-restaurants'] });
       setEditingRest(null);
+      setSelectedRest(null);
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'فشل تعديل بيانات المطعم.');
@@ -189,8 +210,8 @@ export default function SuperAdminDashboard() {
     },
   });
 
-  const openEditModal = (rest: any) => {
-    setEditingRest(rest);
+  const openRestDetails = (rest: any) => {
+    setSelectedRest(rest);
     setEditName(rest.name);
     setEditSlug(rest.slug);
     setEditPhone(rest.phone || '');
@@ -199,12 +220,7 @@ export default function SuperAdminDashboard() {
     setEditOwnerUsername(rest.adminUsername || '');
     setEditPlan(rest.subscription.plan);
     setEditExpiresAt(formatDateForInput(rest.subscription.expiresAt));
-  };
-
-  const handleDeleteRest = (id: string, name: string) => {
-    if (confirm(`هل أنت متأكد تماماً من حذف مطعم "${name}"؟\nسيؤدي هذا إلى حذف المطعم وجميع المستخدمين والأقسام والمنتجات والطلبات التابعة له نهائياً ولا يمكن الاسترجاع!`)) {
-      deleteRestMutation.mutate(id);
-    }
+    setNewPassword('');
   };
 
   const formatDateForInput = (dateStr: string) => {
@@ -274,9 +290,9 @@ export default function SuperAdminDashboard() {
             initial={{ rotate: -10, scale: 0.9 }}
             animate={{ rotate: 0, scale: 1 }}
             transition={{ type: 'spring', stiffness: 200 }}
-            className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600/20 to-violet-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/5"
+            className="w-12 h-12 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-center shadow-lg overflow-hidden"
           >
-            <Sliders className="w-6 h-6 animate-pulse" />
+            <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-1.5" />
           </motion.div>
           <div>
             <div className="flex items-center gap-2">
@@ -563,94 +579,74 @@ export default function SuperAdminDashboard() {
                           <p className="text-sm text-slate-500">لا توجد كافيهات أو مطاعم مسجلة بالنظام بعد.</p>
                         </div>
                       ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-right text-sm">
-                            <thead>
-                              <tr className="border-b border-slate-800/80 text-slate-400 font-bold text-xs">
-                                <th className="pb-3 pr-2">اسم الكافيه / الرابط</th>
-                                <th className="pb-3">المدير المسؤول</th>
-                                <th className="pb-3">الباقة الحالية</th>
-                                <th className="pb-3">تاريخ انتهاء الصلاحية</th>
-                                <th className="pb-3 pl-2">إجراءات التحكم</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-850/50">
-                              {restaurants.map((rest: any, idx: number) => {
-                                const expires = new Date(rest.subscription.expiresAt);
-                                const isExpired = expires < new Date() || rest.subscription.status === 'expired';
-                                const status = rest.subscription.status;
-
-                                return (
-                                  <motion.tr 
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
-                                    key={rest.id} 
-                                    className="hover:bg-slate-800/25 transition-colors group"
-                                  >
-                                    <td className="py-4 pr-2">
-                                      <h4 className="font-extrabold text-white text-sm group-hover:text-indigo-400 transition-colors">{rest.name}</h4>
-                                      <span className="text-[11px] text-slate-550 font-semibold flex items-center gap-1 mt-0.5" dir="ltr">
-                                        <Globe className="w-3.5 h-3.5 flex-shrink-0" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                          {restaurants.map((rest: any, idx: number) => {
+                            const expires = new Date(rest.subscription.expiresAt);
+                            const isExpired = expires < new Date() || rest.subscription.status === 'expired';
+                            
+                            return (
+                              <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                key={rest.id}
+                                onClick={() => openRestDetails(rest)}
+                                className="bg-slate-950/45 border border-slate-800/80 hover:border-indigo-500/40 hover:bg-slate-900/10 rounded-xl p-5 shadow-lg hover:shadow-indigo-550/5 transition-all duration-300 cursor-pointer flex flex-col justify-between h-full group"
+                              >
+                                <div className="space-y-4">
+                                  <div className="flex justify-between items-start">
+                                    <div className="min-w-0 flex-1">
+                                      <h3 className="font-extrabold text-white text-sm group-hover:text-indigo-400 transition-colors truncate">{rest.name}</h3>
+                                      <span className="text-[11px] text-slate-500 font-semibold flex items-center gap-1 mt-1 truncate" dir="ltr">
+                                        <Globe className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                                         <span>/{rest.slug}</span>
                                       </span>
-                                    </td>
-                                    <td className="py-4">
-                                      <span className="font-bold text-slate-300 block text-xs">{rest.adminName || 'غير معين'}</span>
-                                      <span className="font-mono text-[10px] text-slate-500 block mt-0.5">@{rest.adminUsername || 'لا يوجد'}</span>
-                                    </td>
-                                    <td className="py-4">
-                                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide ${
-                                        rest.subscription.plan === 'pro' 
-                                          ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-sm' 
-                                          : rest.subscription.plan === 'basic' 
-                                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-sm' 
-                                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm'
-                                      }`}>
-                                        {rest.subscription.plan === 'pro' && 'PRO احترافية'}
-                                        {rest.subscription.plan === 'basic' && 'BASIC أساسية'}
-                                        {rest.subscription.plan === 'trial' && 'TRIAL تجريبية'}
-                                      </span>
-                                    </td>
-                                    <td className="py-4">
-                                      <span className={`font-mono text-xs font-black ${isExpired ? 'text-red-400' : 'text-emerald-400'}`}>
-                                        {expires.toLocaleDateString('ar-EG', { dateStyle: 'medium' })}
-                                      </span>
-                                      <span className={`block text-[9px] font-extrabold ${isExpired ? 'text-red-500/80' : 'text-slate-500'}`}>
-                                        {isExpired ? 'منتهي الصلاحية' : status === 'active' ? 'نشط' : 'معطل'}
-                                      </span>
-                                    </td>
-                                    <td className="py-4 pl-2">
-                                      <div className="flex items-center gap-1.5">
-                                        <button
-                                          onClick={() => setResettingUser({ id: rest.adminUserId, name: rest.adminName })}
-                                          disabled={!rest.adminUserId}
-                                          className="text-[10px] font-black border border-slate-800 bg-slate-900/50 hover:bg-slate-850 hover:border-slate-700 text-slate-300 px-2 py-1 rounded-lg transition-all cursor-pointer"
-                                          title="تغيير كلمة مرور المدير"
-                                        >
-                                          الباسورد
-                                        </button>
-                                        <button
-                                          onClick={() => openEditModal(rest)}
-                                          className="text-[10px] font-black border border-indigo-950 bg-indigo-950/20 hover:bg-indigo-900/30 text-indigo-400 hover:text-indigo-300 hover:border-indigo-500/30 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                                        >
-                                          <Edit3 className="w-3 h-3" />
-                                          <span>تعديل</span>
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteRest(rest.id, rest.name)}
-                                          className="text-[10px] font-black border border-red-950/50 bg-red-950/10 hover:bg-red-950/30 text-red-400 hover:text-red-300 hover:border-red-500/30 px-2 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                          <span>حذف</span>
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </motion.tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                                    </div>
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide flex-shrink-0 ${
+                                      rest.subscription.plan === 'pro' 
+                                        ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                                        : rest.subscription.plan === 'basic' 
+                                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    }`}>
+                                      {rest.subscription.plan === 'pro' && 'PRO'}
+                                      {rest.subscription.plan === 'basic' && 'BASIC'}
+                                      {rest.subscription.plan === 'trial' && 'TRIAL'}
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-3 text-xs border-t border-slate-800/50 pt-3">
+                                    <div>
+                                      <span className="block text-[10px] text-slate-500 font-extrabold mb-0.5">المدير المسؤول</span>
+                                      <span className="font-bold text-slate-350 truncate block">{rest.adminName || 'غير معين'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block text-[10px] text-slate-500 font-extrabold mb-0.5">اسم المستخدم</span>
+                                      <span className="font-mono text-xs text-indigo-400 truncate block">@{rest.adminUsername || 'لا يوجد'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex justify-between items-center border-t border-slate-800/50 pt-3 mt-4 text-xs">
+                                  <div>
+                                    <span className="text-[10px] text-slate-500 block font-extrabold">تاريخ الانتهاء</span>
+                                    <span className={`font-mono font-black ${isExpired ? 'text-red-400' : 'text-emerald-400'}`}>
+                                      {expires.toLocaleDateString('ar-EG', { dateStyle: 'medium' })}
+                                    </span>
+                                  </div>
+
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                                    isExpired 
+                                      ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                                      : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${isExpired ? 'bg-red-400' : 'bg-emerald-400 animate-pulse'}`} />
+                                    <span>{isExpired ? 'منتهي الاشتراك' : 'نشط'}</span>
+                                  </span>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -741,7 +737,7 @@ export default function SuperAdminDashboard() {
                             className="mt-6 p-4.5 bg-slate-950/80 border border-indigo-500/20 rounded-xl text-center space-y-3 shadow-inner"
                           >
                             <span className="text-[10px] text-slate-400 font-extrabold tracking-wide block">كود التفعيل جاهز للإرسال للعميل</span>
-                            <span className="text-base font-mono font-black text-indigo-400 tracking-wider block bg-slate-900 border border-slate-850 py-2 rounded-lg select-all">
+                            <span className="text-base font-mono font-black text-indigo-400 tracking-wider block bg-slate-900 border border-slate-800 py-2 rounded-lg select-all">
                               {generatedKey}
                             </span>
                             <button
@@ -1028,7 +1024,7 @@ export default function SuperAdminDashboard() {
                   <button
                     type="submit"
                     disabled={updateRestMutation.isPending}
-                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:from-slate-850 disabled:to-slate-850 text-white font-black text-xs transition-colors flex items-center justify-center gap-1 shadow-md cursor-pointer"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:from-slate-800 disabled:to-slate-800 text-white font-black text-xs transition-colors flex items-center justify-center gap-1 shadow-md cursor-pointer"
                   >
                     {updateRestMutation.isPending ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1038,6 +1034,259 @@ export default function SuperAdminDashboard() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* RESTAURANT DETAILS & SETTINGS MODAL */}
+      <AnimatePresence>
+        {selectedRest && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl text-right my-8 flex flex-col overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-slate-800 bg-slate-950/40 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <Coffee className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-white text-lg">{editName || selectedRest.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-indigo-400 font-mono" dir="ltr">/{editSlug || selectedRest.slug}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                      <span className="text-[10px] text-slate-500 font-extrabold">معرف النظام: {selectedRest.id}</span>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedRest(null)}
+                  className="text-slate-400 hover:text-white font-black text-xl p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6">
+                
+                {/* 1. Main Edit Form */}
+                <div className="bg-slate-950/30 border border-slate-850 rounded-xl p-5 space-y-4">
+                  <h4 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
+                    <Sliders className="w-4 h-4" />
+                    <span>تعديل بيانات المطعم والاشتراك</span>
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">اسم المطعم أو الكافيه *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">الرابط الفريد (Slug) *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editSlug}
+                        onChange={(e) => setEditSlug(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">رقم الهاتف</label>
+                      <input
+                        type="text"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">العنوان بالتفصيل</label>
+                      <input
+                        type="text"
+                        value={editAddress}
+                        onChange={(e) => setEditAddress(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-900">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">نوع الباقة *</label>
+                      <select
+                        value={editPlan}
+                        onChange={(e) => setEditPlan(e.target.value as any)}
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      >
+                        <option value="trial">TRIAL (تجريبية)</option>
+                        <option value="basic">BASIC (أساسية)</option>
+                        <option value="pro">PRO (احترافية)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">تاريخ انتهاء الاشتراك *</label>
+                      <input
+                        type="date"
+                        required
+                        value={editExpiresAt}
+                        onChange={(e) => setEditExpiresAt(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={() => updateRestMutation.mutate()}
+                      disabled={updateRestMutation.isPending}
+                      className="py-2 px-5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-black text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      {updateRestMutation.isPending && (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      )}
+                      <span>حفظ تعديلات المطعم والاشتراك</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Admin Credentials & Reset Password */}
+                <div className="bg-slate-950/30 border border-slate-850 rounded-xl p-5 space-y-4">
+                  <h4 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
+                    <Lock className="w-4 h-4" />
+                    <span>بيانات المدير المسؤول وكلمة المرور</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">اسم المدير المسؤول</label>
+                      <input
+                        type="text"
+                        value={editOwnerName}
+                        onChange={(e) => setEditOwnerName(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">اسم مستخدم المدير (Username)</label>
+                      <input
+                        type="text"
+                        value={editOwnerUsername}
+                        onChange={(e) => setEditOwnerUsername(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end pt-2 border-t border-slate-900">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-black text-slate-400">تعيين كلمة مرور جديدة للمدير</label>
+                      <input
+                        type="text"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="اتركها فارغة لعدم التغيير"
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newPassword) {
+                          toast.error('يرجى كتابة كلمة مرور جديدة أولاً.');
+                          return;
+                        }
+                        resetPasswordMutation.mutate();
+                      }}
+                      disabled={!newPassword || newPassword.length < 4 || resetPasswordMutation.isPending}
+                      className="py-2.5 px-5 bg-slate-800 border border-slate-700 hover:border-indigo-500 hover:bg-slate-900 text-slate-200 hover:text-white disabled:opacity-40 font-bold text-xs rounded-xl transition-all cursor-pointer h-10 flex items-center justify-center gap-1.5"
+                    >
+                      {resetPasswordMutation.isPending && (
+                        <div className="w-3.5 h-3.5 border-2 border-slate-200 border-t-transparent rounded-full animate-spin" />
+                      )}
+                      <span>تحديث كلمة مرور المدير</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Restaurant Staff */}
+                <div className="bg-slate-950/30 border border-slate-850 rounded-xl p-5 space-y-4">
+                  <h4 className="text-sm font-black text-indigo-400 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4" />
+                      <span>موظفو المطعم (Staff)</span>
+                    </span>
+                    <span className="text-[10px] font-black bg-indigo-500/10 text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+                      {restStaff.length} موظف
+                    </span>
+                  </h4>
+
+                  {loadingRestStaff ? (
+                    <div className="py-8 flex justify-center items-center">
+                      <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />
+                    </div>
+                  ) : restStaff.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-slate-500 font-medium">
+                      لم يقم هذا المطعم بإضافة أي موظفين بعد.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {restStaff.map((staff: any) => (
+                        <div key={staff.id} className="bg-slate-950 border border-slate-850 rounded-xl p-3 flex justify-between items-center">
+                          <div className="text-right">
+                            <span className="font-extrabold text-white text-xs block">{staff.name}</span>
+                            <span className="font-mono text-[10px] text-slate-500 mt-0.5 block">@{staff.username}</span>
+                          </div>
+                          <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                            موظف
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 bg-slate-950/40 border-t border-slate-800 flex justify-between items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`هل أنت متأكد تماماً من حذف مطعم "${selectedRest.name}"؟\nسيؤدي هذا إلى حذف المطعم وجميع مستخدميه وأقسامه ومنتجاته وطلباته نهائياً ولا يمكن استرجاع البيانات!`)) {
+                      deleteRestMutation.mutate(selectedRest.id);
+                      setSelectedRest(null);
+                    }
+                  }}
+                  className="py-2.5 px-5 border border-red-950/50 bg-red-950/10 hover:bg-red-950/30 text-red-400 hover:text-red-300 hover:border-red-500/30 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>حذف المطعم نهائياً</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRest(null)}
+                  className="py-2.5 px-5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  إغلاق
+                </button>
+              </div>
+
             </motion.div>
           </div>
         )}

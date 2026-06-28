@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
+import logoImg from '../../assets/logo.png';
 
 export default function Register() {
   return (
@@ -28,8 +28,8 @@ export default function Register() {
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-red-500/10 border border-red-200 flex items-center justify-center mb-5 shadow-admin-card text-red-500">
-            <Lock className="w-8 h-8" />
+          <div className="mx-auto mb-5 flex items-center justify-center">
+            <img src={logoImg} alt="Tawla Logo" className="max-h-16 object-contain animate-none" />
           </div>
           <h1 className="text-2xl font-extrabold text-admin-text-primary mb-2">التسجيل المباشر غير متاح</h1>
           <p className="text-admin-text-secondary text-sm font-medium">

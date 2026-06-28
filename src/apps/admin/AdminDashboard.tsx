@@ -7,7 +7,7 @@ import {
   Calendar, ShoppingBag, 
   MapPin, BarChart3, LogOut, ArrowUp, ArrowDown, X, 
   ImagePlus, QrCode, Clock, Flame, Star, Crown,
-  Sliders, ZoomIn, ZoomOut, ShieldAlert
+  Sliders, ZoomIn, ZoomOut, ShieldAlert, Users, Eye, EyeOff
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer 
@@ -357,7 +357,80 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const { user, restaurant, logout, updateRestaurant } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff'>('categories');
+
+  // Staff states
+  const [staffName, setStaffName] = useState('');
+  const [staffUsername, setStaffUsername] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [showStaffPass, setShowStaffPass] = useState(false);
+
+  // Fetch staff
+  const { data: staffList = [], isLoading: loadingStaff } = useQuery({
+    queryKey: ['admin-staff'],
+    queryFn: async () => {
+      const response = await api.get('/auth/staff');
+      return response.data.data;
+    },
+    enabled: !!user,
+  });
+
+  // Create/Update Staff mutation
+  const staffMutation = useMutation({
+    mutationFn: async () => {
+      if (editingStaffId) {
+        const payload: any = { name: staffName, username: staffUsername };
+        if (staffPassword) payload.password = staffPassword;
+        await api.put(`/auth/staff/${editingStaffId}`, payload);
+      } else {
+        await api.post('/auth/staff', {
+          name: staffName,
+          username: staffUsername,
+          password: staffPassword,
+        });
+      }
+    },
+    onSuccess: () => {
+      toast.success(editingStaffId ? 'تم تحديث بيانات الموظف بنجاح!' : 'تم إنشاء حساب الموظف بنجاح!');
+      resetStaffForm();
+      queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل حفظ بيانات الموظف.');
+    }
+  });
+
+  // Delete Staff mutation
+  const deleteStaffMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/auth/staff/${id}`);
+    },
+    onSuccess: () => {
+      toast.success('تم حذف الموظف بنجاح.');
+      queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل حذف الموظف.');
+    }
+  });
+
+  const resetStaffForm = () => {
+    setStaffName('');
+    setStaffUsername('');
+    setStaffPassword('');
+    setEditingStaffId(null);
+    setShowStaffPass(false);
+  };
+
+  const submitStaff = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffName || !staffUsername || (!editingStaffId && !staffPassword)) {
+      toast.error('يرجى ملء جميع الحقول المطلوبة.');
+      return;
+    }
+    staffMutation.mutate();
+  };
 
   // Subscription states
   const [activationKey, setActivationKey] = useState('');
@@ -387,6 +460,23 @@ export default function AdminDashboard() {
   const [receiptHeaderText, setReceiptHeaderText] = useState(restaurant?.receiptSettings?.headerText || '');
   const [receiptFooterText, setReceiptFooterText] = useState(restaurant?.receiptSettings?.footerText || '');
   const [showLogo, setShowLogo] = useState(restaurant?.receiptSettings?.showLogo !== false);
+
+  // Sync subscription status from server on mount
+  useEffect(() => {
+    const syncSubscription = async () => {
+      try {
+        const response = await api.get('/subscriptions/status');
+        if (response.data.success && response.data.data) {
+          updateRestaurant({
+            subscription: response.data.data
+          });
+        }
+      } catch (error) {
+        console.error('Failed to sync subscription status:', error);
+      }
+    };
+    syncSubscription();
+  }, [updateRestaurant]);
 
   useEffect(() => {
     if (restaurant) {
@@ -518,7 +608,11 @@ export default function AdminDashboard() {
       navigate('/admin/login');
     } else if (user.role !== 'admin') {
       toast.error('أنت غير مصرح لك بالدخول كمدير.');
-      navigate('/staff');
+      if (user.role === 'super_admin') {
+        navigate('/super-admin');
+      } else {
+        navigate('/staff');
+      }
     }
   }, [user, navigate]);
 
@@ -892,6 +986,7 @@ export default function AdminDashboard() {
     { key: 'products' as const, label: 'المنتجات', icon: ShoppingBag, count: products.length },
     { key: 'tables' as const, label: 'الطاولات', icon: MapPin, count: tables.length },
     { key: 'orders' as const, label: 'الطلبات', icon: Calendar },
+    { key: 'staff' as const, label: 'الموظفين', icon: Users, count: staffList.length },
     { key: 'analytics' as const, label: 'التحليلات', icon: BarChart3 },
     { key: 'subscription' as const, label: 'إعدادات الفاتورة والاشتراك', icon: Sliders },
   ];
@@ -2041,6 +2136,180 @@ export default function AdminDashboard() {
                         </motion.button>
                       </div>
                     </form>
+                  </div>
+                </div>
+              )}
+
+              {/* ==================== STAFF TAB ==================== */}
+              {activeTab === 'staff' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-extrabold text-admin-text-primary">إدارة موظفي المطعم</h2>
+                    <span className="bg-admin-bg-subtle text-admin-text-secondary text-xs px-3 py-1 rounded-full font-bold">{staffList.length} موظف</span>
+                  </div>
+
+                  {/* Create / Edit Staff Form */}
+                  <form onSubmit={submitStaff} className="bg-admin-bg-elevated border border-admin-border rounded-lg p-6 space-y-5 max-w-2xl shadow-admin-card">
+                    <h3 className="font-extrabold text-admin-text-primary text-sm flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-admin-accent" />
+                      <span>{editingStaffId ? 'تعديل بيانات الموظف المحدد' : 'إضافة حساب موظف جديد'}</span>
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs text-admin-text-secondary font-bold">اسم الموظف *</label>
+                        <input
+                          type="text"
+                          required
+                          value={staffName}
+                          onChange={(e) => setStaffName(e.target.value)}
+                          placeholder="مثال: أحمد محمد"
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3 text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs text-admin-text-secondary font-bold">اسم المستخدم للدخول (Username) *</label>
+                        <input
+                          type="text"
+                          required
+                          value={staffUsername}
+                          onChange={(e) => setStaffUsername(e.target.value)}
+                          placeholder="مثال: ahmed_staff"
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3 text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted text-left font-mono"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 max-w-md">
+                      <label className="block text-xs text-admin-text-secondary font-bold">
+                        {editingStaffId ? 'كلمة المرور الجديدة (اتركها فارغة لعدم التغيير)' : 'كلمة المرور *'}
+                      </label>
+                      <div className="relative group">
+                        <input
+                          type={showStaffPass ? 'text' : 'password'}
+                          required={!editingStaffId}
+                          value={staffPassword}
+                          onChange={(e) => setStaffPassword(e.target.value)}
+                          placeholder={editingStaffId ? '••••••••' : 'اكتب كلمة مرور قوية'}
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3 pr-4 pl-11 text-right text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowStaffPass(!showStaffPass)}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 text-admin-text-muted hover:text-admin-text-primary transition-colors"
+                        >
+                          {showStaffPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-1">
+                      <motion.button
+                        type="submit"
+                        disabled={staffMutation.isPending}
+                        whileTap={{ scale: 0.97 }}
+                        className="py-3 px-6 rounded-lg bg-admin-accent text-white font-bold text-xs hover:opacity-95 transition-opacity"
+                      >
+                        {staffMutation.isPending ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          editingStaffId ? 'حفظ التعديلات' : 'إضافة الموظف'
+                        )}
+                      </motion.button>
+                      {editingStaffId && (
+                        <button
+                          type="button"
+                          onClick={resetStaffForm}
+                          className="bg-admin-bg-subtle text-admin-text-secondary border border-admin-border py-2.5 px-5 rounded-lg text-xs font-medium hover:bg-admin-bg-base transition-colors"
+                        >
+                          إلغاء
+                        </button>
+                      )}
+                    </div>
+                  </form>
+
+                  {/* Staff List */}
+                  <div className="space-y-3">
+                    <h3 className="font-extrabold text-admin-text-primary text-sm">الموظفون الحاليون</h3>
+                    <div className="bg-admin-bg-elevated border border-admin-border rounded-lg overflow-hidden shadow-admin-card">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-right text-sm">
+                          <thead>
+                            <tr className="bg-admin-bg-subtle border-b border-admin-border">
+                              <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">الاسم</th>
+                              <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">اسم المستخدم (Username)</th>
+                              <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider">الصلاحية</th>
+                              <th className="px-5 py-3 text-xs font-semibold text-admin-text-muted uppercase tracking-wider text-left">التحكم</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {loadingStaff ? (
+                              <tr>
+                                <td colSpan={4} className="text-center py-10">
+                                  <div className="w-6 h-6 border-2 border-admin-accent border-t-transparent rounded-full animate-spin mx-auto" />
+                                </td>
+                              </tr>
+                            ) : staffList.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="text-center py-10 text-xs text-admin-text-muted font-medium">
+                                  لا يوجد موظفون مسجلون حالياً.
+                                </td>
+                              </tr>
+                            ) : (
+                              staffList.map((staffMember: any, idx: number) => (
+                                <motion.tr
+                                  key={staffMember.id}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: idx * 0.03 }}
+                                  className="border-b border-admin-border hover:bg-admin-bg-subtle transition-colors"
+                                >
+                                  <td className="px-5 py-4">
+                                    <span className="font-bold text-admin-text-primary block text-sm">{staffMember.name}</span>
+                                  </td>
+                                  <td className="px-5 py-4 text-admin-text-secondary font-mono text-xs" dir="ltr">
+                                    @{staffMember.username}
+                                  </td>
+                                  <td className="px-5 py-4">
+                                    <span className="inline-flex items-center gap-1.5 bg-admin-accent/10 text-admin-accent border border-admin-accent/20 text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
+                                      موظف
+                                    </span>
+                                  </td>
+                                  <td className="px-5 py-4 text-left">
+                                    <div className="flex items-center gap-2 justify-end">
+                                      <button
+                                        onClick={() => {
+                                          setEditingStaffId(staffMember.id);
+                                          setStaffName(staffMember.name);
+                                          setStaffUsername(staffMember.username);
+                                          setStaffPassword('');
+                                        }}
+                                        className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors"
+                                        title="تعديل"
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm(`هل تريد بالتأكيد حذف حساب الموظف "${staffMember.name}"؟`)) {
+                                            deleteStaffMutation.mutate(staffMember.id);
+                                          }
+                                        }}
+                                        className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-red-650 transition-colors"
+                                        title="حذف"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

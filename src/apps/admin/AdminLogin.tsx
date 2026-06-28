@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Lock, User as UserIcon, ShieldAlert, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Lock, User as UserIcon, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
+import logoImg from '../../assets/logo.png';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -25,15 +26,15 @@ export default function AdminLogin() {
         toast.success('تم تسجيل الدخول بنجاح كمدير النظام!');
         loginStore(data.accessToken, data.user, null as any);
         navigate('/super-admin');
-        return;
+      } else if (data.user.role === 'admin') {
+        toast.success('تم تسجيل الدخول بنجاح كمدير!');
+        loginStore(data.accessToken, data.user, data.restaurant);
+        navigate('/admin');
+      } else {
+        toast.success('تم تسجيل الدخول بنجاح كموظف!');
+        loginStore(data.accessToken, data.user, data.restaurant);
+        navigate('/staff');
       }
-      if (data.user.role !== 'admin') {
-        toast.error('عذراً، هذا الحساب غير مصرح له كمدير للنظام.');
-        return;
-      }
-      toast.success('تم تسجيل الدخول بنجاح كمدير!');
-      loginStore(data.accessToken, data.user, data.restaurant);
-      navigate('/admin');
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'فشل تسجيل دخول المدير. تأكد من البيانات.');
@@ -73,8 +74,8 @@ export default function AdminLogin() {
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-admin-accent-light border border-admin-border flex items-center justify-center mb-5 shadow-admin-card text-admin-accent">
-            <ShieldAlert className="w-8 h-8" />
+          <div className="mx-auto mb-5 flex items-center justify-center">
+            <img src={logoImg} alt="Tawla Logo" className="max-h-16 object-contain animate-none" />
           </div>
           <h1 className="text-3xl font-extrabold text-admin-text-primary mb-2">بوابة المدير</h1>
           <p className="text-admin-text-secondary text-sm font-medium">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>

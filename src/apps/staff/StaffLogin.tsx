@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Lock, Coffee, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { User as UserIcon, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
+import logoImg from '../../assets/logo.png';
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -25,7 +26,9 @@ export default function StaffLogin() {
       loginStore(data.accessToken, data.user, data.restaurant);
       
       // Redirect based on role
-      if (data.user.role === 'admin') {
+      if (data.user.role === 'super_admin') {
+        navigate('/super-admin');
+      } else if (data.user.role === 'admin') {
         navigate('/admin');
       } else {
         navigate('/staff');
@@ -71,8 +74,8 @@ export default function StaffLogin() {
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-staff-accent-soft border border-staff-border flex items-center justify-center mb-5">
-            <Coffee className="w-8 h-8 text-staff-accent" />
+          <div className="mx-auto mb-5 flex items-center justify-center">
+            <img src={logoImg} alt="Tawla Logo" className="max-h-16 object-contain animate-none" />
           </div>
           <h1 className="text-3xl font-extrabold text-staff-text-primary mb-2">تسجيل دخول الموظفين</h1>
           <p className="text-staff-text-muted text-sm font-medium">داشبورد إدارة الكاشير والويتر والطلب</p>
