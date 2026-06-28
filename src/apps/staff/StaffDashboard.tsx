@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,6 +47,7 @@ export default function StaffDashboard() {
   const queryClient = useQueryClient();
   const { user, restaurant, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
+  const [orderFilter, setOrderFilter] = useState<'active' | 'archived'>('active');
   const [alerts, setAlerts] = useState<LiveAlert[]>([]);
 
   // Toast Notification States
@@ -127,6 +128,16 @@ export default function StaffDashboard() {
     enabled: !!user,
     refetchInterval: 10000,
   });
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      if (orderFilter === 'active') {
+        return ['pending', 'accepted', 'preparing', 'ready'].includes(order.status);
+      } else {
+        return ['delivered', 'cancelled'].includes(order.status);
+      }
+    });
+  }, [orders, orderFilter]);
 
   // Fetch Tables
   const { data: tables = [] } = useQuery({
@@ -488,132 +499,179 @@ export default function StaffDashboard() {
                 className="flex-1 min-h-0"
               >
                 {activeTab === 'orders' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12">
-                    {orders.length === 0 ? (
-                      <div className="col-span-full bg-staff-bg-elevated border border-staff-border rounded-xl p-16 text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-staff-bg-base border border-staff-border flex items-center justify-center mx-auto mb-4">
-                          <LayoutGrid className="w-7 h-7 text-staff-text-muted" />
+                  <div className="space-y-6 pb-12">
+                    {/* Sub-tab segmented control */}
+                    <div className="inline-flex bg-staff-bg-panel border border-staff-border p-1 rounded-xl shadow-sm">
+                      <button
+                        onClick={() => setOrderFilter('active')}
+                        className={`py-2 px-6 rounded-lg text-xs font-bold transition-all ${
+                          orderFilter === 'active'
+                            ? 'bg-staff-accent text-white shadow-staff-card'
+                            : 'text-staff-text-secondary hover:text-staff-text-primary'
+                        }`}
+                      >
+                        الطلبات النشطة
+                      </button>
+                      <button
+                        onClick={() => setOrderFilter('archived')}
+                        className={`py-2 px-6 rounded-lg text-xs font-bold transition-all ${
+                          orderFilter === 'archived'
+                            ? 'bg-staff-accent text-white shadow-staff-card'
+                            : 'text-staff-text-secondary hover:text-staff-text-primary'
+                        }`}
+                      >
+                        الطلبات القديمة (المكتملة والملغاة)
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filteredOrders.length === 0 ? (
+                        <div className="col-span-full bg-staff-bg-elevated border border-staff-border rounded-xl p-16 text-center">
+                          <div className="w-16 h-16 rounded-2xl bg-staff-bg-base border border-staff-border flex items-center justify-center mx-auto mb-4">
+                            <LayoutGrid className="w-7 h-7 text-staff-text-muted" />
+                          </div>
+                          <p className="text-staff-text-secondary font-medium">
+                            {orderFilter === 'active' ? 'لا توجد طلبات نشطة حالياً' : 'لا توجد طلبات قديمة لعرضها'}
+                          </p>
                         </div>
-                        <p className="text-staff-text-secondary font-medium">لا توجد طلبات نشطة حالياً</p>
-                      </div>
-                    ) : (
-                      <AnimatePresence mode="popLayout">
-                        {orders.map((order, idx) => {
-                          const action = getNextStatusAction(order.status);
-                          
-                          // Calculate live elapsed minutes
-                          const elapsedMs = Date.now() - new Date(order.createdAt).getTime();
-                          const elapsedMins = Math.floor(elapsedMs / (60 * 1000));
-                          let timerClass = 'text-staff-text-secondary bg-staff-bg-panel border border-staff-border';
-                          if (elapsedMins >= 20) {
-                            timerClass = 'text-red-500 bg-red-500/10 border border-red-500/20 animate-pulse font-extrabold';
-                          } else if (elapsedMins >= 10) {
-                            timerClass = 'text-amber-500 bg-amber-500/10 border border-amber-500/20';
-                          }
+                      ) : (
+                        <AnimatePresence mode="popLayout">
+                          {filteredOrders.map((order, idx) => {
+                            const action = getNextStatusAction(order.status);
+                            
+                            // Calculate live elapsed minutes
+                            const elapsedMs = Date.now() - new Date(order.createdAt).getTime();
+                            const elapsedMins = Math.floor(elapsedMs / (60 * 1000));
+                            let timerClass = 'text-staff-text-secondary bg-staff-bg-panel border border-staff-border';
+                            if (order.status !== 'delivered' && order.status !== 'cancelled') {
+                              if (elapsedMins >= 20) {
+                                timerClass = 'text-red-500 bg-red-500/10 border border-red-500/20 animate-pulse font-extrabold';
+                              } else if (elapsedMins >= 10) {
+                                timerClass = 'text-amber-500 bg-amber-500/10 border border-amber-500/20';
+                              }
+                            }
 
-                          const isPending = order.status === 'pending';
-                          const cardBorderColor = 
-                            order.status === 'pending' ? 'border-r-amber-500' :
-                            order.status === 'accepted' ? 'border-r-indigo-500' :
-                            order.status === 'preparing' ? 'border-r-violet-500' :
-                            order.status === 'ready' ? 'border-r-emerald-500' : 'border-r-stone-500';
+                            const isPending = order.status === 'pending';
+                            const cardBorderColor = 
+                              order.status === 'pending' ? 'border-r-amber-500' :
+                              order.status === 'accepted' ? 'border-r-indigo-500' :
+                              order.status === 'preparing' ? 'border-r-violet-500' :
+                              order.status === 'ready' ? 'border-r-emerald-500' :
+                              order.status === 'delivered' ? 'border-r-teal-500' : 'border-r-red-500';
 
-                          return (
-                            <motion.div
-                              key={order.id}
-                              variants={orderCardVariants}
-                              exit="exit"
-                              layout
-                              initial="hidden"
-                              animate="visible"
-                              custom={idx}
-                              className={`bg-staff-bg-elevated border rounded-lg p-5 flex flex-col justify-between gap-4 border-r-4 ${cardBorderColor} shadow-staff-card transition-all duration-300 ${
-                                isPending ? 'animate-pending-pulse bg-gradient-to-br from-staff-bg-elevated to-amber-500/[0.03]' : ''
-                              }`}
-                            >
-                              <div className="space-y-3">
-                                {/* Order header */}
-                                <div className="flex justify-between items-center pb-3 border-b border-staff-border">
-                                  <div>
-                                    <span className="text-[11px] text-staff-text-secondary font-mono bg-staff-bg-panel border border-staff-border px-2 py-0.5 rounded-md">
-                                      #{order.id.slice(-6).toUpperCase()}
-                                    </span>
-                                    <div className="mt-1">
-                                      <h3 className="font-extrabold text-staff-text-primary text-2xl leading-none">طاولة {order.tableNumber}</h3>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {/* Urgency kitchen timer badge */}
-                                    <span className={`text-[12px] font-mono font-bold px-2.5 py-0.5 rounded-full ${timerClass}`}>
-                                      {elapsedMins} دقيقة
-                                    </span>
-
-                                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                                      order.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                      order.status === 'accepted' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
-                                      order.status === 'preparing' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20' :
-                                      'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                    }`}>
-                                      {order.status === 'pending' ? 'جديد' :
-                                       order.status === 'accepted' ? 'مقبول' :
-                                       order.status === 'preparing' ? 'يتم التجهيز' : 'جاهز'}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Items */}
-                                <div className="space-y-2 max-h-[160px] overflow-y-auto scrollbar-hide">
-                                  {order.items.map((item, idx) => (
-                                    <div key={idx}>
-                                      <div className="flex justify-between items-center text-sm">
-                                        <span className="text-staff-text-primary font-bold">
-                                          {item.name} <span className="text-staff-accent font-extrabold font-mono">x{item.quantity}</span>
-                                        </span>
+                            return (
+                              <motion.div
+                                key={order.id}
+                                variants={orderCardVariants}
+                                exit="exit"
+                                layout
+                                initial="hidden"
+                                animate="visible"
+                                custom={idx}
+                                className={`bg-staff-bg-elevated border rounded-lg p-5 flex flex-col justify-between gap-4 border-r-4 ${cardBorderColor} shadow-staff-card transition-all duration-300 ${
+                                  isPending ? 'animate-pending-pulse bg-gradient-to-br from-staff-bg-elevated to-amber-500/[0.03]' : ''
+                                }`}
+                              >
+                                <div className="space-y-3">
+                                  {/* Order header */}
+                                  <div className="flex justify-between items-center pb-3 border-b border-staff-border">
+                                    <div>
+                                      <span className="text-[11px] text-staff-text-secondary font-mono bg-staff-bg-panel border border-staff-border px-2 py-0.5 rounded-md">
+                                        #{order.id.slice(-6).toUpperCase()}
+                                      </span>
+                                      <div className="mt-1">
+                                        <h3 className="font-extrabold text-staff-text-primary text-2xl leading-none">طاولة {order.tableNumber}</h3>
                                       </div>
-                                      {item.notes && (
-                                        <p className="text-[11px] text-amber-400 mr-2 bg-amber-500/5 border border-amber-500/10 p-1.5 rounded-lg mt-1 font-semibold">
-                                          📝 {item.notes}
-                                        </p>
-                                      )}
                                     </div>
-                                  ))}
-                                </div>
+                                    <div className="flex items-center gap-2">
+                                      {/* Urgency kitchen timer badge for active orders only */}
+                                      {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                        <span className={`text-[12px] font-mono font-bold px-2.5 py-0.5 rounded-full ${timerClass}`}>
+                                          {elapsedMins} دقيقة
+                                        </span>
+                                      )}
 
-                                {order.specialNotes && (
-                                  <div className="bg-staff-bg-panel p-3 rounded-xl border border-staff-border">
-                                    <p className="text-xs text-staff-text-secondary font-semibold">📋 {order.specialNotes}</p>
+                                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                                        order.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                        order.status === 'accepted' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
+                                        order.status === 'preparing' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20' :
+                                        order.status === 'ready' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                        order.status === 'delivered' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' :
+                                        'bg-red-500/10 text-red-400 border-red-500/20'
+                                      }`}>
+                                        {order.status === 'pending' ? 'جديد' :
+                                         order.status === 'accepted' ? 'مقبول' :
+                                         order.status === 'preparing' ? 'يتم التجهيز' :
+                                         order.status === 'ready' ? 'جاهز' :
+                                         order.status === 'delivered' ? 'تم التوصيل' : 'ملغي'}
+                                      </span>
+                                    </div>
                                   </div>
-                                )}
-                              </div>
 
-                              {/* Actions */}
-                              <div className="flex items-center justify-between pt-3 border-t border-staff-border">
-                                <span className="font-extrabold text-staff-accent text-lg">{order.totalAmount} ج.م</span>
-                                <div className="flex gap-2">
-                                  <motion.button
-                                    onClick={() => updateStatusMutation.mutate({ orderId: order.id, nextStatus: 'cancelled' })}
-                                    whileTap={{ scale: 0.9 }}
-                                    className="p-2.5 rounded-xl border border-staff-border bg-staff-bg-base text-staff-text-secondary hover:text-red-400 hover:border-red-500/30 transition-colors"
-                                  >
-                                    <XCircle className="w-4.5 h-4.5" />
-                                  </motion.button>
-                                  {action && (
-                                    <motion.button
-                                      onClick={() => updateStatusMutation.mutate({ orderId: order.id, nextStatus: action.next })}
-                                      whileTap={statusChangeVariants.tap}
-                                      className={`flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold transition-all ${action.actionClass}`}
-                                    >
-                                      {action.icon}
-                                      <span>{action.label}</span>
-                                    </motion.button>
+                                  {/* Items */}
+                                  <div className="space-y-2 max-h-[160px] overflow-y-auto scrollbar-hide">
+                                    {order.items.map((item, idx) => (
+                                      <div key={idx}>
+                                        <div className="flex justify-between items-center text-sm">
+                                          <span className="text-staff-text-primary font-bold">
+                                            {item.name} <span className="text-staff-accent font-extrabold font-mono">x{item.quantity}</span>
+                                          </span>
+                                        </div>
+                                        {item.notes && (
+                                          <p className="text-[11px] text-amber-400 mr-2 bg-amber-500/5 border border-amber-500/10 p-1.5 rounded-lg mt-1 font-semibold">
+                                            📝 {item.notes}
+                                          </p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {order.specialNotes && (
+                                    <div className="bg-staff-bg-panel p-3 rounded-xl border border-staff-border">
+                                      <p className="text-xs text-staff-text-secondary font-semibold">📋 {order.specialNotes}</p>
+                                    </div>
                                   )}
                                 </div>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                      </AnimatePresence>
-                    )}
+
+                                {/* Actions */}
+                                <div className="flex items-center justify-between pt-3 border-t border-staff-border">
+                                  <span className="font-extrabold text-staff-accent text-lg">{order.totalAmount} ج.م</span>
+                                  <div className="flex gap-2">
+                                    {orderFilter === 'active' ? (
+                                      <>
+                                        <motion.button
+                                          onClick={() => updateStatusMutation.mutate({ orderId: order.id, nextStatus: 'cancelled' })}
+                                          whileTap={{ scale: 0.9 }}
+                                          className="p-2.5 rounded-xl border border-staff-border bg-staff-bg-base text-staff-text-secondary hover:text-red-400 hover:border-red-500/30 transition-colors"
+                                        >
+                                          <XCircle className="w-4.5 h-4.5" />
+                                        </motion.button>
+                                        {action && (
+                                          <motion.button
+                                            onClick={() => updateStatusMutation.mutate({ orderId: order.id, nextStatus: action.next })}
+                                            whileTap={statusChangeVariants.tap}
+                                            className={`flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold transition-all ${action.actionClass}`}
+                                          >
+                                            {action.icon}
+                                            <span>{action.label}</span>
+                                          </motion.button>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full border ${
+                                        order.status === 'delivered' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                      }`}>
+                                        {order.status === 'delivered' ? 'تم تقديم الخدمة' : 'تم الرفض / الإلغاء'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   /* Tables Map */
