@@ -764,6 +764,7 @@ export default function StaffDashboard() {
         <>
           <style dangerouslySetInnerHTML={{__html: `
             @page {
+              size: 80mm auto;
               margin: 0 !important;
             }
             @media print {
@@ -784,9 +785,10 @@ export default function StaffDashboard() {
               .print-receipt-container {
                 position: absolute !important;
                 left: 0 !important;
+                right: 0 !important;
                 top: 0 !important;
                 width: 80mm !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
                 padding: 8mm 5mm !important;
                 box-sizing: border-box !important;
                 background: white !important;
