@@ -21,13 +21,19 @@ interface SystemSettings {
     proPrice: number;
     endsAt?: string;
   };
+  limits: {
+    trial: number;
+    basic: number;
+    pro: number;
+  };
 }
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState<SystemSettings>({
     pricing: { basic: 1000, pro: 1500 },
-    offer: { active: false, title: '', basicPrice: 0, proPrice: 0 }
+    offer: { active: false, title: '', basicPrice: 0, proPrice: 0 },
+    limits: { trial: 5, basic: 10, pro: 20 }
   });
   const [pulsePricing, setPulsePricing] = useState(false);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
@@ -421,9 +427,13 @@ export default function LandingPage() {
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>تعديل قائمة الأطعمة وتفعيل/إخفاء الأطباق لحظياً</span>
                   </li>
-                  <li className="flex items-center gap-2.5 text-slate-500 line-through">
-                    <CheckCircle2 className="w-4 h-4 text-slate-600 shrink-0" />
-                    <span>تحليلات ورسوم بيانية وتقارير مبيعات متقدمة</span>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>تقارير المبيعات وتحليل الأطباق الأكثر طلباً</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>دعم حتى {settings.limits?.basic || 10} طاولات (طاولة QR)</span>
                   </li>
                 </ul>
               </div>
@@ -489,11 +499,7 @@ export default function LandingPage() {
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#C9A84C] shrink-0" />
-                    <span>شاشة تقارير مبيعات شاملة وأرباح يومية وأسبوعية</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-[#C9A84C] shrink-0" />
-                    <span>معرفة الأصناف والأقسام الأكثر شعبية وطلباً</span>
+                    <span>دعم حتى {settings.limits?.pro || 20} طاولة (طاولة QR)</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#C9A84C] shrink-0" />

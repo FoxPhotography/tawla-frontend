@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /super-admin
+Disallow: /staff
+
+Sitemap: https://www.tawla.site/sitemap.xml

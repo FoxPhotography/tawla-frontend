@@ -28,6 +28,9 @@ export default function SuperAdminDashboard() {
   const [offerBasicPrice, setOfferBasicPrice] = useState(800);
   const [offerProPrice, setOfferProPrice] = useState(1200);
   const [offerEndsAt, setOfferEndsAt] = useState('');
+  const [limitTrial, setLimitTrial] = useState(5);
+  const [limitBasic, setLimitBasic] = useState(10);
+  const [limitPro, setLimitPro] = useState(20);
 
   // Form states - Create Restaurant
   const [restName, setRestName] = useState('');
@@ -137,6 +140,11 @@ export default function SuperAdminDashboard() {
       } else {
         setOfferEndsAt('');
       }
+      if (systemSettings.limits) {
+        setLimitTrial(systemSettings.limits.trial);
+        setLimitBasic(systemSettings.limits.basic);
+        setLimitPro(systemSettings.limits.pro);
+      }
     }
   }, [systemSettings]);
 
@@ -154,6 +162,11 @@ export default function SuperAdminDashboard() {
           basicPrice: Number(offerBasicPrice),
           proPrice: Number(offerProPrice),
           endsAt: offerEndsAt ? new Date(offerEndsAt).toISOString() : undefined,
+        },
+        limits: {
+          trial: Number(limitTrial),
+          basic: Number(limitBasic),
+          pro: Number(limitPro),
         },
       };
       return api.put('/super-admin/system-settings', payload);
@@ -939,6 +952,56 @@ export default function SuperAdminDashboard() {
                             onChange={(e) => setProPrice(Number(e.target.value))}
                             className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
                           />
+                        </div>
+                      </div>
+
+                      {/* Limits Configuration */}
+                      <div className="border-t border-slate-800/50 pt-5 space-y-4">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                          <Sliders className="w-4 h-4 text-indigo-400" />
+                          <span>الحدود القصوى للطاولات لكل باقة</span>
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">حدد الحد الأقصى من الطاولات (QR Tables) المسموح بإنشائها لكل فئة اشتراك.</p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Trial limit */}
+                          <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-400">الباقة التجريبية (TRIAL) *</label>
+                            <input
+                              type="number"
+                              required
+                              min="1"
+                              value={limitTrial}
+                              onChange={(e) => setLimitTrial(Number(e.target.value))}
+                              className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
+                            />
+                          </div>
+
+                          {/* Basic limit */}
+                          <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-400">الباقة الأساسية (BASIC) *</label>
+                            <input
+                              type="number"
+                              required
+                              min="1"
+                              value={limitBasic}
+                              onChange={(e) => setLimitBasic(Number(e.target.value))}
+                              className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
+                            />
+                          </div>
+
+                          {/* Pro limit */}
+                          <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-400">الباقة المتقدمة (PRO) *</label>
+                            <input
+                              type="number"
+                              required
+                              min="1"
+                              value={limitPro}
+                              onChange={(e) => setLimitPro(Number(e.target.value))}
+                              className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
+                            />
+                          </div>
                         </div>
                       </div>
 
