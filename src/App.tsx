@@ -12,26 +12,7 @@ const AdminLogin = React.lazy(() => import('./apps/admin/AdminLogin.js'));
 const AdminDashboard = React.lazy(() => import('./apps/admin/AdminDashboard.js'));
 const Register = React.lazy(() => import('./apps/admin/Register.js'));
 const SuperAdminDashboard = React.lazy(() => import('./apps/super-admin/SuperAdminDashboard.js'));
-
-function HomeRouter() {
-  const { user } = useAuthStore();
-
-  if (!user) {
-    return <Navigate to="/admin/login" replace />;
-  }
-
-  if (user.role === 'super_admin') {
-    return <Navigate to="/super-admin" replace />;
-  }
-  if (user.role === 'admin') {
-    return <Navigate to="/admin" replace />;
-  }
-  if (user.role === 'cashier' || user.role === 'waiter') {
-    return <Navigate to="/staff" replace />;
-  }
-
-  return <Navigate to="/admin/login" replace />;
-}
+const LandingPage = React.lazy(() => import('./apps/landing/LandingPage.js'));
 
 export default function App() {
   return (
@@ -42,8 +23,8 @@ export default function App() {
         </div>
       }>
         <Routes>
-          {/* Root Route Redirect */}
-          <Route path="/" element={<HomeRouter />} />
+          {/* Root Route Landing Page */}
+          <Route path="/" element={<LandingPage />} />
 
           {/* Customer Apps Routes */}
           <Route path="/menu/:restaurantSlug/table/:tableNumber" element={<CustomerMenu />} />

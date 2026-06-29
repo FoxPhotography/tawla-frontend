@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Key, Plus, Copy, Check, LogOut, RefreshCw, 
   Coffee, ShieldAlert, Sliders, Calendar, Globe, Eye, EyeOff,
-  Sparkles, Activity, Trash2, Lock, ShieldCheck, Users
+  Sparkles, Activity, Trash2, Lock, ShieldCheck, Users, Flame
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -18,7 +18,16 @@ export default function SuperAdminDashboard() {
   const queryClient = useQueryClient();
   const { user, logout } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'serials'>('restaurants');
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'serials' | 'settings'>('restaurants');
+
+  // Form states - Platform settings & Pricing
+  const [basicPrice, setBasicPrice] = useState(1000);
+  const [proPrice, setProPrice] = useState(1500);
+  const [offerActive, setOfferActive] = useState(false);
+  const [offerTitle, setOfferTitle] = useState('');
+  const [offerBasicPrice, setOfferBasicPrice] = useState(800);
+  const [offerProPrice, setOfferProPrice] = useState(1200);
+  const [offerEndsAt, setOfferEndsAt] = useState('');
 
   // Form states - Create Restaurant
   const [restName, setRestName] = useState('');
@@ -69,10 +78,6 @@ export default function SuperAdminDashboard() {
     }
   }, [user, navigate]);
 
-  if (!user || user.role !== 'super_admin') {
-    return null;
-  }
-
   const handleLogout = () => {
     logout();
     navigate('/admin/login');
@@ -105,7 +110,62 @@ export default function SuperAdminDashboard() {
     },
   });
 
+  const { data: systemSettings } = useQuery({
+    queryKey: ['super-admin-system-settings'],
+    queryFn: async () => {
+      const response = await api.get('/system-settings');
+      return response.data.data;
+    },
+  });
+
+  useEffect(() => {
+    if (systemSettings) {
+      setBasicPrice(systemSettings.pricing.basic);
+      setProPrice(systemSettings.pricing.pro);
+      setOfferActive(systemSettings.offer.active);
+      setOfferTitle(systemSettings.offer.title || '');
+      setOfferBasicPrice(systemSettings.offer.basicPrice || 0);
+      setOfferProPrice(systemSettings.offer.proPrice || 0);
+      if (systemSettings.offer.endsAt) {
+        const d = new Date(systemSettings.offer.endsAt);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        setOfferEndsAt(`${year}-${month}-${day}T${hours}:${minutes}`);
+      } else {
+        setOfferEndsAt('');
+      }
+    }
+  }, [systemSettings]);
+
   // Mutations
+  const updateSettingsMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        pricing: {
+          basic: Number(basicPrice),
+          pro: Number(proPrice),
+        },
+        offer: {
+          active: offerActive,
+          title: offerTitle,
+          basicPrice: Number(offerBasicPrice),
+          proPrice: Number(offerProPrice),
+          endsAt: offerEndsAt ? new Date(offerEndsAt).toISOString() : undefined,
+        },
+      };
+      return api.put('/super-admin/system-settings', payload);
+    },
+    onSuccess: () => {
+      toast.success('تم حفظ إعدادات النظام وتحديث الأسعار والعروض فورياً!');
+      queryClient.invalidateQueries({ queryKey: ['super-admin-system-settings'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل تحديث الإعدادات.');
+    },
+  });
   const createRestMutation = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -209,6 +269,10 @@ export default function SuperAdminDashboard() {
       toast.error(err.response?.data?.error || 'فشل حذف المطعم.');
     },
   });
+
+  if (!user || user.role !== 'super_admin') {
+    return null;
+  }
 
   const openRestDetails = (rest: any) => {
     setSelectedRest(rest);
@@ -370,7 +434,8 @@ export default function SuperAdminDashboard() {
             <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-3 space-y-1.5 shadow-xl">
               {[
                 { key: 'restaurants' as const, label: 'الاشتراكات والمطاعم', icon: Coffee },
-                { key: 'serials' as const, label: 'أكواد التفعيل (Serials)', icon: Key }
+                { key: 'serials' as const, label: 'أكواد التفعيل (Serials)', icon: Key },
+                { key: 'settings' as const, label: 'إعدادات المنصة والأسعار', icon: Sliders }
               ].map(tab => (
                 <button
                   key={tab.key}
@@ -835,6 +900,152 @@ export default function SuperAdminDashboard() {
                         )}
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {activeTab === 'settings' && (
+                  <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-6 shadow-2xl relative overflow-hidden space-y-6">
+                    <div className="absolute top-0 left-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+                    <h2 className="text-base font-black text-white mb-5 flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <Sliders className="w-4 h-4" />
+                      </div>
+                      <span>إعدادات النظام وأسعار الباقات</span>
+                    </h2>
+
+                    <form onSubmit={(e) => { e.preventDefault(); updateSettingsMutation.mutate(); }} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Basic Plan price */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-black text-slate-400">سعر اشتراك باقة الـ BASIC (بالجنيه المصري) *</label>
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            value={basicPrice}
+                            onChange={(e) => setBasicPrice(Number(e.target.value))}
+                            className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
+                          />
+                        </div>
+
+                        {/* Pro Plan price */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-black text-slate-400">سعر اشتراك باقة الـ PRO (بالجنيه المصري) *</label>
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            value={proPrice}
+                            onChange={(e) => setProPrice(Number(e.target.value))}
+                            className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Promotion configuration section */}
+                      <div className="border-t border-slate-800/50 pt-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                              <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
+                              <span>العروض الترويجية والخصومات المؤقتة</span>
+                            </h3>
+                            <p className="text-[10px] text-slate-500 mt-0.5 font-medium">تفعيل هذا العرض يعرض أسعاراً مخفضة مع شريط عداد تنازلي للعملاء بالصفحة التعريفية فوراً.</p>
+                          </div>
+                          
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={offerActive}
+                              onChange={(e) => setOfferActive(e.target.checked)}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-slate-350 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <span className="mr-3 text-xs font-bold text-slate-400">{offerActive ? 'نشط' : 'غير نشط'}</span>
+                          </label>
+                        </div>
+
+                        {offerActive && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="space-y-4 pt-2.5"
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Subtitle / Title of promotion */}
+                              <div className="space-y-2">
+                                <label className="block text-xs font-bold text-slate-400">عنوان العرض الترويجي (مثال: خصم الصيف 🏖️) *</label>
+                                <input
+                                  type="text"
+                                  required={offerActive}
+                                  value={offerTitle}
+                                  onChange={(e) => setOfferTitle(e.target.value)}
+                                  placeholder="اكتب عنوان جذاب للعرض..."
+                                  className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all placeholder:text-slate-650"
+                                />
+                              </div>
+
+                              {/* Expiry Datetime */}
+                              <div className="space-y-2">
+                                <label className="block text-xs font-bold text-slate-400">تاريخ ووقت انتهاء العرض الترويجي *</label>
+                                <input
+                                  type="datetime-local"
+                                  required={offerActive}
+                                  value={offerEndsAt}
+                                  onChange={(e) => setOfferEndsAt(e.target.value)}
+                                  className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Basic price during offer */}
+                              <div className="space-y-2">
+                                <label className="block text-xs font-bold text-slate-400">سعر باقة BASIC خلال العرض (جنيه) *</label>
+                                <input
+                                  type="number"
+                                  required={offerActive}
+                                  min="0"
+                                  value={offerBasicPrice}
+                                  onChange={(e) => setOfferBasicPrice(Number(e.target.value))}
+                                  className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
+                                />
+                              </div>
+
+                              {/* Pro price during offer */}
+                              <div className="space-y-2">
+                                <label className="block text-xs font-bold text-slate-400">سعر باقة PRO خلال العرض (جنيه) *</label>
+                                <input
+                                  type="number"
+                                  required={offerActive}
+                                  min="0"
+                                  value={offerProPrice}
+                                  onChange={(e) => setOfferProPrice(Number(e.target.value))}
+                                  className="w-full bg-slate-950/80 border border-slate-800/80 text-white rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all font-mono animate-none"
+                                />
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-800/50 flex justify-end">
+                        <motion.button
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                          type="submit"
+                          disabled={updateSettingsMutation.isPending}
+                          className="py-3 px-8 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:from-slate-800 disabled:to-slate-800 text-white font-black text-xs rounded-xl transition-all shadow-lg shadow-indigo-600/10 cursor-pointer flex items-center gap-2"
+                        >
+                          {updateSettingsMutation.isPending ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="w-4 h-4" />
+                          )}
+                          <span>حفظ وبث الأسعار حياً</span>
+                        </motion.button>
+                      </div>
+                    </form>
                   </div>
                 )}
               </motion.div>
