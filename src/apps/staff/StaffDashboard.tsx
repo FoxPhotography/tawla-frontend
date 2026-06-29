@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Coffee, LogOut, Bell, LayoutGrid, MapPin, 
   Check, CheckCheck, Play, XCircle, CreditCard, Clock, Sparkles, Printer,
-  CloudOff, Search, Plus, Minus, Trash2, PlusCircle, Download
+  CloudOff, Search, Plus, Minus, Trash2, PlusCircle, Download, ChevronDown, UtensilsCrossed, ShoppingBag
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -88,6 +88,19 @@ export default function StaffDashboard() {
   const [menuSelectedCategory, setMenuSelectedCategory] = useState<string>('all');
   const [newOrderCart, setNewOrderCart] = useState<{ product: any; quantity: number; notes: string }[]>([]);
   const [newOrderSpecialNotes, setNewOrderSpecialNotes] = useState('');
+  const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
+  const tableDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside custom table select dropdown to close it
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (tableDropdownRef.current && !tableDropdownRef.current.contains(event.target as Node)) {
+        setIsTableDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Digital Clock timer
   useEffect(() => {
@@ -1255,13 +1268,18 @@ export default function StaffDashboard() {
 
       {/* WAITER DIRECT ORDER MODAL */}
       {isCreateOrderOpen && createPortal(
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-          <div className="bg-[#141720] border border-staff-border rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-staff-elevated text-staff-text-primary">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 md:p-6 transition-all duration-300" dir="rtl">
+          <div className="bg-[#0f111a] border border-slate-800 rounded-3xl w-full max-w-5xl h-[88vh] flex flex-col overflow-hidden shadow-2xl text-slate-100 relative">
             {/* Modal Header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-staff-border bg-[#1c2030]">
-              <div className="flex items-center gap-2">
-                <PlusCircle className="w-5 h-5 text-indigo-400" />
-                <h2 className="font-extrabold text-base">إنشاء طلب جديد (ويتر)</h2>
+            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-800 bg-[#161925]/60 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+                  <PlusCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-base text-white">إنشاء طلب جديد (ويتر)</h2>
+                  <p className="text-[10px] text-slate-400 font-medium">سجل طلب طاولة جديدة واطبع الفاتورة فوراً</p>
+                </div>
               </div>
               <button 
                 onClick={() => {
@@ -1270,7 +1288,7 @@ export default function StaffDashboard() {
                   setNewOrderSpecialNotes('');
                   setIsCreateOrderOpen(false);
                 }} 
-                className="text-staff-text-muted hover:text-staff-text-primary transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-slate-800/50 hover:bg-red-500/10 text-slate-400 hover:text-red-400 flex items-center justify-center transition-all cursor-pointer border border-slate-700/30"
               >
                 <XCircle className="w-5 h-5" />
               </button>
@@ -1280,64 +1298,128 @@ export default function StaffDashboard() {
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
               
               {/* Left Column: Cart & Table details (40%) */}
-              <div className="w-full md:w-[380px] border-l border-staff-border flex flex-col h-full bg-[#0d0f12] flex-shrink-0">
+              <div className="w-full md:w-[380px] border-l border-slate-800 flex flex-col h-full bg-[#0c0d14] flex-shrink-0">
                 {/* Table & Notes selection */}
-                <div className="p-4 border-b border-staff-border space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-staff-text-secondary mb-1.5">اختر رقم الطاولة:</label>
-                    <select
-                      value={selectedTableNumber}
-                      onChange={(e) => setSelectedTableNumber(e.target.value ? Number(e.target.value) : '')}
-                      className="w-full bg-staff-bg-panel border border-staff-border text-staff-text-primary text-xs rounded-xl p-2.5 outline-none focus:border-indigo-500 font-bold transition-all"
-                    >
-                      <option value="">-- اختر رقم الطاولة --</option>
-                      {tables.map((t: Table) => (
-                        <option key={t.id} value={t.number}>
-                          طاولة {t.number} ({t.status === 'occupied' ? 'مشغولة' : t.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'})
-                        </option>
-                      ))}
-                    </select>
+                <div className="p-5 border-b border-slate-800 space-y-4">
+                  <div className="space-y-1.5" ref={tableDropdownRef}>
+                    <label className="block text-[11px] font-bold text-slate-400">اختر رقم الطاولة:</label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsTableDropdownOpen(prev => !prev)}
+                        className="w-full bg-[#161925] border border-slate-800 text-slate-100 text-xs rounded-xl pr-3.5 pl-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-bold transition-all text-right flex justify-between items-center cursor-pointer"
+                      >
+                        <span className="truncate">
+                          {selectedTableNumber 
+                            ? `طاولة ${selectedTableNumber} (${
+                                tables.find((t: Table) => t.number === selectedTableNumber)?.status === 'occupied' 
+                                  ? 'مشغولة' 
+                                  : tables.find((t: Table) => t.number === selectedTableNumber)?.status === 'waitingBill' 
+                                  ? 'تطلب الحساب' 
+                                  : 'متاحة'
+                              })`
+                            : '-- اختر رقم الطاولة --'}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-250 ${isTableDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      <AnimatePresence>
+                        {isTableDropdownOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
+                            className="absolute right-0 left-0 mt-2 bg-[#161925] border border-slate-800 rounded-xl overflow-hidden shadow-xl z-50 max-h-60 overflow-y-auto scrollbar-hide"
+                          >
+                            <div className="p-1.5 space-y-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTableNumber('');
+                                  setIsTableDropdownOpen(false);
+                                }}
+                                className="w-full text-right px-3 py-2 text-xs text-slate-400 hover:bg-slate-800/40 hover:text-white rounded-lg transition-colors cursor-pointer"
+                              >
+                                -- اختر رقم الطاولة --
+                              </button>
+                              {tables.map((t: Table) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedTableNumber(t.number);
+                                    setIsTableDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-right px-3 py-2.5 text-xs rounded-lg transition-colors flex justify-between items-center cursor-pointer ${
+                                    selectedTableNumber === t.number
+                                      ? 'bg-indigo-600 text-white font-extrabold shadow-md shadow-indigo-600/10'
+                                      : 'text-slate-200 hover:bg-slate-800/40'
+                                  }`}
+                                >
+                                  <span className="font-bold">طاولة {t.number}</span>
+                                  <span className={`text-[9.5px] px-2 py-0.5 rounded-full font-bold ${
+                                    t.status === 'occupied' 
+                                      ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/10' 
+                                      : t.status === 'waitingBill' 
+                                      ? 'bg-red-500/20 text-red-400 border border-red-500/10 animate-pulse' 
+                                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/10'
+                                  }`}>
+                                    {t.status === 'occupied' ? 'مشغولة' : t.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
                   
-                  <div>
-                    <label className="block text-[11px] font-bold text-staff-text-secondary mb-1.5">ملاحظات عامة للطلب:</label>
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-slate-400">ملاحظات عامة للطلب:</label>
                     <textarea
                       placeholder="مثال: البهارات خفيفة، التوصيل مع فواتير الطاولة السابقة..."
                       value={newOrderSpecialNotes}
                       onChange={(e) => setNewOrderSpecialNotes(e.target.value)}
                       rows={2}
-                      className="w-full bg-staff-bg-panel border border-staff-border text-staff-text-primary text-xs rounded-xl p-2.5 outline-none focus:border-indigo-500 resize-none transition-all"
+                      className="w-full bg-[#161925] border border-slate-800 text-slate-100 text-xs rounded-xl p-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 resize-none transition-all placeholder:text-slate-600"
                     />
                   </div>
                 </div>
 
                 {/* Cart Items List */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
-                  <h4 className="text-[11px] font-extrabold text-staff-text-muted uppercase tracking-wider mb-2">مكونات الطلب</h4>
+                <div className="flex-1 overflow-y-auto p-5 space-y-3 scrollbar-hide">
+                  <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2">مكونات الطلب</h4>
                   {newOrderCart.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center py-12 text-staff-text-muted">
-                      <LayoutGrid className="w-8 h-8 mb-2 opacity-30" />
-                      <p className="text-[11px] font-bold">السلة فارغة. أضف أصناف من القائمة</p>
+                    <div className="h-full border border-dashed border-slate-800/80 rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-[#10121e]/20 min-h-[220px]">
+                      <div className="w-12 h-12 rounded-full bg-slate-800/40 flex items-center justify-center mb-3">
+                        <ShoppingBag className="w-6 h-6 text-slate-500/60" />
+                      </div>
+                      <h5 className="text-xs font-bold text-slate-300 mb-1">السلة فارغة</h5>
+                      <p className="text-[10px] text-slate-500 max-w-[200px] leading-relaxed">
+                        لم يتم إضافة وجبات بعد. اختر بعض الأصناف من القائمة للبدء.
+                      </p>
                     </div>
                   ) : (
                     newOrderCart.map((item, idx) => (
-                      <div key={idx} className="bg-staff-bg-panel border border-staff-border rounded-xl p-3 space-y-2">
-                        <div className="flex justify-between items-start">
+                      <div key={idx} className="bg-[#121420] border border-slate-800/80 rounded-xl p-3.5 space-y-3 hover:border-slate-700/50 transition-all shadow-sm">
+                        <div className="flex justify-between items-start gap-2">
                           <div>
-                            <h5 className="text-xs font-bold text-staff-text-primary leading-tight">{item.product.name}</h5>
-                            <span className="text-[11px] text-indigo-400 font-bold font-mono">{item.product.price} ج.م</span>
+                            <h5 className="text-xs font-extrabold text-white leading-snug">{item.product.name}</h5>
+                            <span className="text-[11px] text-indigo-400 font-extrabold font-mono">{item.product.price} ج.م</span>
                           </div>
                           <button
                             onClick={() => setNewOrderCart(prev => prev.filter(i => i.product.id !== item.product.id))}
-                            className="text-staff-text-muted hover:text-red-400 transition-colors"
+                            className="w-6 h-6 rounded-md hover:bg-red-500/10 text-slate-500 hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                         
                         {/* Quantity and Notes */}
-                        <div className="flex justify-between items-center gap-2 pt-1 border-t border-staff-border/40">
-                          <div className="flex items-center gap-1.5">
+                        <div className="flex justify-between items-center gap-2 pt-2.5 border-t border-slate-800/60">
+                          <div className="flex items-center bg-[#0d0f17] border border-slate-800 rounded-lg p-0.5">
                             <button
                               onClick={() => {
                                 setNewOrderCart(prev => prev.map(i => 
@@ -1346,11 +1428,11 @@ export default function StaffDashboard() {
                                     : i
                                 ));
                               }}
-                              className="w-6 h-6 rounded-md bg-staff-bg-base border border-staff-border flex items-center justify-center hover:bg-staff-bg-panel active:scale-95 transition-all text-xs"
+                              className="w-6 h-6 rounded bg-slate-800/50 hover:bg-slate-800 flex items-center justify-center active:scale-95 transition-all text-xs text-slate-300"
                             >
-                              <Minus className="w-3 h-3 text-staff-text-secondary" />
+                              <Minus className="w-3 h-3" />
                             </button>
-                            <span className="font-mono text-xs font-bold w-4 text-center">{item.quantity}</span>
+                            <span className="font-mono text-xs font-extrabold w-6 text-center text-slate-100">{item.quantity}</span>
                             <button
                               onClick={() => {
                                 setNewOrderCart(prev => prev.map(i => 
@@ -1359,15 +1441,15 @@ export default function StaffDashboard() {
                                     : i
                                 ));
                               }}
-                              className="w-6 h-6 rounded-md bg-staff-bg-base border border-staff-border flex items-center justify-center hover:bg-staff-bg-panel active:scale-95 transition-all text-xs"
+                              className="w-6 h-6 rounded bg-slate-800/50 hover:bg-slate-800 flex items-center justify-center active:scale-95 transition-all text-xs text-slate-300"
                             >
-                              <Plus className="w-3 h-3 text-staff-text-secondary" />
+                              <Plus className="w-3 h-3" />
                             </button>
                           </div>
                           
                           <input
                             type="text"
-                            placeholder="ملاحظات الصنف..."
+                            placeholder="إضافة ملاحظة على الصنف..."
                             value={item.notes}
                             onChange={(e) => {
                               setNewOrderCart(prev => prev.map(i => 
@@ -1376,7 +1458,7 @@ export default function StaffDashboard() {
                                   : i
                               ));
                             }}
-                            className="flex-1 bg-staff-bg-base border border-staff-border text-[10px] rounded-lg px-2 py-1 outline-none text-staff-text-primary focus:border-indigo-500"
+                            className="flex-1 bg-[#161925] border border-slate-800 text-[10px] rounded-lg px-2.5 py-1.5 outline-none text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 transition-colors"
                           />
                         </div>
                       </div>
@@ -1385,17 +1467,17 @@ export default function StaffDashboard() {
                 </div>
 
                 {/* Submit Panel */}
-                <div className="p-4 border-t border-staff-border bg-[#141720] space-y-3">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-staff-text-secondary">الإجمالي:</span>
-                    <span className="font-extrabold text-lg text-indigo-400">
+                <div className="p-5 border-t border-slate-800 bg-[#161925]/30 space-y-4">
+                  <div className="flex justify-between items-center bg-[#0a0b12] border border-slate-800 px-4 py-3.5 rounded-2xl">
+                    <span className="text-xs font-bold text-slate-400">إجمالي الحساب:</span>
+                    <span className="font-mono text-base font-black text-indigo-400">
                       {newOrderCart.reduce((acc, item) => acc + item.product.price * item.quantity, 0)} ج.م
                     </span>
                   </div>
 
                   <button
                     onClick={handleCreateOrderSubmit}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98] text-xs flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-600/10 active:scale-[0.98] text-xs flex items-center justify-center gap-2 cursor-pointer border border-indigo-500/20"
                   >
                     <Printer className="w-4 h-4" />
                     <span>تأكيد وطباعة الفاتورة</span>
@@ -1404,30 +1486,30 @@ export default function StaffDashboard() {
               </div>
 
               {/* Right Column: Menu catalog & Categories (60%) */}
-              <div className="flex-1 flex flex-col overflow-hidden bg-staff-bg-base">
+              <div className="flex-1 flex flex-col overflow-hidden bg-[#0d0f16]">
                 
                 {/* Search Bar */}
-                <div className="p-4 border-b border-staff-border flex items-center gap-2">
+                <div className="p-5 border-b border-slate-800 flex items-center gap-2 bg-[#10121e]/20">
                   <div className="relative flex-1">
-                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-staff-text-muted" />
+                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                     <input
                       type="text"
                       placeholder="ابحث في المنيو عن مشروب أو أكلة..."
                       value={menuSearchQuery}
                       onChange={(e) => setMenuSearchQuery(e.target.value)}
-                      className="w-full bg-staff-bg-panel border border-staff-border text-staff-text-primary text-xs rounded-xl pr-10 pl-4 py-2.5 outline-none focus:border-indigo-500 font-bold transition-all"
+                      className="w-full bg-[#161925] border border-slate-800 text-slate-100 text-xs rounded-xl pr-10 pl-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-bold transition-all placeholder:text-slate-600"
                     />
                   </div>
                 </div>
 
                 {/* Categories Scrollbar */}
-                <div className="flex gap-2 overflow-x-auto p-4 border-b border-staff-border scrollbar-hide flex-shrink-0">
+                <div className="flex gap-2.5 overflow-x-auto p-5 border-b border-slate-800/80 scrollbar-hide flex-shrink-0 bg-[#0d0f16]">
                   <button
                     onClick={() => setMenuSelectedCategory('all')}
-                    className={`py-1.5 px-4 rounded-full text-[11px] font-bold transition-all border ${
+                    className={`py-2 px-5 rounded-full text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
                       menuSelectedCategory === 'all'
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                        : 'bg-staff-bg-panel text-staff-text-secondary border-staff-border hover:text-staff-text-primary'
+                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/10'
+                        : 'bg-[#161925] text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'
                     }`}
                   >
                     الكل
@@ -1436,10 +1518,10 @@ export default function StaffDashboard() {
                     <button
                       key={cat.id}
                       onClick={() => setMenuSelectedCategory(cat.id)}
-                      className={`py-1.5 px-4 rounded-full text-[11px] font-bold transition-all border whitespace-nowrap ${
+                      className={`py-2 px-5 rounded-full text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
                         menuSelectedCategory === cat.id
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                          : 'bg-staff-bg-panel text-staff-text-secondary border-staff-border hover:text-staff-text-primary'
+                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/10'
+                          : 'bg-[#161925] text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'
                       }`}
                     >
                       {cat.name}
@@ -1448,10 +1530,10 @@ export default function StaffDashboard() {
                 </div>
 
                 {/* Product Grid Area */}
-                <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="flex-1 overflow-y-auto p-5 grid grid-cols-2 lg:grid-cols-3 gap-4 items-start scrollbar-hide">
                   {modalFilteredProducts.length === 0 ? (
-                    <div className="col-span-full flex flex-col items-center justify-center text-center py-20 text-staff-text-muted">
-                      <LayoutGrid className="w-12 h-12 mb-3 opacity-25" />
+                    <div className="col-span-full flex flex-col items-center justify-center text-center py-20 text-slate-500">
+                      <LayoutGrid className="w-12 h-12 mb-3 opacity-20" />
                       <p className="text-xs font-semibold">لا توجد منتجات مطابقة للبحث</p>
                     </div>
                   ) : (
@@ -1460,24 +1542,34 @@ export default function StaffDashboard() {
                       return (
                         <div
                           key={prod.id}
-                          className="bg-staff-bg-elevated border border-staff-border rounded-xl p-3 flex flex-col justify-between gap-3 hover:border-indigo-500/30 transition-all shadow-sm group"
+                          className="bg-[#121420] border border-slate-800/80 rounded-2xl p-3 flex flex-col justify-between hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/[0.02] transition-all group overflow-hidden"
                         >
-                          <div>
-                            {prod.image?.url && (
-                              <img
-                                src={prod.image.url}
-                                alt={prod.name}
-                                className="w-full h-24 object-cover rounded-lg mb-2 border border-staff-border/40 group-hover:scale-[1.02] transition-transform duration-300"
-                              />
+                          <div className="flex flex-col gap-2">
+                            {prod.image?.url ? (
+                              <div className="w-full aspect-square rounded-xl overflow-hidden mb-1 border border-slate-800/40">
+                                <img
+                                  src={prod.image.url}
+                                  alt={prod.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-full aspect-square rounded-xl bg-slate-900/60 border border-slate-800/40 flex items-center justify-center text-slate-600 mb-1">
+                                <UtensilsCrossed className="w-8 h-8 opacity-40" />
+                              </div>
                             )}
-                            <h5 className="text-xs font-extrabold text-staff-text-primary leading-tight line-clamp-1">{prod.name}</h5>
-                            {prod.description && (
-                              <p className="text-[10px] text-staff-text-muted leading-tight mt-1 line-clamp-2">{prod.description}</p>
-                            )}
+                            <div className="px-1">
+                              <h5 className="text-xs font-extrabold text-white leading-snug line-clamp-1 group-hover:text-indigo-400 transition-colors">{prod.name}</h5>
+                              {prod.description ? (
+                                <p className="text-[10px] text-slate-500 leading-tight mt-1 line-clamp-2 min-h-[28px]">{prod.description}</p>
+                              ) : (
+                                <p className="text-[10px] text-slate-600 italic leading-tight mt-1 min-h-[28px]">لا يوجد وصف متوفر</p>
+                              )}
+                            </div>
                           </div>
                           
-                          <div className="flex justify-between items-center pt-2 border-t border-staff-border/30">
-                            <span className="font-mono text-xs font-bold text-indigo-400">{prod.price} ج.م</span>
+                          <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-slate-800/60 px-1">
+                            <span className="font-mono text-xs font-black text-indigo-400">{prod.price} ج.م</span>
                             <button
                               onClick={() => {
                                 if (inCart) {
@@ -1491,7 +1583,11 @@ export default function StaffDashboard() {
                                   toast.success(`تم إضافة ${prod.name}`);
                                 }
                               }}
-                              className="bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer"
+                              className={`text-[10px] font-bold px-3 py-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                                inCart 
+                                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/15'
+                                  : 'bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20'
+                              }`}
                             >
                               {inCart ? `مضاف (${inCart.quantity})` : 'إضافة +'}
                             </button>

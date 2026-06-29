@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useTransform, useInView } from 'framer-motion';
 import { 
   QrCode, Coffee, Bell, TrendingUp, Receipt,
-  ShieldCheck, Laptop, Check, ArrowLeft,
+  Laptop, Check, ArrowLeft,
   ChevronDown, Send, Sparkles, Menu, X,
-  Lock, Users, ShoppingBag, Plus, Trash2
+  Lock, Users, ShoppingBag, Plus, Trash2, CloudOff
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket';
+import logoImg from '../../assets/logo.png';
 
 interface SystemSettings {
   pricing: {
@@ -246,10 +247,10 @@ export default function LandingPage() {
       badge: "تخصيص كامل"
     },
     {
-      title: "سيرفرات سحابية آمنة ومستقرة",
-      desc: "سيرفرات فائقة الأمان وسرعة استجابة لا تضاهى. دعم فني متاح وحفظ كامل للبيانات بنسبة 100%.",
-      icon: ShieldCheck,
-      badge: "حماية سحابية"
+      title: "دعم العمل بدون إنترنت (أوفلاين)",
+      desc: "سيستم محمي ومستقر تماماً في حال انقطاع الشبكة. يتم حفظ طلبيات الويتر محلياً مع طباعة فواتيره، وتُرفع تلقائياً للسيرفر فور عودة الاتصال.",
+      icon: CloudOff,
+      badge: "حصري ومبتكر"
     }
   ];
 
@@ -267,6 +268,7 @@ export default function LandingPage() {
     `دعم حتى ${settings.limits?.pro || 20} طاولة`,
     "تصميم وضبط إيصالات الدفع واللوجو",
     "تفعيل الضرائب والخدمة للفواتير",
+    "تثبيت كتطبيق سطح مكتب والعمل بالكامل أوفلاين (PWA)",
     "دعم فني خاص ذو أولوية على الواتساب"
   ];
 
@@ -332,8 +334,8 @@ export default function LandingPage() {
       >
         <div className="max-w-7xl mx-auto w-full px-6 flex items-center justify-between">
           <a href="#" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-[#B8973E]/10 border border-[#B8973E]/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:border-[#B8973E]/60">
-              <QrCode className="w-4.5 h-4.5 text-[#B8973E]" />
+            <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center transition-all duration-300 group-hover:scale-110 bg-white border border-[#B8973E]/20">
+              <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-0.5" />
             </div>
             <span className="text-[20px] text-[#1C1612] font-semibold tracking-tight" style={{ fontFamily: '"Playfair Display", Georgia, serif' }}>
               طاولة
@@ -1297,8 +1299,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-[12px] text-[#5C524C]/60">
           
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-[#B8973E]/10 border border-[#B8973E]/20 flex items-center justify-center">
-              <QrCode className="w-3.5 h-3.5 text-[#B8973E]" />
+            <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-[#B8973E]/20">
+              <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-0.5" />
             </div>
             <span className="font-semibold text-[#1C1612] tracking-tight font-serif">
               طاولة © {new Date().getFullYear()}

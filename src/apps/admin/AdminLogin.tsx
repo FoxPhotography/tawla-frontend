@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Lock, User as UserIcon, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Lock, User as UserIcon, ArrowLeft, Eye, EyeOff, QrCode } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
-import logoImg from '../../assets/logo.png';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -74,8 +73,8 @@ export default function AdminLogin() {
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto mb-5 flex items-center justify-center">
-            <img src={logoImg} alt="Tawla Logo" className="max-h-16 object-contain animate-none" />
+          <div className="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[#B8973E]/10 border border-[#B8973E]/30 flex items-center justify-center transition-all duration-300">
+            <QrCode className="w-9 h-9 text-[#B8973E]" />
           </div>
           <h1 className="text-3xl font-extrabold text-admin-text-primary mb-2">بوابة المدير</h1>
           <p className="text-admin-text-secondary text-sm font-medium">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>

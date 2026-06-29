@@ -5,13 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Key, Plus, Copy, Check, LogOut, RefreshCw, 
   Coffee, ShieldAlert, Sliders, Calendar, Globe, Eye, EyeOff,
-  Sparkles, Activity, Trash2, Lock, ShieldCheck, Users, Flame
+  Sparkles, Activity, Trash2, Lock, ShieldCheck, Users, Flame, QrCode
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { SerialKey } from '../../shared/types';
-import logoImg from '../../assets/logo.png';
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -369,7 +368,7 @@ export default function SuperAdminDashboard() {
             transition={{ type: 'spring', stiffness: 200 }}
             className="w-12 h-12 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-center shadow-lg overflow-hidden"
           >
-            <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-1.5" />
+            <QrCode className="w-6 h-6 text-indigo-400" />
           </motion.div>
           <div>
             <div className="flex items-center gap-2">
