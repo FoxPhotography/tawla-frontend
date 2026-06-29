@@ -5,13 +5,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Coffee, LogOut, Bell, LayoutGrid, MapPin, 
-  Check, CheckCheck, Play, XCircle, CreditCard, Clock, Sparkles, Printer
+  Check, CheckCheck, Play, XCircle, CreditCard, Clock, Sparkles, Printer,
+  CloudOff, RefreshCw, Search, Plus, Minus, Trash2, PlusCircle, Download, AlertTriangle
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { Order, Table } from '../../shared/types';
+import { getOfflineOrders, saveOfflineOrder, removeOfflineOrder, syncOfflineOrders, OfflineOrder } from '../../shared/services/offlineOrders';
+
 
 // ============ Framer Motion Animation Variants ============
 const orderCardVariants = {
@@ -70,6 +73,20 @@ export default function StaffDashboard() {
   const [isOnline, setIsOnline] = useState(socket.connected);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [, setTick] = useState(0);
+
+  // Network and PWA installation state
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>(navigator.onLine ? 'online' : 'offline');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [offlineOrders, setOfflineOrders] = useState<OfflineOrder[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Waiter ordering state
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [selectedTableNumber, setSelectedTableNumber] = useState<number | ''>('');
+  const [menuSearchQuery, setMenuSearchQuery] = useState('');
+  const [menuSelectedCategory, setMenuSelectedCategory] = useState<string>('all');
+  const [newOrderCart, setNewOrderCart] = useState<{ product: any; quantity: number; notes: string }[]>([]);
+  const [newOrderSpecialNotes, setNewOrderSpecialNotes] = useState('');
 
   // Digital Clock timer
   useEffect(() => {
@@ -130,45 +147,147 @@ export default function StaffDashboard() {
     return () => window.removeEventListener('click', resumeAudio);
   }, []);
 
-  // Fetch Orders
-  const { data: orders = [] } = useQuery({
+  // Fetch Orders (with offline cache fallback)
+  const { data: serverOrders = [] } = useQuery({
     queryKey: ['staff-orders'],
     queryFn: async () => {
-      const response = await api.get('/orders');
-      return response.data.data as Order[];
+      try {
+        const response = await api.get('/orders');
+        const list = response.data.data as Order[];
+        localStorage.setItem('tawla_cached_orders', JSON.stringify(list));
+        return list;
+      } catch (err) {
+        console.warn('Failed to fetch orders, loading from cache:', err);
+        const cached = localStorage.getItem('tawla_cached_orders');
+        return cached ? JSON.parse(cached) : [];
+      }
     },
     enabled: !!user,
     refetchInterval: 10000,
   });
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
+  // Fetch Tables (with offline cache fallback)
+  const { data: tables = [] } = useQuery({
+    queryKey: ['staff-tables'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/tables');
+        const list = response.data.data as Table[];
+        localStorage.setItem('tawla_cached_tables', JSON.stringify(list));
+        return list;
+      } catch (err) {
+        console.warn('Failed to fetch tables, loading from cache:', err);
+        const cached = localStorage.getItem('tawla_cached_tables');
+        return cached ? JSON.parse(cached) : [];
+      }
+    },
+    enabled: !!user,
+  });
+
+  // Fetch Products & Categories for order creation (with offline cache fallback)
+  const { data: menuData = { products: [], categories: [] } } = useQuery({
+    queryKey: ['staff-menu-data'],
+    queryFn: async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          api.get('/products'),
+          api.get('/categories')
+        ]);
+        const products = prodRes.data.data;
+        const categories = catRes.data.data;
+        localStorage.setItem('tawla_cached_products', JSON.stringify(products));
+        localStorage.setItem('tawla_cached_categories', JSON.stringify(categories));
+        return { products, categories };
+      } catch (err) {
+        console.warn('Failed to fetch products/categories, loading from cache:', err);
+        const cachedProducts = localStorage.getItem('tawla_cached_products');
+        const cachedCategories = localStorage.getItem('tawla_cached_categories');
+        return {
+          products: cachedProducts ? JSON.parse(cachedProducts) : [],
+          categories: cachedCategories ? JSON.parse(cachedCategories) : []
+        };
+      }
+    },
+    enabled: !!user,
+  });
+
+  // Combine offline orders and online orders
+  const allOrders = useMemo(() => {
+    const activeOffline = offlineOrders.filter(o => {
+      if (orderFilter === 'active') {
+        return ['pending', 'accepted', 'preparing', 'ready'].includes(o.status);
+      } else {
+        return ['delivered', 'cancelled'].includes(o.status);
+      }
+    });
+
+    const activeServer = serverOrders.filter(order => {
       if (orderFilter === 'active') {
         return ['pending', 'accepted', 'preparing', 'ready'].includes(order.status);
       } else {
         return ['delivered', 'cancelled'].includes(order.status);
       }
     });
-  }, [orders, orderFilter]);
 
-  // Fetch Tables
-  const { data: tables = [] } = useQuery({
-    queryKey: ['staff-tables'],
-    queryFn: async () => {
-      const response = await api.get('/tables');
-      return response.data.data as Table[];
-    },
-    enabled: !!user,
-  });
+    const merged = [...activeOffline, ...activeServer];
+    return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [offlineOrders, serverOrders, orderFilter]);
+
+  // Alias for backward compatibility
+  const filteredOrders = allOrders;
+
+  const modalFilteredProducts = useMemo(() => {
+    const products = menuData?.products || [];
+    return products.filter((p: any) => {
+      const matchesSearch = p.name.toLowerCase().includes(menuSearchQuery.toLowerCase()) || 
+        (p.description && p.description.toLowerCase().includes(menuSearchQuery.toLowerCase()));
+      const matchesCategory = menuSelectedCategory === 'all' || p.categoryId === menuSelectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [menuData?.products, menuSearchQuery, menuSelectedCategory]);
+
+  const updateLocalTableStatus = (tableNumber: number, status: 'empty' | 'occupied' | 'waitingBill', currentOrderId: string | null) => {
+    queryClient.setQueryData(['staff-tables'], (old: any) => {
+      const list = old ? [...old] : [];
+      const updated = list.map((t: any) => 
+        t.number === tableNumber ? { ...t, status, currentOrderId } : t
+      );
+      localStorage.setItem('tawla_cached_tables', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   // Status Mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, nextStatus }: { orderId: string; nextStatus: string }) => {
+      if (orderId.startsWith('offline_')) {
+        if (nextStatus === 'cancelled') {
+          removeOfflineOrder(orderId);
+          setOfflineOrders(getOfflineOrders());
+          toast.success('تم إلغاء الطلب المحلي بنجاح.');
+          
+          // Revert table status local cache
+          const targetOrder = offlineOrders.find(o => o.id === orderId);
+          if (targetOrder) {
+            updateLocalTableStatus(targetOrder.tableNumber, 'empty', null);
+          }
+          return;
+        } else {
+          const list = getOfflineOrders();
+          const updated = list.map(o => o.id === orderId ? { ...o, status: nextStatus as any } : o);
+          localStorage.setItem('tawla_offline_orders', JSON.stringify(updated));
+          setOfflineOrders(getOfflineOrders());
+          toast.success('تم تحديث حالة الطلب محلياً.');
+          return;
+        }
+      }
       await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
     },
-    onSuccess: () => {
-      toast.success('تم تحديث حالة الطلب.');
-      queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+    onSuccess: (_, variables) => {
+      if (!variables.orderId.startsWith('offline_')) {
+        toast.success('تم تحديث حالة الطلب.');
+        queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+      }
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'فشل تحديث حالة الطلب.');
@@ -288,6 +407,167 @@ export default function StaffDashboard() {
     navigate('/staff/login');
   };
 
+  // Load offline orders on mount and listen to network changes
+  useEffect(() => {
+    setOfflineOrders(getOfflineOrders());
+
+    const handleOnline = () => {
+      setNetworkStatus('online');
+      setIsOnline(true);
+      triggerSync();
+    };
+
+    const handleOffline = () => {
+      setNetworkStatus('offline');
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check
+    if (navigator.onLine) {
+      triggerSync();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [restaurant?.id]);
+
+  // Periodically check and sync offline orders if online
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (navigator.onLine && getOfflineOrders().length > 0) {
+        triggerSync();
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [restaurant?.id]);
+
+  const triggerSync = async () => {
+    if (!restaurant?.id || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const synced = await syncOfflineOrders(restaurant.id, (tempId, serverOrder) => {
+        queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
+      });
+      if (synced) {
+        setOfflineOrders(getOfflineOrders());
+      }
+    } catch (e) {
+      console.error('Offline orders sync error:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // PWA Install prompt capture
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      console.log('beforeinstallprompt event fired');
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to install prompt: ${outcome}`);
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
+
+  const handleCreateOrderSubmit = async () => {
+    if (!selectedTableNumber) {
+      toast.error('يرجى اختيار رقم الطاولة.');
+      return;
+    }
+    if (newOrderCart.length === 0) {
+      toast.error('يرجى إضافة صنف واحد على الأقل للطلب.');
+      return;
+    }
+
+    const totalAmount = newOrderCart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+
+    const orderPayload = {
+      restaurantId: restaurant.id,
+      tableNumber: Number(selectedTableNumber),
+      items: newOrderCart.map(item => ({
+        productId: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        notes: item.notes
+      })),
+      specialNotes: newOrderSpecialNotes,
+      totalAmount,
+      status: 'pending' as const,
+      createdAt: new Date().toISOString()
+    };
+
+    if (navigator.onLine) {
+      try {
+        const payload = {
+          tableNumber: orderPayload.tableNumber,
+          items: orderPayload.items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            notes: item.notes
+          })),
+          specialNotes: orderPayload.specialNotes
+        };
+        const response = await api.post('/orders', payload, {
+          headers: { 'x-restaurant-id': restaurant.id }
+        });
+        if (response.data?.success) {
+          const serverOrder = response.data.data;
+          toast.success('تم إرسال الطلب بنجاح.');
+          
+          handlePrintReceipt(serverOrder);
+
+          queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+          queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
+
+          setNewOrderCart([]);
+          setNewOrderSpecialNotes('');
+          setSelectedTableNumber('');
+          setIsCreateOrderOpen(false);
+        }
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'فشل إرسال الطلب للسيرفر.');
+      }
+    } else {
+      const tempId = `offline_${Date.now()}`;
+      const tempOrder = {
+        ...orderPayload,
+        id: tempId,
+        isOffline: true
+      };
+      
+      saveOfflineOrder(tempOrder);
+      setOfflineOrders(getOfflineOrders());
+
+      updateLocalTableStatus(Number(selectedTableNumber), 'occupied', tempId);
+
+      toast.success('تم حفظ الطلب محلياً (أوفلاين) وجاري طباعة الفاتورة.');
+
+      handlePrintReceipt(tempOrder);
+
+      setNewOrderCart([]);
+      setNewOrderSpecialNotes('');
+      setSelectedTableNumber('');
+      setIsCreateOrderOpen(false);
+    }
+  };
+
   const dismissAlert = (alertId: string) => {
     setAlerts(prev => prev.filter(a => a.id !== alertId));
   };
@@ -397,6 +677,33 @@ export default function StaffDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Waiter Ordering Trigger */}
+            <button
+              onClick={() => setIsCreateOrderOpen(true)}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-extrabold px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/20 active:scale-95 cursor-pointer"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>طلب جديد (ويتر)</span>
+            </button>
+
+            {/* PWA Install Trigger */}
+            {deferredPrompt && (
+              <button
+                onClick={handleInstallClick}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold px-3 py-2 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                title="تثبيت التطبيق على الجهاز"
+              >
+                <Download className="w-4 h-4" />
+                <span>تثبيت التطبيق</span>
+              </button>
+            )}
+
+            {/* Network Status Badge */}
+            <span className="flex items-center gap-2 bg-staff-bg-base border border-staff-border px-3 py-1.5 rounded-full text-[10px] font-bold">
+              <span className={`w-2 h-2 rounded-full ${networkStatus === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-ping'}`} />
+              <span>{networkStatus === 'online' ? 'الشبكة متصلة' : 'يعمل بدون إنترنت (أوفلاين)'}</span>
+            </span>
+
             {/* Socket connectivity badge */}
             <span className="flex items-center gap-2 bg-staff-bg-base border border-staff-border px-3 py-1.5 rounded-full text-[10px] font-bold">
               <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] animate-pulse' : 'bg-red-500 animate-ping'}`} />
@@ -597,8 +904,14 @@ export default function StaffDashboard() {
                                   <div className="flex justify-between items-center pb-3 border-b border-staff-border">
                                     <div>
                                       <span className="text-[11px] text-staff-text-secondary font-mono bg-staff-bg-panel border border-staff-border px-2 py-0.5 rounded-md">
-                                        #{order.id.slice(-6).toUpperCase()}
+                                        #{order.id.startsWith('offline_') ? 'محلي' : order.id.slice(-6).toUpperCase()}
                                       </span>
+                                      {order.id.startsWith('offline_') && (
+                                        <span className="mr-2 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md font-bold inline-flex items-center gap-1 animate-pulse">
+                                          <CloudOff className="w-3 h-3" />
+                                          بانتظار المزامنة
+                                        </span>
+                                      )}
                                       <div className="mt-1">
                                         <h3 className="font-extrabold text-staff-text-primary text-2xl leading-none">طاولة {order.tableNumber}</h3>
                                       </div>
@@ -931,6 +1244,261 @@ export default function StaffDashboard() {
             </div>
           </div>
         </>,
+        document.body
+      )}
+
+      {/* WAITER DIRECT ORDER MODAL */}
+      {isCreateOrderOpen && createPortal(
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
+          <div className="bg-[#141720] border border-staff-border rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-staff-elevated text-staff-text-primary">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-staff-border bg-[#1c2030]">
+              <div className="flex items-center gap-2">
+                <PlusCircle className="w-5 h-5 text-indigo-400" />
+                <h2 className="font-extrabold text-base">إنشاء طلب جديد (ويتر)</h2>
+              </div>
+              <button 
+                onClick={() => {
+                  setNewOrderCart([]);
+                  setSelectedTableNumber('');
+                  setNewOrderSpecialNotes('');
+                  setIsCreateOrderOpen(false);
+                }} 
+                className="text-staff-text-muted hover:text-staff-text-primary transition-colors cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+              
+              {/* Left Column: Cart & Table details (40%) */}
+              <div className="w-full md:w-[380px] border-l border-staff-border flex flex-col h-full bg-[#0d0f12] flex-shrink-0">
+                {/* Table & Notes selection */}
+                <div className="p-4 border-b border-staff-border space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-staff-text-secondary mb-1.5">اختر رقم الطاولة:</label>
+                    <select
+                      value={selectedTableNumber}
+                      onChange={(e) => setSelectedTableNumber(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full bg-staff-bg-panel border border-staff-border text-staff-text-primary text-xs rounded-xl p-2.5 outline-none focus:border-indigo-500 font-bold transition-all"
+                    >
+                      <option value="">-- اختر رقم الطاولة --</option>
+                      {tables.map((t) => (
+                        <option key={t.id} value={t.number}>
+                          طاولة {t.number} ({t.status === 'occupied' ? 'مشغولة' : t.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[11px] font-bold text-staff-text-secondary mb-1.5">ملاحظات عامة للطلب:</label>
+                    <textarea
+                      placeholder="مثال: البهارات خفيفة، التوصيل مع فواتير الطاولة السابقة..."
+                      value={newOrderSpecialNotes}
+                      onChange={(e) => setNewOrderSpecialNotes(e.target.value)}
+                      rows={2}
+                      className="w-full bg-staff-bg-panel border border-staff-border text-staff-text-primary text-xs rounded-xl p-2.5 outline-none focus:border-indigo-500 resize-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Cart Items List */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
+                  <h4 className="text-[11px] font-extrabold text-staff-text-muted uppercase tracking-wider mb-2">مكونات الطلب</h4>
+                  {newOrderCart.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center py-12 text-staff-text-muted">
+                      <LayoutGrid className="w-8 h-8 mb-2 opacity-30" />
+                      <p className="text-[11px] font-bold">السلة فارغة. أضف أصناف من القائمة</p>
+                    </div>
+                  ) : (
+                    newOrderCart.map((item, idx) => (
+                      <div key={idx} className="bg-staff-bg-panel border border-staff-border rounded-xl p-3 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h5 className="text-xs font-bold text-staff-text-primary leading-tight">{item.product.name}</h5>
+                            <span className="text-[11px] text-indigo-400 font-bold font-mono">{item.product.price} ج.م</span>
+                          </div>
+                          <button
+                            onClick={() => setNewOrderCart(prev => prev.filter(i => i.product.id !== item.product.id))}
+                            className="text-staff-text-muted hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        
+                        {/* Quantity and Notes */}
+                        <div className="flex justify-between items-center gap-2 pt-1 border-t border-staff-border/40">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setNewOrderCart(prev => prev.map(i => 
+                                  i.product.id === item.product.id 
+                                    ? { ...i, quantity: Math.max(1, i.quantity - 1) } 
+                                    : i
+                                ));
+                              }}
+                              className="w-6 h-6 rounded-md bg-staff-bg-base border border-staff-border flex items-center justify-center hover:bg-staff-bg-panel active:scale-95 transition-all text-xs"
+                            >
+                              <Minus className="w-3 h-3 text-staff-text-secondary" />
+                            </button>
+                            <span className="font-mono text-xs font-bold w-4 text-center">{item.quantity}</span>
+                            <button
+                              onClick={() => {
+                                setNewOrderCart(prev => prev.map(i => 
+                                  i.product.id === item.product.id 
+                                    ? { ...i, quantity: i.quantity + 1 } 
+                                    : i
+                                ));
+                              }}
+                              className="w-6 h-6 rounded-md bg-staff-bg-base border border-staff-border flex items-center justify-center hover:bg-staff-bg-panel active:scale-95 transition-all text-xs"
+                            >
+                              <Plus className="w-3 h-3 text-staff-text-secondary" />
+                            </button>
+                          </div>
+                          
+                          <input
+                            type="text"
+                            placeholder="ملاحظات الصنف..."
+                            value={item.notes}
+                            onChange={(e) => {
+                              setNewOrderCart(prev => prev.map(i => 
+                                i.product.id === item.product.id 
+                                  ? { ...i, notes: e.target.value } 
+                                  : i
+                              ));
+                            }}
+                            className="flex-1 bg-staff-bg-base border border-staff-border text-[10px] rounded-lg px-2 py-1 outline-none text-staff-text-primary focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Submit Panel */}
+                <div className="p-4 border-t border-staff-border bg-[#141720] space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-staff-text-secondary">الإجمالي:</span>
+                    <span className="font-extrabold text-lg text-indigo-400">
+                      {newOrderCart.reduce((acc, item) => acc + item.product.price * item.quantity, 0)} ج.م
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={handleCreateOrderSubmit}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98] text-xs flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>تأكيد وطباعة الفاتورة</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Menu catalog & Categories (60%) */}
+              <div className="flex-1 flex flex-col overflow-hidden bg-staff-bg-base">
+                
+                {/* Search Bar */}
+                <div className="p-4 border-b border-staff-border flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-staff-text-muted" />
+                    <input
+                      type="text"
+                      placeholder="ابحث في المنيو عن مشروب أو أكلة..."
+                      value={menuSearchQuery}
+                      onChange={(e) => setMenuSearchQuery(e.target.value)}
+                      className="w-full bg-staff-bg-panel border border-staff-border text-staff-text-primary text-xs rounded-xl pr-10 pl-4 py-2.5 outline-none focus:border-indigo-500 font-bold transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Categories Scrollbar */}
+                <div className="flex gap-2 overflow-x-auto p-4 border-b border-staff-border scrollbar-hide flex-shrink-0">
+                  <button
+                    onClick={() => setMenuSelectedCategory('all')}
+                    className={`py-1.5 px-4 rounded-full text-[11px] font-bold transition-all border ${
+                      menuSelectedCategory === 'all'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                        : 'bg-staff-bg-panel text-staff-text-secondary border-staff-border hover:text-staff-text-primary'
+                    }`}
+                  >
+                    الكل
+                  </button>
+                  {(menuData?.categories || []).map((cat: any) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setMenuSelectedCategory(cat.id)}
+                      className={`py-1.5 px-4 rounded-full text-[11px] font-bold transition-all border whitespace-nowrap ${
+                        menuSelectedCategory === cat.id
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-staff-bg-panel text-staff-text-secondary border-staff-border hover:text-staff-text-primary'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Product Grid Area */}
+                <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 lg:grid-cols-3 gap-3">
+                  {modalFilteredProducts.length === 0 ? (
+                    <div className="col-span-full flex flex-col items-center justify-center text-center py-20 text-staff-text-muted">
+                      <LayoutGrid className="w-12 h-12 mb-3 opacity-25" />
+                      <p className="text-xs font-semibold">لا توجد منتجات مطابقة للبحث</p>
+                    </div>
+                  ) : (
+                    modalFilteredProducts.map((prod: any) => {
+                      const inCart = newOrderCart.find(i => i.product.id === prod.id);
+                      return (
+                        <div
+                          key={prod.id}
+                          className="bg-staff-bg-elevated border border-staff-border rounded-xl p-3 flex flex-col justify-between gap-3 hover:border-indigo-500/30 transition-all shadow-sm group"
+                        >
+                          <div>
+                            {prod.image?.url && (
+                              <img
+                                src={prod.image.url}
+                                alt={prod.name}
+                                className="w-full h-24 object-cover rounded-lg mb-2 border border-staff-border/40 group-hover:scale-[1.02] transition-transform duration-300"
+                              />
+                            )}
+                            <h5 className="text-xs font-extrabold text-staff-text-primary leading-tight line-clamp-1">{prod.name}</h5>
+                            {prod.description && (
+                              <p className="text-[10px] text-staff-text-muted leading-tight mt-1 line-clamp-2">{prod.description}</p>
+                            )}
+                          </div>
+                          
+                          <div className="flex justify-between items-center pt-2 border-t border-staff-border/30">
+                            <span className="font-mono text-xs font-bold text-indigo-400">{prod.price} ج.م</span>
+                            <button
+                              onClick={() => {
+                                if (inCart) {
+                                  setNewOrderCart(prev => prev.map(i => 
+                                    i.product.id === prod.id 
+                                      ? { ...i, quantity: i.quantity + 1 } 
+                                      : i
+                                  ));
+                                } else {
+                                  setNewOrderCart(prev => [...prev, { product: prod, quantity: 1, notes: '' }]);
+                                  toast.success(`تم إضافة ${prod.name}`);
+                                }
+                              }}
+                              className="bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all active:scale-95 cursor-pointer"
+                            >
+                              {inCart ? `مضاف (${inCart.quantity})` : 'إضافة +'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
         document.body
       )}
     </div>
