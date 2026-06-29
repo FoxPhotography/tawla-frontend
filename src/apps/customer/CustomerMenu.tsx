@@ -96,6 +96,13 @@ export default function CustomerMenu() {
   const categories = menuData?.categories || [];
   const products = menuData?.products || [];
 
+  // Set document title dynamically based on customized menu title
+  useEffect(() => {
+    if (restaurant) {
+      document.title = restaurant.settings?.menuTitle || restaurant.name;
+    }
+  }, [restaurant]);
+
   const popularProducts = useMemo(() => {
     const available = products.filter(p => p.isAvailable);
     return available.sort((a, b) => {
@@ -298,8 +305,8 @@ export default function CustomerMenu() {
           <UtensilsCrossed className="w-3 h-3" />
           <span>طاولة {tableNumber}</span>
         </div>
-        <h1 className="restaurant-name">{restaurant.name}</h1>
-        <div className="restaurant-sub">أهلاً بك في تجربة طعام فاخرة ومميزة</div>
+        <h1 className="restaurant-name">{restaurant.settings?.menuTitle || restaurant.name}</h1>
+        <div className="restaurant-sub">{restaurant.settings?.menuDescription || 'أهلاً بك في تجربة طعام فاخرة ومميزة'}</div>
       </div>
 
       {/* ===== Quick Action Row ===== */}

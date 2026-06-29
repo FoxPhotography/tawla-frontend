@@ -17,6 +17,8 @@ export interface Restaurant {
     currency: string;
     language: 'ar' | 'en';
     timezone: string;
+    menuTitle?: string;
+    menuDescription?: string;
   };
   receiptSettings?: {
     showLogo: boolean;

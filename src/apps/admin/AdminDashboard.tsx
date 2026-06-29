@@ -20,6 +20,7 @@ import type { Category, Product, Table, Order } from '../../shared/types';
 
 import { ImageUploadZone } from './components/ImageUploadZone.js';
 import { ImageCropperModal } from './components/ImageCropperModal.js';
+import CustomSelect from './components/CustomSelect.js';
 
 // ============ Recharts Timeline Helpers ============
 
@@ -158,6 +159,10 @@ export default function AdminDashboard() {
   const [receiptFooterText, setReceiptFooterText] = useState(restaurant?.receiptSettings?.footerText || '');
   const [showLogo, setShowLogo] = useState(restaurant?.receiptSettings?.showLogo !== false);
 
+  // Menu settings states
+  const [menuTitle, setMenuTitle] = useState(restaurant?.settings?.menuTitle || restaurant?.name || '');
+  const [menuDescription, setMenuDescription] = useState(restaurant?.settings?.menuDescription || '');
+
   // Sync subscription status from server on mount
   useEffect(() => {
     const syncSubscription = async () => {
@@ -185,6 +190,10 @@ export default function AdminDashboard() {
       setReceiptHeaderText(restaurant.receiptSettings?.headerText || '');
       setReceiptFooterText(restaurant.receiptSettings?.footerText || '');
       setShowLogo(restaurant.receiptSettings?.showLogo !== false);
+
+      // Sync menu settings
+      setMenuTitle(restaurant.settings?.menuTitle || restaurant.name || '');
+      setMenuDescription(restaurant.settings?.menuDescription || '');
     }
   }, [restaurant]);
 
@@ -213,6 +222,28 @@ export default function AdminDashboard() {
       serviceRate: Number(receiptServiceRate),
       headerText: receiptHeaderText,
       footerText: receiptFooterText,
+    });
+  };
+
+  const saveMenuSettingsMutation = useMutation({
+    mutationFn: async (settings: any) => {
+      const response = await api.put('/subscriptions/settings', settings);
+      return response.data.data;
+    },
+    onSuccess: (data) => {
+      toast.success('تم حفظ إعدادات المينيو بنجاح!');
+      updateRestaurant(data);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل حفظ إعدادات المينيو.');
+    }
+  });
+
+  const handleSaveMenuSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveMenuSettingsMutation.mutate({
+      menuTitle,
+      menuDescription,
     });
   };
 
@@ -989,17 +1020,13 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-1.5">
                         <label className="block text-xs text-admin-text-secondary font-bold">القسم *</label>
-                        <select
+                        <CustomSelect
                           required
                           value={prodCatId}
-                          onChange={(e) => setProdCatId(e.target.value)}
-                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3 text-sm focus:border-admin-accent focus:outline-none transition-all"
-                        >
-                          <option value="">اختر القسم...</option>
-                          {categories.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => setProdCatId(val)}
+                          options={categories.map(c => ({ value: c.id, label: c.name }))}
+                          placeholder="اختر القسم..."
+                        />
                       </div>
                     </div>
 
@@ -1497,19 +1524,21 @@ export default function AdminDashboard() {
                   <div className="bg-admin-bg-elevated border border-admin-border rounded-lg p-5 flex flex-wrap gap-4 items-end shadow-admin-card">
                     <div className="space-y-1.5">
                       <label className="block text-xs text-admin-text-secondary font-bold">حالة الطلب</label>
-                      <select
+                      <CustomSelect
                         value={orderStatusFilter}
-                        onChange={(e) => setOrderStatusFilter(e.target.value)}
-                        className="w-40 bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-3 py-2 text-xs focus:border-admin-accent focus:outline-none"
-                      >
-                        <option value="">كل الحالات</option>
-                        <option value="pending">قيد الانتظار</option>
-                        <option value="accepted">مقبول</option>
-                        <option value="preparing">قيد التحضير</option>
-                        <option value="ready">جاهز للاستلام</option>
-                        <option value="delivered">تم التوصيل</option>
-                        <option value="cancelled">ملغي</option>
-                      </select>
+                        onChange={(val) => setOrderStatusFilter(val)}
+                        options={[
+                          { value: '', label: 'كل الحالات' },
+                          { value: 'pending', label: 'قيد الانتظار' },
+                          { value: 'accepted', label: 'مقبول' },
+                          { value: 'preparing', label: 'قيد التحضير' },
+                          { value: 'ready', label: 'جاهز للاستلام' },
+                          { value: 'delivered', label: 'تم التوصيل' },
+                          { value: 'cancelled', label: 'ملغي' }
+                        ]}
+                        placeholder="كل الحالات"
+                        className="w-40"
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-xs text-admin-text-secondary font-bold">من تاريخ</label>
@@ -1978,6 +2007,55 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
+                  </div>
+
+                  {/* Menu Settings Section */}
+                  <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card space-y-6">
+                    <div>
+                      <h3 className="font-extrabold text-admin-text-primary text-base">إعدادات المينيو الخاص بك</h3>
+                      <p className="text-xs text-admin-text-secondary mt-1">قم بتخصيص العنوان والوصف اللذين يظهران للزبائن في صفحة المينيو الخاصة بمطعمك.</p>
+                    </div>
+
+                    <form onSubmit={handleSaveMenuSettings} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">عنوان المينيو (العنوان الرئيسي)</label>
+                        <input
+                          type="text"
+                          value={menuTitle}
+                          onChange={(e) => setMenuTitle(e.target.value)}
+                          placeholder={restaurant?.name || "مثال: مطعم وكافيه البركة"}
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                        />
+                        <p className="text-[10px] text-admin-text-muted">إذا تركت هذا الحقل فارغاً، فسيتم عرض اسم المطعم الافتراضي ({restaurant?.name || 'اسم المطعم'}).</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">وصف المطعم (المقدمة الترحيبية)</label>
+                        <textarea
+                          rows={3}
+                          value={menuDescription}
+                          onChange={(e) => setMenuDescription(e.target.value)}
+                          placeholder="مثال: أهلاً بك في تجربة طعام فاخرة ومميزة. نقدم لكم تشكيلة من أشهى المأكولات والمشروبات الطازجة."
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors resize-none"
+                        />
+                        <p className="text-[10px] text-admin-text-muted">سيظهر هذا الوصف أسفل عنوان المطعم مباشرة كرسالة ترحيبية للعملاء.</p>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <motion.button
+                          type="submit"
+                          disabled={saveMenuSettingsMutation.isPending}
+                          whileTap={{ scale: 0.97 }}
+                          className="py-2.5 px-6 bg-admin-accent text-white font-bold text-xs rounded-lg hover:opacity-95 transition-opacity flex items-center gap-2 shadow-admin-accent"
+                        >
+                          {saveMenuSettingsMutation.isPending ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <span>حفظ إعدادات المينيو</span>
+                          )}
+                        </motion.button>
+                      </div>
+                    </form>
                   </div>
 
                   {/* Receipt Settings Section */}
