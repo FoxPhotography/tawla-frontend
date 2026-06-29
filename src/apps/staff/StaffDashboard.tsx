@@ -719,7 +719,7 @@ export default function StaffDashboard() {
 
             {/* Network Status Badge */}
             <span className="flex items-center gap-2 bg-staff-bg-base border border-staff-border px-3 py-1.5 rounded-full text-[10px] font-bold">
-              <span className={`w-2 h-2 rounded-full ${networkStatus === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-ping'}`} />
+              <span className={`w-2 h-2 rounded-full ${networkStatus === 'online' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] animate-pulse' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-ping'}`} />
               <span>{networkStatus === 'online' ? 'الشبكة متصلة' : 'يعمل بدون إنترنت (أوفلاين)'}</span>
             </span>
 
