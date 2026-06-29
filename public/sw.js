@@ -1,8 +1,9 @@
-const CACHE_NAME = 'tawla-cache-v1';
+const CACHE_NAME = 'tawla-cache-v2'; // Bumped cache name
 const ASSETS_TO_CACHE = [
   '/staff',
   '/index.html',
-  '/favicon.png',
+  '/favicon-192.png',
+  '/favicon-512.png',
   '/favicon.svg',
   '/icons.svg',
   '/manifest.json'
@@ -38,8 +39,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  // Disable service worker caching on localhost/development
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return;
+  }
+
   // Skip API requests and hot-reload websockets
-  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/socket.io') || url.hostname === 'localhost' && url.port === '5173' && url.pathname.startsWith('/@vite')) {
+  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/socket.io')) {
     return;
   }
 
@@ -64,14 +70,20 @@ self.addEventListener('fetch', (event) => {
       })
     );
   } else {
-    // If request mode is navigate (e.g. user opens /staff, /admin, etc.), serve /index.html from cache
+    // If request mode is navigate, try network first, fallback to cached index.html
     if (event.request.mode === 'navigate') {
       event.respondWith(
-        caches.match('/index.html').then((cachedResponse) => {
-          return cachedResponse || fetch(event.request);
-        }).catch(() => {
-          return caches.match('/index.html');
-        })
+        fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse.status === 200) {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', responseToCache));
+            }
+            return networkResponse;
+          })
+          .catch(() => {
+            return caches.match('/index.html');
+          })
       );
     }
   }
