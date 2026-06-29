@@ -29,11 +29,10 @@ export default function LandingPage() {
     pricing: { basic: 1000, pro: 1500 },
     offer: { active: false, title: '', basicPrice: 0, proPrice: 0 }
   });
-  const [loading, setLoading] = useState(true);
   const [pulsePricing, setPulsePricing] = useState(false);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<any>(null);
 
   // Fetch initial system settings
   useEffect(() => {
@@ -45,8 +44,6 @@ export default function LandingPage() {
         }
       } catch (err) {
         console.error('Failed to load system settings:', err);
-      } finally {
-        setLoading(false);
       }
     }
     fetchSettings();
