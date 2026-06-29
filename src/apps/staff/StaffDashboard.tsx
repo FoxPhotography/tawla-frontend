@@ -6,14 +6,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Coffee, LogOut, Bell, LayoutGrid, MapPin, 
   Check, CheckCheck, Play, XCircle, CreditCard, Clock, Sparkles, Printer,
-  CloudOff, RefreshCw, Search, Plus, Minus, Trash2, PlusCircle, Download, AlertTriangle
+  CloudOff, Search, Plus, Minus, Trash2, PlusCircle, Download
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { Order, Table } from '../../shared/types';
-import { getOfflineOrders, saveOfflineOrder, removeOfflineOrder, syncOfflineOrders, OfflineOrder } from '../../shared/services/offlineOrders';
+import { getOfflineOrders, saveOfflineOrder, removeOfflineOrder, syncOfflineOrders } from '../../shared/services/offlineOrders';
+import type { OfflineOrder } from '../../shared/services/offlineOrders';
 
 
 // ============ Framer Motion Animation Variants ============
@@ -221,7 +222,7 @@ export default function StaffDashboard() {
       }
     });
 
-    const activeServer = serverOrders.filter(order => {
+    const activeServer = serverOrders.filter((order: Order) => {
       if (orderFilter === 'active') {
         return ['pending', 'accepted', 'preparing', 'ready'].includes(order.status);
       } else {
@@ -450,7 +451,7 @@ export default function StaffDashboard() {
     if (!restaurant?.id || isSyncing) return;
     setIsSyncing(true);
     try {
-      const synced = await syncOfflineOrders(restaurant.id, (tempId, serverOrder) => {
+      const synced = await syncOfflineOrders(restaurant.id, () => {
         queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
         queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
       });
@@ -492,6 +493,11 @@ export default function StaffDashboard() {
     }
     if (newOrderCart.length === 0) {
       toast.error('يرجى إضافة صنف واحد على الأقل للطلب.');
+      return;
+    }
+
+    if (!restaurant?.id) {
+      toast.error('لم يتم العثور على بيانات المطعم.');
       return;
     }
 
@@ -727,7 +733,7 @@ export default function StaffDashboard() {
             <div className="bg-staff-bg-elevated border border-staff-border rounded-xl p-4 space-y-3">
               <h3 className="text-xs font-bold text-staff-text-muted uppercase tracking-wider">حالة الطاولات</h3>
               <div className="grid grid-cols-5 gap-2">
-                {tables.map(table => {
+                {tables.map((table: Table) => {
                   let cellClass = 'bg-staff-bg-panel text-staff-text-muted border border-staff-border';
                   if (table.status === 'occupied') {
                     cellClass = 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400';
@@ -943,7 +949,7 @@ export default function StaffDashboard() {
 
                                   {/* Items */}
                                   <div className="space-y-2 max-h-[160px] overflow-y-auto scrollbar-hide">
-                                    {order.items.map((item, idx) => (
+                                    {order.items.map((item: any, idx: number) => (
                                       <div key={idx}>
                                         <div className="flex justify-between items-center text-sm">
                                           <span className="text-staff-text-primary font-bold">
@@ -1025,7 +1031,7 @@ export default function StaffDashboard() {
                         <p className="text-staff-text-secondary font-medium">لا توجد طاولات مضافة للنظام</p>
                       </div>
                     ) : (
-                      tables.map((table, idx) => (
+                      tables.map((table: Table, idx: number) => (
                         <motion.div
                           key={table.id}
                           initial={{ opacity: 0, scale: 0.9 }}
@@ -1285,7 +1291,7 @@ export default function StaffDashboard() {
                       className="w-full bg-staff-bg-panel border border-staff-border text-staff-text-primary text-xs rounded-xl p-2.5 outline-none focus:border-indigo-500 font-bold transition-all"
                     >
                       <option value="">-- اختر رقم الطاولة --</option>
-                      {tables.map((t) => (
+                      {tables.map((t: Table) => (
                         <option key={t.id} value={t.number}>
                           طاولة {t.number} ({t.status === 'occupied' ? 'مشغولة' : t.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'})
                         </option>
