@@ -7,6 +7,18 @@ export default {
   theme: {
     extend: {
       colors: {
+        ink:    '#0C0C0D',
+        'ink-2':'#141416',
+        'ink-3':'#1E1E21',
+        bone:   '#F2F0EB',
+        'bone-dim': 'rgba(242,240,235,0.55)',
+        'bone-muted': 'rgba(242,240,235,0.28)',
+        gold:   '#C8A84B',
+        'gold-warm': '#D4B86A',
+        'gold-dim': 'rgba(200,168,75,0.12)',
+        'gold-line': 'rgba(200,168,75,0.20)',
+        emerald: '#22C55E',
+        'red-soft': '#F87171',
         // Customer Theme (Dark Luxury)
         customer: {
           bg: {
@@ -80,8 +92,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'Cairo', 'system-ui', 'sans-serif'],
-        display: ['Playfair Display', 'Cairo', 'serif'],
+        display: ['"Playfair Display"', 'Georgia', 'serif'],
+        sans:    ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
+        mono:    ['"IBM Plex Mono"', 'monospace'],
       },
       borderRadius: {
         'sm': '6px',
