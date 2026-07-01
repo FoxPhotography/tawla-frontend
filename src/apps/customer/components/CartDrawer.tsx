@@ -43,19 +43,19 @@ const drawerVariants = {
     y: '100%',
     transition: { ease: 'easeInOut', duration: 0.25 }
   }
-};
+} as const;
 
 const backdropVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 0.5 },
   exit: { opacity: 0 }
-};
+} as const;
 
 const itemVariants = {
   hidden: { x: 20, opacity: 0 },
   visible: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 350, damping: 25 } },
   exit: { x: -20, opacity: 0, transition: { duration: 0.18 } }
-};
+} as const;
 
 export default function CartDrawer({
   isOpen,

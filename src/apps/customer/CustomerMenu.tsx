@@ -33,24 +33,6 @@ const addButtonTap = {
   transition: { duration: 0.3, ease: "easeOut" as const }
 };
 
-const fabVariants = {
-  hidden: { y: 40, opacity: 0, scale: 0.9 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    scale: 1,
-    transition: { type: "spring" as const, stiffness: 400, damping: 28 }
-  }
-};
-
-const confirmationVariants = {
-  hidden: { scale: 0.85, opacity: 0 },
-  visible: {
-    scale: 1,
-    opacity: 1,
-    transition: { type: "spring" as const, stiffness: 300, damping: 24 }
-  }
-};
 
 interface CartItem {
   product: Product;

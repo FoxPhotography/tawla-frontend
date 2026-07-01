@@ -19,7 +19,7 @@ const containerVariants = {
       delayChildren: 0.1
     }
   }
-};
+} as const;
 
 const itemVariants = {
   hidden: { y: 24, opacity: 0 },
@@ -28,7 +28,7 @@ const itemVariants = {
     opacity: 1,
     transition: { type: "spring", stiffness: 350, damping: 25 }
   }
-};
+} as const;
 
 const iconCircleVariants = {
   hidden: { scale: 0 },
@@ -36,7 +36,7 @@ const iconCircleVariants = {
     scale: 1,
     transition: { type: "spring", stiffness: 280, damping: 20 }
   }
-};
+} as const;
 
 const checkmarkPathVariants = {
   hidden: { pathLength: 0 },
@@ -44,7 +44,7 @@ const checkmarkPathVariants = {
     pathLength: 1,
     transition: { duration: 0.5, ease: "easeOut", delay: 0.3 }
   }
-};
+} as const;
 
 // Generates random directional vectors for burst particles
 const particles = [

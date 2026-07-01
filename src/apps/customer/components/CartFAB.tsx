@@ -25,7 +25,7 @@ const fabVariants = {
     scale: 0.9,
     transition: { duration: 0.2, ease: "easeIn" }
   }
-};
+} as const;
 
 export default function CartFAB({ cartCount, cartTotal, onClick }: CartFABProps) {
   return (
