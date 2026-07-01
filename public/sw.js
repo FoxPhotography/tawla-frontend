@@ -60,6 +60,18 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request).then((cachedResponse) => {
         const fetchPromise = fetch(event.request).then((networkResponse) => {
           if (networkResponse.status === 200) {
+            const contentType = networkResponse.headers.get('content-type') || '';
+            const isJsRequest = url.pathname.endsWith('.js') || (url.pathname.includes('/assets/') && !url.pathname.includes('.css'));
+            
+            // Prevent caching SPA index.html fallbacks as actual JS asset files
+            if (isJsRequest && contentType.includes('text/html')) {
+              return new Response('Asset not found (SPA fallback)', { 
+                status: 404, 
+                statusText: 'Not Found', 
+                headers: { 'Content-Type': 'text/plain' } 
+              });
+            }
+
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
           }

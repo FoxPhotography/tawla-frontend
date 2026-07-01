@@ -39,7 +39,17 @@ export default function AnalyticsTab() {
     queryKey: ['admin-analytics-sales', period],
     queryFn: async () => {
       const res = await api.get(`/analytics/sales?period=${period}`);
-      return res.data.data;
+      const raw = res.data.data || {};
+      return {
+        totalRevenue: raw.total || 0,
+        totalOrders: raw.ordersCount || 0,
+        averageOrderValue: raw.avgOrderValue || 0,
+        sales: (raw.timeline || []).map((t: any) => ({
+          label: t.label,
+          sales: t.amount || 0,
+          orders: t.orders || 0,
+        })),
+      };
     },
     enabled: !isLocked,
   });
@@ -48,7 +58,12 @@ export default function AnalyticsTab() {
     queryKey: ['admin-analytics-products'],
     queryFn: async () => {
       const res = await api.get('/analytics/products?limit=5');
-      return res.data.data;
+      const raw = res.data.data || [];
+      return raw.map((p: any) => ({
+        name: p.name,
+        quantity: p.count || p.quantity || 0,
+        revenue: p.revenue || 0,
+      }));
     },
     enabled: !isLocked,
   });

@@ -6,12 +6,24 @@ import { Ghost } from 'lucide-react';
 import CustomerMenu from './apps/customer/CustomerMenu.js';
 import OrderTrack from './apps/customer/OrderTrack.js';
 
-const StaffLogin = React.lazy(() => import('./apps/staff/StaffLogin.js'));
-const StaffDashboard = React.lazy(() => import('./apps/staff/StaffDashboard.js'));
-const AdminDashboard = React.lazy(() => import('./apps/admin/AdminDashboard.js'));
-const Register = React.lazy(() => import('./apps/admin/Register.js'));
-const SuperAdminDashboard = React.lazy(() => import('./apps/super-admin/SuperAdminDashboard.js'));
-const LandingPage = React.lazy(() => import('./apps/landing/LandingPage.js'));
+function lazyWithRetry(componentImport: () => Promise<any>) {
+  return React.lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      console.error('Error loading dynamic chunk, reloading page...', error);
+      window.location.reload();
+      return { default: () => null };
+    }
+  });
+}
+
+const StaffLogin = lazyWithRetry(() => import('./apps/staff/StaffLogin.js'));
+const StaffDashboard = lazyWithRetry(() => import('./apps/staff/StaffDashboard.js'));
+const AdminDashboard = lazyWithRetry(() => import('./apps/admin/AdminDashboard.js'));
+const Register = lazyWithRetry(() => import('./apps/admin/Register.js'));
+const SuperAdminDashboard = lazyWithRetry(() => import('./apps/super-admin/SuperAdminDashboard.js'));
+const LandingPage = lazyWithRetry(() => import('./apps/landing/LandingPage.js'));
 
 export default function App() {
   return (
