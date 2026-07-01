@@ -628,25 +628,26 @@
 
 /* Order Number */
 .order-number {
-  background: #111113;
-  border: 1px solid rgba(212,168,83,0.20);
+  background: var(--customer-bg-elevated);
+  border: 1px solid var(--customer-border);
   border-radius: 12px;
   padding: 16px 32px;
   text-align: center;
   margin-bottom: 40px;
+  box-shadow: var(--shadow-card-light);
 }
 .order-number-label {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(245,245,240,0.30);
+  color: var(--customer-text-muted);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 6px;
 }
 .order-number-value {
   font-size: 32px;
-  font-weight: 600;
-  color: #D4A853;
+  font-weight: 750;
+  color: var(--customer-accent);
   letter-spacing: -0.02em;
 }
 
@@ -663,12 +664,12 @@
   flex: 1;
   height: 3px;
   border-radius: 9999px;
-  background: rgba(255,255,255,0.08);
+  background: var(--customer-border-strong);
   transition: background 0.5s ease;
 }
 
-.order-step.done { background: #D4A853; }
-.order-step.active { background: rgba(212,168,83,0.45); }
+.order-step.done { background: var(--customer-accent); }
+.order-step.active { background: var(--customer-accent-glow); }
 
 
 /* ============ STAFF DASHBOARD — Dark Focused ============ */

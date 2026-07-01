@@ -370,8 +370,13 @@ export default function OrderTrack() {
         <button
           onClick={() => {
             const cachedSlug = localStorage.getItem('tawla_restaurant_slug') || 'demo';
-            const cachedTable = localStorage.getItem('tawla_table_number') || '1';
-            navigate(`/menu/${cachedSlug}/table/${cachedTable}`);
+            const isDelivery = order ? order.type === 'delivery' : !localStorage.getItem('tawla_table_number');
+            if (isDelivery) {
+              navigate(`/menu/${cachedSlug}`);
+            } else {
+              const cachedTable = localStorage.getItem('tawla_table_number') || '1';
+              navigate(`/menu/${cachedSlug}/table/${cachedTable}`);
+            }
           }}
           className="bottom-nav-item"
         >
@@ -379,13 +384,15 @@ export default function OrderTrack() {
           <span>المنيو</span>
         </button>
 
-        <button
-          onClick={() => setIsServiceOpen(true)}
-          className="bottom-nav-item"
-        >
-          <Bell />
-          <span>الخدمات</span>
-        </button>
+        {(!order || order.type !== 'delivery') && (
+          <button
+            onClick={() => setIsServiceOpen(true)}
+            className="bottom-nav-item"
+          >
+            <Bell />
+            <span>الخدمات</span>
+          </button>
+        )}
 
         <button
           onClick={() => {

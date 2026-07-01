@@ -664,13 +664,15 @@ export default function CustomerMenu() {
           <span>المنيو</span>
         </button>
 
-        <button
-          onClick={() => setIsServiceOpen(true)}
-          className="bottom-nav-item"
-        >
-          <Bell />
-          <span>الخدمات</span>
-        </button>
+        {tableNumber && (
+          <button
+            onClick={() => setIsServiceOpen(true)}
+            className="bottom-nav-item"
+          >
+            <Bell />
+            <span>الخدمات</span>
+          </button>
+        )}
 
         <button
           onClick={() => {
