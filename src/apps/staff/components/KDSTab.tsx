@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Check, CookingPot, BellRing, Printer, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import type { Order } from '../../../shared/types';
 
 interface KDSTabProps {
@@ -36,14 +37,7 @@ export default function KDSTab({ orders, onUpdateStatus, isStatusPending }: KDST
     return 'bg-zinc-800/40 border-zinc-700/50 text-zinc-400';
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'طلب جديد';
-      case 'accepted': return 'مقبول';
-      case 'preparing': return 'قيد التحضير';
-      default: return '';
-    }
-  };
+
 
   return (
     <div className="flex flex-col h-full text-right" dir="rtl">

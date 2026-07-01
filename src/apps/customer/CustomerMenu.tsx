@@ -38,6 +38,8 @@ interface CartItem {
   product: Product;
   quantity: number;
   notes: string;
+  selectedOptions?: { name: string; value: string; priceAdjustment: number }[];
+  selectedModifiers?: { name: string; value: string; price: number }[];
 }
 
 export default function CustomerMenu() {

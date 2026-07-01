@@ -25,7 +25,7 @@ export default function StaffDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { token, user, restaurant, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'tables' | 'kds'>('orders');
   const [orderFilter, setOrderFilter] = useState<'active' | 'archived'>('active');
   const [alerts, setAlerts] = useState<LiveAlert[]>([]);
 
@@ -252,7 +252,7 @@ export default function StaffDashboard() {
       const res = await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
       return res.data.data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       if (!variables.orderId.startsWith('offline_')) {
         toast.success('تم تحديث حالة الطلب بنجاح.');
         
