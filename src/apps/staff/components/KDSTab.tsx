@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Check, CookingPot, BellRing, Printer, AlertTriangle } from 'lucide-react';
+import { Clock, Check, CookingPot, BellRing, Printer, AlertTriangle, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Order } from '../../../shared/types';
 
@@ -91,6 +91,12 @@ export default function KDSTab({ orders, onUpdateStatus, isStatusPending }: KDST
                           {order.type === 'dine_in' ? `طاولة ${order.tableNumber}` : order.type === 'takeaway' ? 'تيك أواي' : 'توصيل'}
                         </span>
                         <h4 className="text-xs font-black text-zinc-300">طلب #{order.id.slice(-4).toUpperCase()}</h4>
+                        {order.customerName && (
+                          <div className="text-[10px] font-bold text-zinc-400 mt-1 flex items-center gap-1">
+                            <User className="w-3 h-3 text-amber-500" />
+                            <span>العميل: {order.customerName}</span>
+                          </div>
+                        )}
                       </div>
                       
                       {/* Timer */}

@@ -66,9 +66,29 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
               <td className="py-0.5 font-bold text-zinc-700 w-[75px]">رقم الطلب:</td>
               <td className="py-0.5 font-mono font-bold text-black">#{printingOrder.id.slice(-6).toUpperCase()}</td>
             </tr>
+            {printingOrder.customerName && (
+              <tr>
+                <td className="py-0.5 font-bold text-zinc-700">الزبون:</td>
+                <td className="py-0.5 font-bold text-black">{printingOrder.customerName}</td>
+              </tr>
+            )}
             <tr>
-              <td className="py-0.5 font-bold text-zinc-700">رقم الطاولة:</td>
-              <td className="py-0.5 font-bold text-black">طاولة {printingOrder.tableNumber}</td>
+              {printingOrder.type === 'delivery' ? (
+                <>
+                  <td className="py-0.5 font-bold text-zinc-700">نوع الطلب:</td>
+                  <td className="py-0.5 font-bold text-black">دليفري</td>
+                </>
+              ) : printingOrder.type === 'takeaway' ? (
+                <>
+                  <td className="py-0.5 font-bold text-zinc-700">نوع الطلب:</td>
+                  <td className="py-0.5 font-bold text-black">تيك أواي</td>
+                </>
+              ) : (
+                <>
+                  <td className="py-0.5 font-bold text-zinc-700">رقم الطاولة:</td>
+                  <td className="py-0.5 font-bold text-black">طاولة {printingOrder.tableNumber}</td>
+                </>
+              )}
             </tr>
             <tr>
               <td className="py-0.5 font-bold text-zinc-700">التاريخ:</td>

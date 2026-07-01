@@ -242,17 +242,29 @@ export default function StaffDashboard() {
           return null;
         } else {
           const list = getOfflineOrders();
-          const updated = list.map((o: any) => o.id === orderId ? { ...o, status: nextStatus } : o);
+          let updatedOrder: any = null;
+          const updated = list.map((o: any) => {
+            if (o.id === orderId) {
+              updatedOrder = { ...o, status: nextStatus };
+              return updatedOrder;
+            }
+            return o;
+          });
           localStorage.setItem('tawla_offline_orders', JSON.stringify(updated));
           setOfflineOrders(getOfflineOrders());
           toast.success('تم تحديث حالة الطلب محلياً.');
-          return null;
+          return updatedOrder;
         }
       }
       const res = await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
       return res.data.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
+      // Print receipt if it's a delivery order and the new status is delivered
+      if (data && data.status === 'delivered' && data.type === 'delivery') {
+        handlePrintReceipt(data);
+      }
+
       if (!variables.orderId.startsWith('offline_')) {
         toast.success('تم تحديث حالة الطلب بنجاح.');
         

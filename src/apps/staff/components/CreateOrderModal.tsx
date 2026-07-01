@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  PlusCircle, XCircle, ChevronDown, ShoppingBag, Search, LayoutGrid, UtensilsCrossed, Printer, Plus, Minus, Trash2
+  PlusCircle, XCircle, ChevronDown, ShoppingBag, Search, LayoutGrid, UtensilsCrossed, Printer, Plus, Minus, Trash2, User
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
@@ -38,6 +38,7 @@ export default function CreateOrderModal({
   const [menuSelectedCategory, setMenuSelectedCategory] = useState<string>('all');
   const [newOrderCart, setNewOrderCart] = useState<{ product: any; quantity: number; notes: string }[]>([]);
   const [newOrderSpecialNotes, setNewOrderSpecialNotes] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
@@ -110,7 +111,8 @@ export default function CreateOrderModal({
       status: 'accepted' as const,
       type: orderType,
       paymentMethod: orderType === 'takeaway' ? paymentMethod : 'cash',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      customerName: customerName || undefined
     };
 
     if (networkStatus === 'online') {
@@ -125,7 +127,8 @@ export default function CreateOrderModal({
           specialNotes: orderPayload.specialNotes,
           status: 'accepted',
           type: orderType,
-          paymentMethod: orderType === 'takeaway' ? paymentMethod : 'cash'
+          paymentMethod: orderType === 'takeaway' ? paymentMethod : 'cash',
+          customerName: customerName || undefined
         };
         const response = await api.post('/orders', payload, {
           headers: { 'x-restaurant-id': restaurantId }
@@ -142,6 +145,7 @@ export default function CreateOrderModal({
           // Reset fields
           setNewOrderCart([]);
           setNewOrderSpecialNotes('');
+          setCustomerName('');
           setSelectedTableNumber('');
           setOrderType('dine_in');
           setPaymentMethod('cash');
@@ -178,6 +182,7 @@ export default function CreateOrderModal({
 
         setNewOrderCart([]);
         setNewOrderSpecialNotes('');
+        setCustomerName('');
         setSelectedTableNumber('');
         onClose();
       } catch (e) {
@@ -214,6 +219,7 @@ export default function CreateOrderModal({
               setNewOrderCart([]);
               setSelectedTableNumber('');
               setNewOrderSpecialNotes('');
+              setCustomerName('');
               setOrderType('dine_in');
               setPaymentMethod('cash');
               onClose();
@@ -380,6 +386,20 @@ export default function CreateOrderModal({
                 </div>
               )}
               
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-staff-accent" />
+                  <span>اسم الزبون (اختياري):</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="اسم الزبون للتفريق بين الطلبات..."
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-600"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-zinc-400">ملاحظات عامة للطلب:</label>
                 <textarea

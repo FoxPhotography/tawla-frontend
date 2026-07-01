@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { 
-  LayoutGrid, Printer, XCircle, CloudOff, Play, Check, CheckCheck, AlertCircle
+  LayoutGrid, Printer, XCircle, CloudOff, Play, Check, CheckCheck, AlertCircle,
+  Bike, User, Phone, MapPin, FileText
 } from 'lucide-react';
 import type { Order } from '../../../shared/types';
 
@@ -192,8 +193,9 @@ export default function OrdersTab({
                             #{order.id.slice(-6).toUpperCase()}
                           </span>
                           {order.type === 'delivery' ? (
-                            <span className="text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-md font-bold font-body">
-                              🛵 دليفري
+                            <span className="text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-md font-bold font-body flex items-center gap-1">
+                              <Bike className="w-3.5 h-3.5" />
+                              <span>دليفري</span>
                             </span>
                           ) : order.tableNumber > 0 ? (
                             <span className="text-[10px] bg-staff-bg-panel text-staff-text-primary border border-staff-border font-mono px-2 py-0.5 rounded-md font-bold">
@@ -205,6 +207,12 @@ export default function OrdersTab({
                             </span>
                           )}
                         </div>
+                        {order.customerName && (
+                          <div className="text-xs text-zinc-300 font-extrabold mt-1.5 flex items-center gap-1.5 bg-white/5 border border-white/5 px-2 py-0.5 rounded-md w-fit">
+                            <User className="w-3.5 h-3.5 text-staff-accent" />
+                            <span>الزبون: {order.customerName}</span>
+                          </div>
+                        )}
                         <span className="text-[9px] text-staff-text-muted font-mono block mt-1.5">
                           {new Date(order.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -234,16 +242,25 @@ export default function OrdersTab({
                     {/* Customer Delivery Details */}
                     {order.type === 'delivery' && (
                       <div className="bg-rose-500/[0.02] border border-rose-500/10 rounded-xl p-3.5 space-y-2 text-xs text-staff-text-secondary font-bold font-body">
-                        <div className="flex justify-between border-b border-white/5 pb-1">
-                          <span className="text-zinc-400">👤 الاسم:</span>
+                        <div className="flex justify-between border-b border-white/5 pb-1 items-center">
+                          <span className="text-zinc-400 flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>الاسم:</span>
+                          </span>
                           <span className="text-white font-black">{(order as any).customerName}</span>
                         </div>
-                        <div className="flex justify-between border-b border-white/5 pb-1">
-                          <span className="text-zinc-400">📞 الموبايل:</span>
+                        <div className="flex justify-between border-b border-white/5 pb-1 items-center">
+                          <span className="text-zinc-400 flex items-center gap-1">
+                            <Phone className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>الموبايل:</span>
+                          </span>
                           <span className="font-mono text-white select-all">{(order as any).customerPhone}</span>
                         </div>
                         <div className="text-zinc-400 space-y-1">
-                          <span>📍 العنوان:</span>
+                          <span className="flex items-center gap-1 mb-1">
+                            <MapPin className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>العنوان:</span>
+                          </span>
                           <span className="block font-medium leading-relaxed bg-[#111112] p-2 rounded-lg border border-white/5 select-all text-white">{(order as any).customerAddress}</span>
                         </div>
                       </div>
@@ -251,8 +268,9 @@ export default function OrdersTab({
 
                     {/* Notes & Summary */}
                     {order.specialNotes && (
-                      <div className="p-3 bg-red-500/[0.02] border border-red-500/10 rounded-xl text-[11px] text-staff-text-secondary font-bold font-body">
-                        📝 ملاحظة خاصة: {order.specialNotes}
+                      <div className="p-3 bg-red-500/[0.02] border border-red-500/10 rounded-xl text-[11px] text-staff-text-secondary font-bold font-body flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-red-400 flex-shrink-0" />
+                        <span>ملاحظة خاصة: {order.specialNotes}</span>
                       </div>
                     )}
                   </div>
