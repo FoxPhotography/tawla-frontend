@@ -45,6 +45,23 @@ export interface Category {
   isActive: boolean;
 }
 
+export interface ProductOption {
+  name: string;
+  required: boolean;
+  choices: {
+    name: string;
+    priceAdjustment: number;
+  }[];
+}
+
+export interface ProductModifier {
+  name: string;
+  choices: {
+    name: string;
+    price: number;
+  }[];
+}
+
 export interface Product {
   id: string;
   restaurantId: string;
@@ -58,6 +75,8 @@ export interface Product {
   };
   isAvailable: boolean;
   order: number;
+  options?: ProductOption[];
+  modifiers?: ProductModifier[];
 }
 
 export interface Table {
@@ -73,12 +92,26 @@ export interface Table {
   currentOrderId?: string;
 }
 
+export interface SelectedOption {
+  name: string;
+  value: string;
+  priceAdjustment: number;
+}
+
+export interface SelectedModifier {
+  name: string;
+  value: string;
+  price: number;
+}
+
 export interface OrderItem {
   productId: string;
   name: string;
   price: number;
   quantity: number;
   notes?: string;
+  selectedOptions?: SelectedOption[];
+  selectedModifiers?: SelectedModifier[];
 }
 
 export interface Order {

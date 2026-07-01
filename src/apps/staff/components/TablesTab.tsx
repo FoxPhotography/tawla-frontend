@@ -307,6 +307,9 @@ export default function TablesTab({
                   </button>
                   <button
                     onClick={() => {
+                      if (activeOrder) {
+                        onPrintReceipt(activeOrder);
+                      }
                       onEmptyTable(checkoutTable.id, paymentMethod);
                       setCheckoutTable(null);
                     }}

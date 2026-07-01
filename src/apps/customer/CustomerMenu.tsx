@@ -52,6 +52,13 @@ export default function CustomerMenu() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [specialNotes, setSpecialNotes] = useState('');
   
+  // States for customizing a product
+  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, { value: string; priceAdjustment: number }>>({});
+  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, { value: string; price: number }>>({});
+  const [customizingNotes, setCustomizingNotes] = useState('');
+  const [customizingQty, setCustomizingQty] = useState(1);
+  
   // Custom states for Tawla Luxury navigation
   const [isServiceOpen, setIsServiceOpen] = useState(false);
   const [isNoOrderModalOpen, setIsNoOrderModalOpen] = useState(false);
@@ -163,24 +170,121 @@ export default function CustomerMenu() {
     });
   }, [products, categories, searchQuery, selectedCategory]);
 
-  // Cart Actions
-  const addToCart = (product: Product) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) => 
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
+  // Customization Effect
+  useEffect(() => {
+    if (customizingProduct) {
+      const defaultOpts: Record<string, { value: string; priceAdjustment: number }> = {};
+      customizingProduct.options?.forEach((opt) => {
+        if (opt.required && opt.choices.length > 0) {
+          defaultOpts[opt.name] = {
+            value: opt.choices[0].name,
+            priceAdjustment: opt.choices[0].priceAdjustment,
+          };
+        }
+      });
+      setSelectedOptions(defaultOpts);
+      setSelectedModifiers({});
+      setCustomizingNotes('');
+      setCustomizingQty(1);
+    }
+  }, [customizingProduct]);
+
+  const handleSelectOption = (groupName: string, choiceName: string, priceAdjustment: number) => {
+    setSelectedOptions((prev) => ({
+      ...prev,
+      [groupName]: { value: choiceName, priceAdjustment },
+    }));
+  };
+
+  const handleToggleModifier = (choiceName: string, price: number) => {
+    setSelectedModifiers((prev) => {
+      const copy = { ...prev };
+      if (copy[choiceName]) {
+        delete copy[choiceName];
+      } else {
+        copy[choiceName] = { value: choiceName, price };
       }
-      toast.success(`تم إضافة ${product.name} للسلة`);
-      return [...prev, { product, quantity: 1, notes: '' }];
+      return copy;
     });
   };
 
-  const updateQuantity = (productId: string, amount: number) => {
+  const calculatedCustomTotal = useMemo(() => {
+    if (!customizingProduct) return 0;
+    const base = customizingProduct.price;
+    const opts = Object.values(selectedOptions).reduce((sum, o) => sum + o.priceAdjustment, 0);
+    const mods = Object.values(selectedModifiers).reduce((sum, m) => sum + m.price, 0);
+    return base + opts + mods;
+  }, [customizingProduct, selectedOptions, selectedModifiers]);
+
+  const handleConfirmCustomization = () => {
+    if (!customizingProduct) return;
+    const missing = customizingProduct.options?.filter(o => o.required && !selectedOptions[o.name]);
+    if (missing && missing.length > 0) {
+      toast.error(`يرجى تحديد: ${missing.map(o => o.name).join(', ')}`);
+      return;
+    }
+
+    const optionsArr = Object.entries(selectedOptions).map(([name, detail]) => ({
+      name,
+      value: detail.value,
+      priceAdjustment: detail.priceAdjustment,
+    }));
+
+    const modifiersArr = Object.values(selectedModifiers).map(detail => ({
+      name: 'الإضافات',
+      value: detail.value,
+      price: detail.price,
+    }));
+
+    addToCart(customizingProduct, customizingQty, customizingNotes, optionsArr, modifiersArr);
+    setCustomizingProduct(null);
+  };
+
+  const handleProductClick = (product: Product) => {
+    const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
+    if (isCustom) {
+      setCustomizingProduct(product);
+    } else {
+      addToCart(product);
+    }
+  };
+
+  // Cart Actions
+  const addToCart = (
+    product: Product,
+    quantity = 1,
+    notes = '',
+    selectedOptions?: { name: string; value: string; priceAdjustment: number }[],
+    selectedModifiers?: { name: string; value: string; price: number }[]
+  ) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => {
+        const matchesProduct = item.product.id === product.id;
+        const matchesOptions = JSON.stringify(item.selectedOptions || []) === JSON.stringify(selectedOptions || []);
+        const matchesModifiers = JSON.stringify(item.selectedModifiers || []) === JSON.stringify(selectedModifiers || []);
+        return matchesProduct && matchesOptions && matchesModifiers;
+      });
+
+      if (existing) {
+        return prev.map((item) => {
+          const matchesProduct = item.product.id === product.id;
+          const matchesOptions = JSON.stringify(item.selectedOptions || []) === JSON.stringify(selectedOptions || []);
+          const matchesModifiers = JSON.stringify(item.selectedModifiers || []) === JSON.stringify(selectedModifiers || []);
+          if (matchesProduct && matchesOptions && matchesModifiers) {
+            return { ...item, quantity: item.quantity + quantity };
+          }
+          return item;
+        });
+      }
+      toast.success(`تم إضافة ${product.name} للسلة`);
+      return [...prev, { product, quantity, notes, selectedOptions, selectedModifiers }];
+    });
+  };
+
+  const updateQuantity = (index: number, amount: number) => {
     setCart((prev) => 
-      prev.map((item) => {
-        if (item.product.id === productId) {
+      prev.map((item, idx) => {
+        if (idx === index) {
           const newQty = item.quantity + amount;
           return newQty > 0 ? { ...item, quantity: newQty } : null;
         }
@@ -189,19 +293,24 @@ export default function CustomerMenu() {
     );
   };
 
-  const updateItemNotes = (productId: string, notes: string) => {
+  const updateItemNotes = (index: number, notes: string) => {
     setCart((prev) => 
-      prev.map((item) => item.product.id === productId ? { ...item, notes } : item)
+      prev.map((item, idx) => idx === index ? { ...item, notes } : item)
     );
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeFromCart = (index: number) => {
+    setCart((prev) => prev.filter((_, idx) => idx !== index));
     toast.error('تم الحذف من السلة');
   };
 
   const cartTotal = useMemo(() => {
-    return cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    return cart.reduce((total, item) => {
+      const optionsPrice = item.selectedOptions?.reduce((sum, opt) => sum + opt.priceAdjustment, 0) || 0;
+      const modifiersPrice = item.selectedModifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
+      const itemUnitPrice = item.product.price + optionsPrice + modifiersPrice;
+      return total + itemUnitPrice * item.quantity;
+    }, 0);
   }, [cart]);
 
   const cartCount = useMemo(() => {
@@ -217,14 +326,18 @@ export default function CustomerMenu() {
         }
       }
 
+      const activeOrderId = localStorage.getItem('tawla_active_order_id');
       const payload = {
         restaurantId: restaurant?.id,
         tableNumber: Number(tableNumber || 0),
         type: tableNumber ? 'dine_in' : 'delivery',
+        parentOrderId: activeOrderId || undefined,
         items: cart.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
           notes: item.notes,
+          selectedOptions: item.selectedOptions,
+          selectedModifiers: item.selectedModifiers,
         })),
         specialNotes,
         customerName: tableNumber ? undefined : customerName,
@@ -539,7 +652,9 @@ export default function CustomerMenu() {
           </div>
         ) : (
           filteredProducts.map((product, idx) => {
-            const inCartItem = cart.find(i => i.product.id === product.id);
+            const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
+            const inCartIndex = !isCustom ? cart.findIndex(i => i.product.id === product.id) : -1;
+            const inCartItem = inCartIndex > -1 ? cart[inCartIndex] : null;
             const isAvailable = product.isAvailable;
             
             return (
@@ -550,7 +665,7 @@ export default function CustomerMenu() {
                 initial="hidden"
                 animate="visible"
                 custom={idx}
-                onClick={() => isAvailable && addToCart(product)}
+                onClick={() => isAvailable && handleProductClick(product)}
                 className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''}`}
               >
                 {/* Image on the Right (First child in RTL) */}
@@ -584,20 +699,20 @@ export default function CustomerMenu() {
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       {inCartItem ? (
                         <div className="flex items-center gap-2 bg-customer-bg-overlay rounded-full p-0.5 border border-customer-border">
-                          <button onClick={() => updateQuantity(product.id, -1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
+                          <button onClick={() => updateQuantity(inCartIndex, -1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
                             <Minus className="w-3 h-3" />
                           </button>
                           <span className="text-xs font-bold text-customer-text-primary min-w-[12px] text-center">
                             {inCartItem.quantity}
                           </span>
-                          <button onClick={() => updateQuantity(product.id, 1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
+                          <button onClick={() => updateQuantity(inCartIndex, 1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
                             <Plus className="w-3 h-3" />
                           </button>
                         </div>
                       ) : (
                         <motion.div
                           whileTap={addButtonTap}
-                          onClick={() => addToCart(product)}
+                          onClick={() => handleProductClick(product)}
                           className="add-btn"
                         >
                           <Plus className="w-4 h-4" />
@@ -801,6 +916,146 @@ export default function CustomerMenu() {
               navigate(`/order/${orderId}/track`);
             }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ===== Product Customization Dialog ===== */}
+      <AnimatePresence>
+        {customizingProduct && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setCustomizingProduct(null)}
+              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 200 }}
+              className="fixed bottom-0 inset-x-0 bg-customer-bg-overlay rounded-t-3xl z-50 p-6 border-t border-customer-border shadow-customer-elevated text-right max-w-[430px] mx-auto max-h-[85vh] overflow-y-auto"
+              dir="rtl"
+            >
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-customer-border">
+                <h3 className="font-extrabold text-customer-text-primary text-base">تخصيص المنتج</h3>
+                <button
+                  onClick={() => setCustomizingProduct(null)}
+                  className="p-1 text-customer-text-secondary hover:text-customer-text-primary"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-4 flex items-center gap-3">
+                {customizingProduct.image?.url && (
+                  <img src={customizingProduct.image.url} alt="" className="w-16 h-16 rounded-xl object-cover border border-customer-border" />
+                )}
+                <div>
+                  <h4 className="font-bold text-customer-text-primary text-sm">{customizingProduct.name}</h4>
+                  <p className="text-xs text-customer-text-secondary mt-1">{customizingProduct.description || 'اختر إضافات وتفاصيل وجبتك المفضلة'}</p>
+                </div>
+              </div>
+
+              {/* Options Groups */}
+              {customizingProduct.options?.map((option, groupIdx) => {
+                const selected = selectedOptions[option.name];
+                return (
+                  <div key={groupIdx} className="mb-5 bg-customer-bg-elevated p-3 rounded-2xl border border-customer-border">
+                    <h5 className="font-bold text-xs text-customer-text-primary mb-3 flex justify-between">
+                      <span>{option.name}</span>
+                      {option.required && (
+                        <span className="text-[10px] bg-customer-accent/15 text-customer-accent px-1.5 py-0.5 rounded font-extrabold">مطلوب</span>
+                      )}
+                    </h5>
+                    <div className="space-y-2">
+                      {option.choices.map((choice, choiceIdx) => (
+                        <label key={choiceIdx} className="flex justify-between items-center cursor-pointer text-xs p-1.5 rounded-lg hover:bg-customer-bg-overlay transition-colors">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`option-${option.name}`}
+                              checked={selected?.value === choice.name}
+                              onChange={() => handleSelectOption(option.name, choice.name, choice.priceAdjustment)}
+                              className="text-customer-accent focus:ring-customer-accent h-4 w-4"
+                            />
+                            <span className="text-customer-text-primary font-bold">{choice.name}</span>
+                          </div>
+                          {choice.priceAdjustment > 0 ? (
+                            <span className="text-customer-text-secondary font-mono">+{choice.priceAdjustment} ج.م</span>
+                          ) : (
+                            <span className="text-customer-text-secondary font-bold">مشمول</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Modifiers Groups */}
+              {customizingProduct.modifiers?.map((modifier, groupIdx) => (
+                <div key={groupIdx} className="mb-5 bg-customer-bg-elevated p-3 rounded-2xl border border-customer-border">
+                  <h5 className="font-bold text-xs text-customer-text-primary mb-3">{modifier.name}</h5>
+                  <div className="space-y-2">
+                    {modifier.choices.map((choice, choiceIdx) => (
+                      <label key={choiceIdx} className="flex justify-between items-center cursor-pointer text-xs p-1.5 rounded-lg hover:bg-customer-bg-overlay transition-colors">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={!!selectedModifiers[choice.name]}
+                            onChange={() => handleToggleModifier(choice.name, choice.price)}
+                            className="rounded text-customer-accent focus:ring-customer-accent h-4 w-4"
+                          />
+                          <span className="text-customer-text-primary font-bold">{choice.name}</span>
+                        </div>
+                        <span className="text-customer-text-secondary font-mono">+{choice.price} ج.م</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* Notes input */}
+              <div className="mb-5">
+                <label className="block text-xs font-bold text-customer-text-primary mb-2">ملاحظات خاصة</label>
+                <input
+                  type="text"
+                  placeholder="مثال: بدون بصل، صوص خارجي..."
+                  value={customizingNotes}
+                  onChange={(e) => setCustomizingNotes(e.target.value)}
+                  className="w-full bg-customer-bg-elevated border border-customer-border text-customer-text-primary rounded-xl px-3 py-2.5 text-xs text-right focus:border-customer-accent focus:outline-none placeholder:text-customer-text-secondary/50"
+                />
+              </div>
+
+              {/* Bottom Add Bar */}
+              <div className="flex justify-between items-center gap-4 pt-4 border-t border-customer-border mt-6">
+                <div className="flex items-center gap-2 bg-customer-bg-elevated p-1 rounded-xl border border-customer-border">
+                  <button
+                    onClick={() => setCustomizingQty(q => Math.max(1, q - 1))}
+                    className="p-1 text-customer-text-secondary hover:text-customer-text-primary hover:bg-customer-bg-overlay rounded transition-colors"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-black font-mono text-customer-text-primary min-w-[20px] text-center">{customizingQty}</span>
+                  <button
+                    onClick={() => setCustomizingQty(q => q + 1)}
+                    className="p-1 text-customer-text-secondary hover:text-customer-text-primary hover:bg-customer-bg-overlay rounded transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleConfirmCustomization}
+                  className="flex-1 bg-customer-accent text-customer-bg-base font-bold py-3 rounded-xl hover:opacity-95 transition-opacity text-xs"
+                >
+                  إضافة {customizingQty} للسلة • {calculatedCustomTotal * customizingQty} ج.م
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

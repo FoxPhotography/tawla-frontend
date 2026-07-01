@@ -33,8 +33,17 @@ export default function OrderTrack() {
       return response.data.data as Order;
     },
     enabled: !!orderId,
-    refetchInterval: 15000,
   });
+
+  // Clear active order ID from local storage when order is delivered or cancelled
+  useEffect(() => {
+    if (order && (order.status === 'delivered' || order.status === 'cancelled')) {
+      const activeOrderId = localStorage.getItem('tawla_active_order_id');
+      if (activeOrderId === order.id) {
+        localStorage.removeItem('tawla_active_order_id');
+      }
+    }
+  }, [order]);
 
   // Service Mutations
   const callWaiterMutation = useMutation({

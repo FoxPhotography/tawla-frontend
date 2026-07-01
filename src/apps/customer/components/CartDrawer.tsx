@@ -7,15 +7,17 @@ interface CartItem {
   product: Product;
   quantity: number;
   notes: string;
+  selectedOptions?: { name: string; value: string; priceAdjustment: number }[];
+  selectedModifiers?: { name: string; value: string; price: number }[];
 }
 
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   cart: CartItem[];
-  updateQuantity: (productId: string, amount: number) => void;
-  removeFromCart: (productId: string) => void;
-  updateItemNotes: (productId: string, notes: string) => void;
+  updateQuantity: (index: number, amount: number) => void;
+  removeFromCart: (index: number) => void;
+  updateItemNotes: (index: number, notes: string) => void;
   cartTotal: number;
   cartCount: number;
   specialNotes: string;
@@ -80,7 +82,8 @@ export default function CartDrawer({
   onSubmitOrder,
   isSubmitting
 }: CartDrawerProps) {
-  const [activeItemNotes, setActiveItemNotes] = useState<{ productId: string; text: string } | null>(null);
+  const [activeItemNotesIndex, setActiveItemNotesIndex] = useState<number | null>(null);
+  const [activeItemNotesText, setActiveItemNotesText] = useState('');
 
   if (!isOpen) return null;
 
@@ -134,87 +137,113 @@ export default function CartDrawer({
               {/* Cart Items List */}
               <div className="space-y-3">
                 <AnimatePresence initial={false}>
-                  {cart.map((item) => (
-                    <motion.div
-                      key={item.product.id}
-                      variants={itemVariants}
-                      layout
-                      className="bg-white border border-zinc-200/60 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-sm"
-                    >
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="flex items-center gap-3">
-                          {item.product.image?.url ? (
-                            <img src={item.product.image.url} alt="" className="w-12 h-12 rounded-xl object-cover border border-zinc-100" />
-                          ) : (
-                            <div className="w-12 h-12 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400">
-                              <ShoppingBag className="w-5 h-5" />
+                  {cart.map((item, index) => {
+                    const optionsPrice = item.selectedOptions?.reduce((sum, opt) => sum + opt.priceAdjustment, 0) || 0;
+                    const modifiersPrice = item.selectedModifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
+                    const itemUnitPrice = item.product.price + optionsPrice + modifiersPrice;
+
+                    return (
+                      <motion.div
+                        key={index}
+                        variants={itemVariants}
+                        layout
+                        className="bg-white border border-zinc-200/60 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-sm"
+                      >
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="flex items-center gap-3">
+                            {item.product.image?.url ? (
+                              <img src={item.product.image.url} alt="" className="w-12 h-12 rounded-xl object-cover border border-zinc-100" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400">
+                                <ShoppingBag className="w-5 h-5" />
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="font-extrabold text-sm text-zinc-950">{item.product.name}</h4>
+                              <span className="text-xs text-orange-600 font-extrabold font-mono mt-1 block">{itemUnitPrice} ج.م</span>
+                              
+                              {/* Display Custom Options & Modifiers in Cart */}
+                              {((item.selectedOptions && item.selectedOptions.length > 0) || 
+                                (item.selectedModifiers && item.selectedModifiers.length > 0)) && (
+                                <div className="flex flex-wrap gap-1 mt-1 text-[10px] text-zinc-500 font-semibold">
+                                  {item.selectedOptions?.map((opt, i) => (
+                                    <span key={i} className="bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
+                                      {opt.name}: {opt.value} {opt.priceAdjustment > 0 ? `(+${opt.priceAdjustment} ج.م)` : ''}
+                                    </span>
+                                  ))}
+                                  {item.selectedModifiers?.map((mod, i) => (
+                                    <span key={i} className="bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded border border-orange-200/40">
+                                      {mod.value} (+{mod.price} ج.م)
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                          )}
-                          <div>
-                            <h4 className="font-extrabold text-sm text-zinc-950">{item.product.name}</h4>
-                            <span className="text-xs text-orange-600 font-extrabold font-mono mt-1 block">{item.product.price} ج.م</span>
                           </div>
-                        </div>
-                        <button
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="w-7 h-7 rounded-lg bg-zinc-50 border border-zinc-200/80 text-zinc-400 hover:text-red-500 hover:border-red-200/50 flex items-center justify-center transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Quantity & Notes Footer row */}
-                      <div className="flex justify-between items-center gap-4 pt-1.5 border-t border-zinc-100">
-                        {/* Quantity controls */}
-                        <div className="flex items-center gap-2 bg-zinc-50 p-1 rounded-xl border border-zinc-200/80">
                           <button
-                            onClick={() => updateQuantity(item.product.id, -1)}
-                            className="w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer"
+                            onClick={() => removeFromCart(index)}
+                            className="w-7 h-7 rounded-lg bg-zinc-50 border border-zinc-200/80 text-zinc-400 hover:text-red-500 hover:border-red-200/50 flex items-center justify-center transition-colors cursor-pointer"
                           >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="text-xs font-black font-mono text-zinc-900 min-w-[20px] text-center">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.product.id, 1)}
-                            className="w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer"
-                          >
-                            <Plus className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
-                        {/* Item Notes Input or Trigger */}
-                        <div className="flex-1 max-w-[180px]">
-                          {activeItemNotes?.productId === item.product.id ? (
-                            <input
-                              type="text"
-                              placeholder="سكر زيادة، بدون بصل..."
-                              value={activeItemNotes.text}
-                              onChange={(e) => {
-                                setActiveItemNotes({ productId: item.product.id, text: e.target.value });
-                                updateItemNotes(item.product.id, e.target.value);
-                              }}
-                              onBlur={() => setActiveItemNotes(null)}
-                              autoFocus
-                              className="w-full bg-white border border-zinc-200 text-zinc-800 rounded-xl px-3 py-1.5 text-xs text-right focus:border-orange-500/50 focus:outline-none placeholder:text-zinc-400 transition-colors"
-                            />
-                          ) : (
+                        {/* Quantity & Notes Footer row */}
+                        <div className="flex justify-between items-center gap-4 pt-1.5 border-t border-zinc-100">
+                          {/* Quantity controls */}
+                          <div className="flex items-center gap-2 bg-zinc-50 p-1 rounded-xl border border-zinc-200/80">
                             <button
-                              onClick={() => setActiveItemNotes({ productId: item.product.id, text: item.notes })}
-                              className="flex items-center gap-1.5 text-[10px] text-zinc-500 hover:text-orange-600 border border-zinc-200 hover:border-orange-500/20 bg-white rounded-xl px-3 py-1.5 transition-all font-bold w-full justify-center cursor-pointer shadow-sm"
+                              onClick={() => updateQuantity(index, -1)}
+                              className="w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer"
                             >
-                              <MessageSquare className="w-3.5 h-3.5 text-orange-500/70" />
-                              <span className="truncate">{item.notes ? item.notes : 'إضافة ملاحظة'}</span>
+                              <Minus className="w-3 h-3" />
                             </button>
-                          )}
-                        </div>
+                            <span className="text-xs font-black font-mono text-zinc-900 min-w-[20px] text-center">{item.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(index, 1)}
+                              className="w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
 
-                        {/* Item Subtotal */}
-                        <span className="text-sm font-black text-zinc-900 font-mono">
-                          {item.product.price * item.quantity} ج.م
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
+                          {/* Item Notes Input or Trigger */}
+                          <div className="flex-1 max-w-[180px]">
+                            {activeItemNotesIndex === index ? (
+                              <input
+                                type="text"
+                                placeholder="سكر زيادة، بدون بصل..."
+                                value={activeItemNotesText}
+                                onChange={(e) => {
+                                  setActiveItemNotesText(e.target.value);
+                                  updateItemNotes(index, e.target.value);
+                                }}
+                                onBlur={() => setActiveItemNotesIndex(null)}
+                                autoFocus
+                                className="w-full bg-white border border-zinc-200 text-zinc-800 rounded-xl px-3 py-1.5 text-xs text-right focus:border-orange-500/50 focus:outline-none placeholder:text-zinc-400 transition-colors"
+                              />
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setActiveItemNotesIndex(index);
+                                  setActiveItemNotesText(item.notes || '');
+                                }}
+                                className="flex items-center gap-1.5 text-[10px] text-zinc-500 hover:text-orange-600 border border-zinc-200 hover:border-orange-500/20 bg-white rounded-xl px-3 py-1.5 transition-all font-bold w-full justify-center cursor-pointer shadow-sm"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 text-orange-500/70" />
+                                <span className="truncate">{item.notes ? item.notes : 'إضافة ملاحظة'}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Item Subtotal */}
+                          <span className="text-sm font-black text-zinc-900 font-mono">
+                            {itemUnitPrice * item.quantity} ج.م
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </AnimatePresence>
               </div>
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Coffee, LogOut, LayoutGrid, MapPin, 
+  Coffee, LogOut, LayoutGrid, MapPin, ChefHat,
   Sparkles, Download, PlusCircle, Wifi, WifiOff
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -19,11 +19,12 @@ import OrdersTab from './components/OrdersTab';
 import TablesTab from './components/TablesTab';
 import CreateOrderModal from './components/CreateOrderModal';
 import ReceiptPrintTemplate from './components/ReceiptPrintTemplate';
+import KDSTab from './components/KDSTab';
 
 export default function StaffDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, restaurant, logout } = useAuthStore();
+  const { token, user, restaurant, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'orders' | 'tables'>('orders');
   const [orderFilter, setOrderFilter] = useState<'active' | 'archived'>('active');
   const [alerts, setAlerts] = useState<LiveAlert[]>([]);
@@ -238,22 +239,25 @@ export default function StaffDashboard() {
           if (targetOrder) {
             updateLocalTableStatus(targetOrder.tableNumber, 'empty', null);
           }
-          return;
+          return null;
         } else {
           const list = getOfflineOrders();
           const updated = list.map((o: any) => o.id === orderId ? { ...o, status: nextStatus } : o);
           localStorage.setItem('tawla_offline_orders', JSON.stringify(updated));
           setOfflineOrders(getOfflineOrders());
           toast.success('تم تحديث حالة الطلب محلياً.');
-          return;
+          return null;
         }
       }
-      await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
+      const res = await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
+      return res.data.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       if (!variables.orderId.startsWith('offline_')) {
         toast.success('تم تحديث حالة الطلب بنجاح.');
+        
         queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
       }
     },
     onError: (err: any) => {
@@ -297,23 +301,22 @@ export default function StaffDashboard() {
 
     const handleConnect = () => {
       console.log('Socket connected, joining restaurant room:', restaurant.id);
-      socket.emit('join_restaurant', restaurant.id);
-      setIsOnline(true);
+      socket.emit('join_restaurant', restaurant.id, (res: any) => {
+        if (res && !res.success) {
+          console.error('[Socket.io]: Failed to join restaurant room:', res.error);
+          setIsOnline(false);
+        } else {
+          console.log('[Socket.io]: Successfully joined restaurant room:', restaurant.id);
+          setIsOnline(true);
+        }
+      });
     };
 
     const handleDisconnect = () => {
       setIsOnline(false);
     };
 
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-
-    // Provide authentication token
-    socket.auth = { token: useAuthStore.getState().token };
-
-    socket.disconnect().connect();
-
-    socket.on('new_order', (data: { order: Order }) => {
+    const handleNewOrder = (data: { order: Order }) => {
       queryClient.setQueryData(['staff-orders'], (old: any) => {
         const list = old ? [...old] : [];
         if (!list.find((o: any) => o.id === data.order.id)) {
@@ -321,6 +324,18 @@ export default function StaffDashboard() {
         }
         return list;
       });
+
+      // Double-sync: update table state locally if it is a dine-in order
+      if (data.order.tableNumber > 0) {
+        queryClient.setQueryData(['staff-tables'], (old: any) => {
+          const list = old ? [...old] : [];
+          return list.map((t: any) => 
+            t.number === data.order.tableNumber && t.status === 'empty'
+              ? { ...t, status: 'occupied', currentOrderId: data.order.id }
+              : t
+          );
+        });
+      }
       
       const isDelivery = data.order.type === 'delivery';
       playAlertSound(isDelivery ? 'delivery_order' : 'new_order');
@@ -335,17 +350,27 @@ export default function StaffDashboard() {
       } else {
         toast.success(`طلب سفري جديد`);
       }
-    });
+    };
 
-    socket.on('order_status_updated', () => {
+    const handleOrderStatusUpdated = () => {
       queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
-    });
+    };
 
-    socket.on('table_status_changed', () => {
+    const handleTableStatusChanged = (data: { tableId: string; tableNumber: number; status: 'empty' | 'occupied' | 'waitingBill'; currentOrderId?: string | null }) => {
+      queryClient.setQueryData(['staff-tables'], (old: any) => {
+        const list = old ? [...old] : [];
+        return list.map((t: any) => 
+          t.id === data.tableId || t.number === data.tableNumber
+            ? { ...t, status: data.status, currentOrderId: data.currentOrderId || null }
+            : t
+        );
+      });
+      // Invalidate both to ensure absolute consistency
       queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
-    });
+      queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+    };
 
-    socket.on('call_waiter', (data: { tableNumber: number }) => {
+    const handleCallWaiter = (data: { tableNumber: number }) => {
       playAlertSound('call_waiter');
       const newAlert: LiveAlert = {
         id: `${Date.now()}-${Math.random()}`,
@@ -354,9 +379,9 @@ export default function StaffDashboard() {
         time: new Date(),
       };
       setAlerts(prev => [newAlert, ...prev]);
-    });
+    };
 
-    socket.on('request_bill', (data: { tableNumber: number; totalAmount: number }) => {
+    const handleRequestBill = (data: { tableNumber: number; totalAmount: number }) => {
       playAlertSound('bill');
       const newAlert: LiveAlert = {
         id: `${Date.now()}-${Math.random()}`,
@@ -366,18 +391,32 @@ export default function StaffDashboard() {
         time: new Date(),
       };
       setAlerts(prev => [newAlert, ...prev]);
-    });
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+
+    // Provide authentication token
+    socket.auth = { token: useAuthStore.getState().token };
+
+    socket.disconnect().connect();
+
+    socket.on('new_order', handleNewOrder);
+    socket.on('order_status_updated', handleOrderStatusUpdated);
+    socket.on('table_status_changed', handleTableStatusChanged);
+    socket.on('call_waiter', handleCallWaiter);
+    socket.on('request_bill', handleRequestBill);
 
     return () => {
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
-      socket.off('new_order');
-      socket.off('order_status_updated');
-      socket.off('table_status_changed');
-      socket.off('call_waiter');
-      socket.off('request_bill');
+      socket.off('new_order', handleNewOrder);
+      socket.off('order_status_updated', handleOrderStatusUpdated);
+      socket.off('table_status_changed', handleTableStatusChanged);
+      socket.off('call_waiter', handleCallWaiter);
+      socket.off('request_bill', handleRequestBill);
     };
-  }, [user, restaurant, queryClient]);
+  }, [user, restaurant, queryClient, token]);
 
   useEffect(() => {
     if (!user) {
@@ -549,6 +588,17 @@ export default function StaffDashboard() {
             >
               <MapPin className="w-5 h-5" />
             </button>
+            <button
+              onClick={() => setActiveTab('kds')}
+              className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+                activeTab === 'kds'
+                  ? 'bg-staff-accent text-white shadow-lg shadow-staff-accent/20'
+                  : 'text-zinc-500 hover:text-white hover:bg-white/5'
+              }`}
+              title="شاشة عرض المطبخ (KDS)"
+            >
+              <ChefHat className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -693,14 +743,20 @@ export default function StaffDashboard() {
                     onUpdateOrder={(id, items, status) => updateOrderMutation.mutateAsync({ orderId: id, items, status })}
                     isUpdatePending={updateOrderMutation.isPending}
                   />
-                ) : (
+                ) : activeTab === 'tables' ? (
                   <TablesTab 
                     tables={tables}
-                    orders={allOrders}
+                    orders={serverOrders}
                     onEmptyTable={(id, method) => emptyTableMutation.mutate({ tableId: id, paymentMethod: method })}
                     isEmptyTablePending={emptyTableMutation.isPending}
                     onStartOrderForTable={handleStartOrderForTable}
                     onPrintReceipt={handlePrintReceipt}
+                  />
+                ) : (
+                  <KDSTab 
+                    orders={allOrders}
+                    onUpdateStatus={(id, status) => updateStatusMutation.mutate({ orderId: id, nextStatus: status })}
+                    isStatusPending={updateStatusMutation.isPending}
                   />
                 )}
               </motion.div>
