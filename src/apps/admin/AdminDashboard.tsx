@@ -24,7 +24,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   const plan = restaurant?.subscription?.plan || 'trial';
@@ -43,16 +43,16 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#09090B] flex flex-col md:flex-row text-right" dir="rtl">
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-[#09090B] border-l border-white/5 flex flex-col justify-between p-6 flex-shrink-0 text-white">
+      <aside className="w-full md:w-64 bg-white border-l border-zinc-200/80 flex flex-col justify-between p-6 flex-shrink-0 text-zinc-900">
         <div className="space-y-8">
           {/* Logo / Header */}
-          <div className="flex items-center gap-3 pb-6 border-b border-white/5">
+          <div className="flex items-center gap-3 pb-6 border-b border-zinc-200/85">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-admin-accent to-orange-500 flex items-center justify-center text-white font-black shadow-md shadow-admin-accent/20">
               T
             </div>
             <div>
-              <h1 className="text-sm font-black tracking-wide">{restaurant?.name || 'لوحة المدير'}</h1>
-              <span className="text-[10px] text-zinc-400 font-bold">باقة: <span className="text-admin-accent uppercase">{plan}</span></span>
+              <h1 className="text-sm font-black tracking-wide text-zinc-900">{restaurant?.name || 'لوحة المدير'}</h1>
+              <span className="text-[10px] text-zinc-500 font-bold">باقة: <span className="text-admin-accent uppercase">{plan}</span></span>
             </div>
           </div>
 
@@ -69,15 +69,15 @@ export default function AdminDashboard() {
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     isActive
                       ? 'bg-admin-accent text-white shadow-lg shadow-admin-accent/15'
-                      : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-white' : 'text-zinc-400'}`} />
+                    <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-white' : 'text-zinc-500'}`} />
                     <span>{item.label}</span>
                   </div>
                   {item.premium && plan !== 'pro' && (
-                    <span className="text-[8px] bg-admin-accent/20 text-admin-accent px-1.5 py-0.5 rounded font-black uppercase">PRO</span>
+                    <span className="text-[8px] bg-admin-accent/10 text-admin-accent px-1.5 py-0.5 rounded font-black uppercase">PRO</span>
                   )}
                 </button>
               );
@@ -86,14 +86,14 @@ export default function AdminDashboard() {
         </div>
 
         {/* Footer Logout */}
-        <div className="pt-6 border-t border-white/5 mt-8 flex justify-between items-center">
-          <div className="text-[10px] text-zinc-500 font-semibold">
+        <div className="pt-6 border-t border-zinc-200 mt-8 flex justify-between items-center">
+          <div className="text-[10px] text-zinc-700 font-semibold">
             <div>مرحباً، {user?.name}</div>
-            <div className="mt-0.5 text-zinc-600">الدور: مدير النظام</div>
+            <div className="mt-0.5 text-zinc-500">الدور: مدير النظام</div>
           </div>
           <button
             onClick={handleLogout}
-            className="p-2 rounded-lg bg-zinc-900 border border-white/5 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-all cursor-pointer"
+            className="p-2 rounded-lg bg-zinc-50 border border-zinc-250 text-zinc-500 hover:text-red-650 hover:bg-red-500/10 transition-all cursor-pointer"
             title="تسجيل الخروج"
           >
             <LogOut className="w-4 h-4" />

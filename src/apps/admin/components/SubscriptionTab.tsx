@@ -26,7 +26,7 @@ export default function SubscriptionTab() {
   // Activate Serial Key Mutation
   const activateMutation = useMutation({
     mutationFn: async (key: string) => {
-      const response = await api.post('/subscriptions/activate', { serialKey: key });
+      const response = await api.post('/subscriptions/activate', { key, serialKey: key });
       return response.data.data;
     },
     onSuccess: (data) => {
