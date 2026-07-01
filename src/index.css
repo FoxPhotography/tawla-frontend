@@ -5,25 +5,25 @@
 @tailwind utilities;
 
 :root {
-  /* ============ CUSTOMER INTERFACE — Dark Luxury ============ */
-  --c-bg-base:          #0A0A0B;                    /* أسود دافي — مش بارد */
-  --c-bg-elevated:      #111113;                    /* الكروت والـ surfaces */
-  --c-bg-overlay:       #1A1A1E;                    /* modals, drawers */
-  --c-border:           rgba(255,255,255,0.06);
-  --c-border-strong:    rgba(255,255,255,0.12);
+  /* ============ CUSTOMER INTERFACE — White, Orange & Black Premium ============ */
+  --c-bg-base:          #FAF9F6;                    /* أبيض ألبستر فاخر ودافي */
+  --c-bg-elevated:      #FFFFFF;                    /* أبيض ناصع للكروت والأسطح */
+  --c-bg-overlay:       #FFFFFF;                    /* modals, drawers */
+  --c-border:           rgba(9,9,11,0.06);          /* حدود رقيقة جداً بلون داكن */
+  --c-border-strong:    rgba(9,9,11,0.12);
 
-  --c-accent:           #D4A853;                    /* ذهبي دافي */
-  --c-accent-glow:      rgba(212,168,83,0.15);
-  --c-accent-subtle:    rgba(212,168,83,0.08);
-  --c-accent-border:    rgba(212,168,83,0.25);
+  --c-accent:           #FF5500;                    /* برتقالي ملكي فاخر */
+  --c-accent-glow:      rgba(255,85,0,0.15);        /* توهج برتقالي ناعم */
+  --c-accent-subtle:    rgba(255,85,0,0.06);        /* خلفية برتقالية خفيفة للغاية */
+  --c-accent-border:    rgba(255,85,0,0.20);        /* حدود بلون برتقالي شفاف */
 
-  --c-text-primary:     #F5F5F0;                    /* أبيض دافي */
-  --c-text-secondary:   rgba(245,245,240,0.55);
-  --c-text-muted:       rgba(245,245,240,0.30);
-  --c-text-accent:      #D4A853;
+  --c-text-primary:     #09090B;                    /* أسود ملكي فحمى للنصوص الأساسية */
+  --c-text-secondary:   #52525B;                    /* رمادي داكن للنصوص الثانوية */
+  --c-text-muted:       #8E8E98;                    /* رمادي باهت للنص المساعد */
+  --c-text-accent:      #FF5500;
 
-  --c-success:          #4ADE80;
-  --c-error:            #F87171;
+  --c-success:          #00B074;
+  --c-error:            #FF3B30;
 
   /* ============ STAFF DASHBOARD — White, Orange, & Black Premium ============ */
   --s-bg-base:          #FAF9F6;                    /* أبيض ألبستر فاخر ودافي */
@@ -217,9 +217,10 @@
   min-height: 200px;
   background: var(--c-bg-base);
   background-image:
-    radial-gradient(circle at 70% 30%, rgba(212,168,83,0.12) 0%, transparent 60%),
-    radial-gradient(circle at 20% 80%, rgba(212,168,83,0.06) 0%, transparent 40%);
+    radial-gradient(circle at 70% 30%, rgba(255,85,0,0.05) 0%, transparent 60%),
+    radial-gradient(circle at 20% 80%, rgba(255,85,0,0.03) 0%, transparent 40%);
   padding: 32px 20px 24px;
+  border-bottom: 1px solid var(--c-border);
 }
 
 /* badge رقم الترابيزة */
@@ -227,13 +228,13 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(212,168,83,0.12);
-  border: 1px solid rgba(212,168,83,0.25);
+  background: rgba(255,85,0,0.12);
+  border: 1px solid rgba(255,85,0,0.25);
   border-radius: 9999px;
   padding: 4px 12px;
   font-size: 10px;
   font-weight: 600;
-  color: #D4A853;
+  color: #FF5500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 14px;
@@ -243,8 +244,8 @@
 .restaurant-name {
   font-family: var(--font-display);
   font-size: 38px;
-  font-weight: 500;
-  color: #F5F5F0;
+  font-weight: 700;
+  color: var(--c-text-primary);
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
@@ -252,7 +253,7 @@
 /* الـ tagline */
 .restaurant-sub {
   font-size: 12px;
-  color: rgba(245,245,240,0.38);
+  color: var(--c-text-secondary);
   margin-top: 6px;
   letter-spacing: 0.02em;
 }
@@ -271,59 +272,61 @@
   justify-content: center;
   gap: 8px;
   padding: 12px;
-  background: #111113;
-  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border);
   border-radius: 12px;
   font-size: 12px;
-  font-weight: 500;
-  color: rgba(245,245,240,0.65);
+  font-weight: 650;
+  color: var(--c-text-primary);
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: var(--shadow-card-light);
 }
 
-.action-btn i, .action-btn svg { color: #D4A853; font-size: 15px; }
+.action-btn i, .action-btn svg { color: var(--c-accent); font-size: 15px; }
 
 .action-btn:hover {
-  border-color: rgba(212,168,83,0.3);
-  color: #F5F5F0;
+  border-color: var(--c-accent-border);
+  background: var(--c-bg-base);
 }
 
 /* لما يتضغط استدعاء ويتر — يبعت Socket event */
 .action-btn:active {
   transform: scale(0.97);
-  background: rgba(212,168,83,0.06);
+  background: var(--c-accent-subtle);
 }
 
 .search-box {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #111113;
-  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border);
   border-radius: 12px;
   padding: 11px 14px;
   margin: 14px 16px 0;
   transition: border-color 0.2s;
+  box-shadow: var(--shadow-card-light);
 }
 
 .search-box:focus-within {
-  border-color: rgba(212,168,83,0.35);
+  border-color: var(--c-accent-border);
 }
 
-.search-box i, .search-box svg { color: rgba(245,245,240,0.28); font-size: 15px; }
+.search-box i, .search-box svg { color: var(--c-text-muted); font-size: 15px; }
 
 .search-input {
   background: none;
   border: none;
   outline: none;
-  color: #F5F5F0;
+  color: var(--c-text-primary);
   font-size: 13px;
   font-family: var(--font-body);
   width: 100%;
   direction: rtl;
 }
 
-.search-input::placeholder { color: rgba(245,245,240,0.28); }
+.search-input::placeholder { color: var(--c-text-muted); }
 
 .cat-tabs {
   display: flex;
@@ -360,23 +363,24 @@
 /* Product Card */
 .product-card {
   display: flex;
-  background: #111113;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border);
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
   transition: border-color 0.25s ease, transform 0.2s ease;
   direction: rtl;
+  box-shadow: var(--shadow-card-light);
 }
 
 .product-card:hover {
-  border-color: rgba(212,168,83,0.18);
+  border-color: var(--c-accent-border);
   transform: translateY(-1px);
 }
 
 /* لما المنتج يتضاف للسلة */
 .product-card.in-cart {
-  border-color: rgba(212,168,83,0.30);
+  border-color: var(--c-accent);
 }
 
 /* لما المنتج مش متاح */
@@ -397,8 +401,8 @@
 
 .product-name {
   font-size: 14px;
-  font-weight: 500;
-  color: #F5F5F0;
+  font-weight: 700;
+  color: var(--c-text-primary);
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -407,7 +411,7 @@
 
 .product-desc {
   font-size: 11px;
-  color: rgba(245,245,240,0.38);
+  color: var(--c-text-secondary);
   line-height: 1.55;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -422,27 +426,27 @@
   justify-content: space-between;
 }
 
-/* السعر بالذهبي دايماً */
+/* السعر بالبرتقالي دايماً */
 .product-price {
   font-size: 16px;
-  font-weight: 600;
-  color: #D4A853;
+  font-weight: 700;
+  color: var(--c-accent);
   letter-spacing: -0.01em;
 }
 .product-price .currency {
   font-size: 10px;
-  font-weight: 400;
-  color: rgba(212,168,83,0.6);
+  font-weight: 500;
+  color: rgba(255,85,0,0.7);
   margin-left: 2px;
 }
 
-/* زر الإضافة — دايرة ذهبية صغيرة */
+/* زر الإضافة — دايرة برتقالية صغيرة */
 .add-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(212,168,83,0.12);
-  border: 1px solid rgba(212,168,83,0.25);
+  background: var(--c-accent-subtle);
+  border: 1px solid var(--c-accent-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -450,17 +454,17 @@
   flex-shrink: 0;
   transition: all 0.2s ease;
 }
-.add-btn i, .add-btn svg { font-size: 15px; color: #D4A853; }
+.add-btn i, .add-btn svg { font-size: 15px; color: var(--c-accent); }
 
 .add-btn:hover,
 .add-btn.added {
-  background: #D4A853;
+  background: var(--c-accent);
 }
 .add-btn:hover i,
 .add-btn.added i,
 .add-btn:hover svg,
 .add-btn.added svg {
-  color: #0A0A0B;
+  color: #FFFFFF;
 }
 
 /* الصورة أو الـ Placeholder */
@@ -477,14 +481,14 @@
   height: 88px;
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #1a1208, #151510);
+  background: linear-gradient(135deg, #F3F3F6, #FAF9F6);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .product-img-placeholder i, .product-img-placeholder svg {
   font-size: 22px;
-  color: rgba(212,168,83,0.20);
+  color: rgba(255,85,0,0.20);
 }
 
 /* tag "نفد" */
@@ -546,9 +550,10 @@
 /* Bottom Navigation */
 .bottom-nav {
   display: flex;
-  background: #0D0D0F;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  background: var(--customer-bg-elevated);
+  border-top: 1px solid var(--customer-border);
   padding: 10px 0 20px;   /* 20px عشان iPhone home indicator */
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.03);
 }
 
 .bottom-nav-item {
@@ -563,19 +568,19 @@
 
 .bottom-nav-item i, .bottom-nav-item svg {
   font-size: 20px;
-  color: rgba(245,245,240,0.28);
+  color: var(--customer-text-muted);
   transition: color 0.2s;
 }
 .bottom-nav-item span {
   font-size: 9px;
-  color: rgba(245,245,240,0.28);
-  font-weight: 500;
+  color: var(--customer-text-muted);
+  font-weight: 600;
   letter-spacing: 0.04em;
   transition: color 0.2s;
 }
 
-.bottom-nav-item.active i, .bottom-nav-item.active svg  { color: #D4A853; }
-.bottom-nav-item.active span { color: #D4A853; }
+.bottom-nav-item.active i, .bottom-nav-item.active svg  { color: var(--customer-accent); }
+.bottom-nav-item.active span { color: var(--customer-accent); }
 
 /* Order Confirmation Screen */
 .order-confirmation {

@@ -3,13 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, ShoppingCart, Bell, Receipt, Plus, Minus, 
-  Trash2, X, CheckCircle2, UtensilsCrossed, MessageSquare, Clock, FolderPlus, ShoppingBag
+  Search, Bell, Receipt, Plus, Minus, 
+  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket.js';
 import type { Product, Category, Restaurant } from '../../shared/types';
+import CartFAB from './components/CartFAB';
+import CartDrawer from './components/CartDrawer';
+import OrderConfirmationModal from './components/OrderConfirmationModal';
 
 // ============ Framer Motion Animations ============
 const productCardVariants = {
@@ -66,7 +69,6 @@ export default function CustomerMenu() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [specialNotes, setSpecialNotes] = useState('');
-  const [activeItemNotes, setActiveItemNotes] = useState<{ productId: string; text: string } | null>(null);
   
   // Custom states for Tawla Luxury navigation
   const [isServiceOpen, setIsServiceOpen] = useState(false);
@@ -350,23 +352,26 @@ export default function CustomerMenu() {
 
       {/* ===== Offline Notice ===== */}
       {!isStaffOnline && (
-        <div className="mx-4 mt-4 relative z-10 max-w-[428px] md:mx-auto bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 space-y-3 font-body text-right">
-          <div className="flex items-center gap-2 text-amber-500">
+        <div className="mx-4 mt-4 relative z-10 max-w-[428px] md:mx-auto bg-amber-50 border border-amber-200/60 rounded-2xl p-4 space-y-3 font-body text-right shadow-sm">
+          <div className="flex items-center gap-2 text-amber-600">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
             <h3 className="font-extrabold text-sm">⚠️ الخدمة معطلة مؤقتاً</h3>
           </div>
           {tableNumber ? (
-            <p className="text-xs text-amber-200/80 leading-relaxed">
+            <p className="text-xs text-amber-900 leading-relaxed">
               النظام غير متصل بالإنترنت حالياً في المطعم. يرجى طلب الخدمة وإعطاء طلبك مباشرةً للويتر.
             </p>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-amber-200/80 leading-relaxed">
+              <p className="text-xs text-amber-900 leading-relaxed">
                 تلقي الطلبات المباشرة معطل مؤقتاً لعدم اتصال الكاشير. يمكنك إرسال طلبك مباشرةً وتأكيده عبر الواتساب.
               </p>
               {(() => {
                 const waNumber = (restaurant.receiptSettings as any)?.whatsapp || restaurant.receiptSettings?.phone || restaurant.phone;
-                const formattedWaNumber = waNumber ? waNumber.replace(/[^\d+]/g, '') : '';
+                let formattedWaNumber = waNumber ? waNumber.replace(/[^\d]/g, '') : '';
+                if (formattedWaNumber.startsWith('0')) {
+                  formattedWaNumber = '2' + formattedWaNumber;
+                }
                 const cartSummary = cart.length > 0 
                   ? `أود طلب:\n${cart.map(item => `- ${item.product.name} (عدد ${item.quantity})`).join('\n')}\nالإجمالي: ${cartTotal} ج.م`
                   : 'أود الاستفسار عن الطلبات من المنيو';
@@ -632,252 +637,38 @@ export default function CustomerMenu() {
       {/* ===== Floating Cart FAB ===== */}
       <AnimatePresence>
         {cart.length > 0 && !isCartOpen && (
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={fabVariants}
-            className="fixed bottom-[96px] inset-x-0 px-4 z-45 pointer-events-none flex justify-center"
-          >
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="cart-fab pointer-events-auto"
-            >
-              <div className="flex items-center gap-2.5">
-                <ShoppingCart className="w-4.5 h-4.5" />
-                <span className="count-badge">
-                  {cartCount}
-                </span>
-              </div>
-              <span>عرض السلة وتأكيد الطلب</span>
-              <span className="font-extrabold">{cartTotal} ج.م</span>
-            </button>
-          </motion.div>
+          <CartFAB
+            cartCount={cartCount}
+            cartTotal={cartTotal}
+            onClick={() => setIsCartOpen(true)}
+          />
         )}
       </AnimatePresence>
 
       {/* ===== Cart Sheet ===== */}
-      <AnimatePresence>
-        {isCartOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 200 }}
-              className="fixed bottom-0 inset-x-0 bg-customer-bg-overlay rounded-t-3xl z-50 max-h-[92vh] flex flex-col border-t border-customer-border shadow-customer-elevated max-w-[430px] mx-auto"
-            >
-              {/* Cart Header */}
-              <div className="p-5 border-b border-customer-border flex justify-between items-center flex-shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <ShoppingCart className="w-5 h-5 text-customer-accent" />
-                  <h2 className="text-lg font-extrabold text-customer-text-primary">سلة المشتريات</h2>
-                  <span className="badge bg-customer-accent/10 border border-customer-accent/20 text-customer-accent px-2 py-0.5 rounded-full text-xs font-bold">{cartCount} عنصر</span>
-                </div>
-                <button onClick={() => setIsCartOpen(false)} className="bg-customer-bg-elevated border border-customer-border text-customer-text-secondary hover:text-customer-text-primary p-2 rounded-xl">
-                  <X className="w-4.5 h-4.5" />
-                </button>
-              </div>
-
-              {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
-                {cart.map((item) => (
-                  <motion.div
-                    key={item.product.id}
-                    layout
-                    className="bg-customer-bg-elevated border border-customer-border rounded-xl p-4 space-y-3"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        {item.product.image?.url ? (
-                          <img src={item.product.image.url} alt="" className="w-12 h-12 rounded-lg object-cover" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-customer-bg-overlay border border-customer-border flex items-center justify-center">
-                            <UtensilsCrossed className="w-4 h-4 text-customer-text-muted" />
-                          </div>
-                        )}
-                        <div>
-                          <h4 className="font-extrabold text-customer-text-primary text-sm">{item.product.name}</h4>
-                          <span className="text-xs text-customer-accent font-extrabold">{item.product.price} ج.م</span>
-                        </div>
-                      </div>
-                      <button onClick={() => removeFromCart(item.product.id)} className="text-customer-text-muted hover:text-red-500 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      {/* Quantity */}
-                      <div className="flex items-center gap-3 bg-customer-bg-overlay p-1.5 rounded-xl border border-customer-border">
-                        <button onClick={() => updateQuantity(item.product.id, -1)} className="p-1.5 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="text-sm font-extrabold text-customer-text-primary min-w-4 text-center">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.product.id, 1)} className="p-1.5 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Item Notes */}
-                      {activeItemNotes?.productId === item.product.id ? (
-                        <div className="flex-1 mr-3">
-                          <input
-                            type="text"
-                            placeholder="سكر زيادة، بدون بصل..."
-                            value={activeItemNotes.text}
-                            onChange={(e) => {
-                              setActiveItemNotes({ productId: item.product.id, text: e.target.value });
-                              updateItemNotes(item.product.id, e.target.value);
-                            }}
-                            onBlur={() => setActiveItemNotes(null)}
-                            autoFocus
-                            className="w-full bg-customer-bg-overlay border border-customer-border text-customer-text-primary rounded-xl px-3 py-1.5 text-xs focus:border-customer-accent focus:outline-none"
-                          />
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setActiveItemNotes({ productId: item.product.id, text: item.notes })}
-                          className="flex items-center gap-1 text-xs text-customer-text-secondary hover:text-customer-accent border border-customer-border rounded-lg px-2.5 py-1.5 transition-colors bg-customer-bg-overlay font-medium"
-                        >
-                          <MessageSquare className="w-3 h-3 text-customer-accent" />
-                          <span>{item.notes ? `${item.notes}` : 'ملاحظة'}</span>
-                        </button>
-                      )}
-
-                      {/* Subtotal */}
-                      <span className="text-sm font-extrabold text-customer-text-primary">
-                        {item.product.price * item.quantity} ج.م
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-
-                {/* Special Notes */}
-                <div className="mt-2">
-                  <label className="block text-xs text-customer-text-secondary mb-2 font-bold">ملاحظات إضافية على الطلب بالكامل</label>
-                  <textarea
-                    rows={2}
-                    placeholder="مثال: سرعة تحضير، التوصيل دفعة واحدة..."
-                    value={specialNotes}
-                    onChange={(e) => setSpecialNotes(e.target.value)}
-                    className="w-full bg-customer-bg-elevated border border-customer-border text-customer-text-primary rounded-xl p-3 text-sm text-right resize-none focus:border-customer-accent focus:outline-none placeholder:text-customer-text-muted"
-                  />
-                </div>
-
-                {/* Delivery Form (If outside of restaurant) */}
-                {!tableNumber && (
-                  <div className="mt-4 bg-customer-bg-elevated border border-customer-border rounded-xl p-4 space-y-3 text-right">
-                    <h4 className="text-xs font-black text-customer-accent mb-2">🚚 بيانات التوصيل (الدليفري)</h4>
-                    <div className="space-y-1">
-                      <label className="block text-[10px] text-zinc-400 font-bold">الاسم بالكامل</label>
-                      <input
-                        type="text"
-                        required
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="الاسم"
-                        className="w-full bg-customer-bg-overlay border border-customer-border text-customer-text-primary rounded-xl px-3 py-2 text-xs focus:border-customer-accent focus:outline-none placeholder:text-customer-text-muted"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-[10px] text-zinc-400 font-bold">رقم الموبايل</label>
-                      <input
-                        type="tel"
-                        required
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        placeholder="مثال: 01012345678"
-                        className="w-full bg-customer-bg-overlay border border-customer-border text-customer-text-primary rounded-xl px-3 py-2 text-xs focus:border-customer-accent focus:outline-none text-left placeholder:text-customer-text-muted"
-                        dir="ltr"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-[10px] text-zinc-400 font-bold">العنوان بالتفصيل</label>
-                      <input
-                        type="text"
-                        required
-                        value={customerAddress}
-                        onChange={(e) => setCustomerAddress(e.target.value)}
-                        placeholder="الشارع، الدور، الشقة، علامة مميزة..."
-                        className="w-full bg-customer-bg-overlay border border-customer-border text-customer-text-primary rounded-xl px-3 py-2 text-xs focus:border-customer-accent focus:outline-none placeholder:text-customer-text-muted"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Checkout Footer */}
-              <div className="p-5 border-t border-customer-border space-y-4 flex-shrink-0">
-                <div className="flex justify-between items-center">
-                  <span className="text-customer-text-secondary font-bold">الإجمالي</span>
-                  <span className="text-2xl font-extrabold text-customer-accent">{cartTotal} ج.م</span>
-                </div>
-                
-                {(() => {
-                  if (!isStaffOnline) {
-                    if (tableNumber) {
-                      return (
-                        <button
-                          disabled
-                          className="w-full py-4 text-xs font-bold bg-zinc-800 text-zinc-500 rounded-xl flex items-center justify-center gap-2.5 cursor-not-allowed border border-zinc-700/50"
-                        >
-                          <X className="w-5 h-5" />
-                          <span>الخدمة معطلة مؤقتاً (يرجى الطلب من الويتر)</span>
-                        </button>
-                      );
-                    } else {
-                      const handleWhatsappCheckout = () => {
-                        if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
-                          toast.error('يرجى كتابة الاسم ورقم الهاتف وعنوان التوصيل لإرسال الطلب عبر واتساب.');
-                          return;
-                        }
-                        const waNumber = (restaurant.receiptSettings as any)?.whatsapp || restaurant.receiptSettings?.phone || restaurant.phone;
-                        const formattedWaNumber = waNumber ? waNumber.replace(/[^\d+]/g, '') : '';
-                        const cartSummary = `أود طلب:\n${cart.map(item => `- ${item.product.name} (عدد ${item.quantity})`).join('\n')}\nالإجمالي: ${cartTotal} ج.م\nالاسم: ${customerName}\nالهاتف: ${customerPhone}\nالعنوان: ${customerAddress}`;
-                        window.open(`https://wa.me/${formattedWaNumber}?text=${encodeURIComponent(cartSummary)}`, '_blank');
-                      };
-                      return (
-                        <motion.button
-                          onClick={handleWhatsappCheckout}
-                          whileTap={{ scale: 0.97 }}
-                          className="w-full py-4 text-base font-bold bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-2.5 hover:bg-emerald-700 transition-colors"
-                        >
-                          <span>💬 إرسال الطلب عبر واتساب</span>
-                        </motion.button>
-                      );
-                    }
-                  }
-
-                  return (
-                    <motion.button
-                      onClick={() => submitOrderMutation.mutate()}
-                      disabled={submitOrderMutation.isPending}
-                      whileTap={{ scale: 0.97 }}
-                      className="w-full py-4 text-base font-bold bg-customer-accent text-customer-bg-base rounded-xl flex items-center justify-center gap-2.5 hover:opacity-95 transition-opacity"
-                    >
-                      {submitOrderMutation.isPending ? (
-                        <div className="w-5 h-5 border-2 border-customer-bg-base border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-5 h-5" />
-                          <span>تأكيد وإرسال الطلب</span>
-                        </>
-                      )}
-                    </motion.button>
-                  );
-                })()}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        updateQuantity={updateQuantity}
+        removeFromCart={removeFromCart}
+        updateItemNotes={updateItemNotes}
+        cartTotal={cartTotal}
+        cartCount={cartCount}
+        specialNotes={specialNotes}
+        setSpecialNotes={setSpecialNotes}
+        customerName={customerName}
+        setCustomerName={setCustomerName}
+        customerPhone={customerPhone}
+        setCustomerPhone={setCustomerPhone}
+        customerAddress={customerAddress}
+        setCustomerAddress={setCustomerAddress}
+        tableNumber={tableNumber}
+        isStaffOnline={isStaffOnline}
+        restaurant={restaurant}
+        onSubmitOrder={() => submitOrderMutation.mutate()}
+        isSubmitting={submitOrderMutation.isPending}
+      />
 
       {/* ===== persistent Bottom Navigation Bar ===== */}
       <div className="fixed bottom-0 inset-x-0 bottom-nav z-40 max-w-[430px] mx-auto rounded-t-2xl shadow-customer-elevated">
@@ -1018,47 +809,14 @@ export default function CustomerMenu() {
       {/* ===== Order Confirmation Screen ===== */}
       <AnimatePresence>
         {submittedOrder && (
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={confirmationVariants}
-            className="order-confirmation"
-          >
-            <div className="confirm-icon">
-              <CheckCircle2 className="w-10 h-10 text-customer-accent" />
-            </div>
-            
-            <h2 className="confirm-title">تم إرسال طلبك للمطبخ</h2>
-            <p className="confirm-sub">الشيف بدأ في تحضير طعامك وسيكون جاهزاً قريباً</p>
-            
-            {/* Order Number */}
-            <div className="order-number">
-              <div className="order-number-label">رقم الطلب</div>
-              <div className="order-number-value">
-                #{submittedOrder.id.slice(-6).toUpperCase()}
-              </div>
-            </div>
-            
-            {/* Status steps tracker */}
-            <div className="order-steps mb-8 max-w-[280px] mx-auto">
-              <div className="order-step done" />
-              <div className="order-step active" />
-              <div className="order-step" />
-              <div className="order-step" />
-            </div>
-            
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                const orderId = submittedOrder.id;
-                setSubmittedOrder(null);
-                navigate(`/order/${orderId}/track`);
-              }}
-              className="w-full max-w-[280px] py-3.5 text-sm font-bold bg-[#D4A853] text-[#0A0A0B] rounded-full shadow-gold hover:opacity-95 transition-opacity"
-            >
-              متابعة حالة الطلب
-            </motion.button>
-          </motion.div>
+          <OrderConfirmationModal
+            order={submittedOrder}
+            onTrack={() => {
+              const orderId = submittedOrder.id;
+              setSubmittedOrder(null);
+              navigate(`/order/${orderId}/track`);
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
