@@ -5,7 +5,7 @@ import {
   QrCode, Coffee, Bell, TrendingUp, Receipt,
   Laptop, Check, ArrowLeft,
   ChevronDown, Send, Sparkles, Menu, X,
-  Lock, Users, ShoppingBag, Plus, Trash2, CloudOff
+  Lock, ShoppingBag, Plus, Trash2, CloudOff
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -361,10 +361,10 @@ export default function LandingPage() {
 
           <div className="hidden md:flex items-center gap-4">
             <button 
-              onClick={() => navigate('/admin/login')}
+              onClick={() => navigate('/login')}
               className="text-[13px] text-[#5C524C] hover:text-[#1C1612] transition-colors py-2 px-4 font-medium"
             >
-              دخول المشرف
+              تسجيل دخول
             </button>
             <button 
               onClick={() => navigate('/register')}
@@ -410,10 +410,10 @@ export default function LandingPage() {
                 ))}
                 <div className="flex flex-col gap-3 pt-4">
                   <button 
-                    onClick={() => { setMobileMenuOpen(false); navigate('/admin/login'); }}
+                    onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
                     className="w-full text-center text-[14px] text-[#5C524C] hover:text-[#1C1612] py-2.5 border border-[#B8973E]/15 rounded-xl"
                   >
-                    دخول المشرف
+                    تسجيل دخول
                   </button>
                   <button 
                     onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
@@ -1311,19 +1311,11 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-6">
             <a 
-              href="/admin/login" 
+              href="/login" 
               className="hover:text-[#B8973E] transition-colors flex items-center gap-1.5 font-medium"
             >
               <Lock className="w-3.5 h-3.5" />
-              دخول الإدارة
-            </a>
-            <span className="text-zinc-200">|</span>
-            <a 
-              href="/staff/login" 
-              className="hover:text-[#B8973E] transition-colors flex items-center gap-1.5 font-medium"
-            >
-              <Users className="w-3.5 h-3.5" />
-              دخول الموظفين والويتر
+              تسجيل الدخول للنظام
             </a>
           </div>
         </div>

@@ -84,8 +84,10 @@ export interface OrderItem {
 export interface Order {
   id: string;
   restaurantId: string;
-  tableId: string;
+  tableId?: string;
   tableNumber: number;
+  type?: 'dine_in' | 'takeaway';
+  paymentMethod?: 'cash' | 'card' | 'wallet';
   items: OrderItem[];
   totalAmount: number;
   status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled';

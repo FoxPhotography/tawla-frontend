@@ -10,7 +10,8 @@ import {
   Sliders, ShieldAlert, Users, Eye, EyeOff, GripVertical, Search
 } from 'lucide-react';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer,
+  BarChart, Bar
 } from 'recharts';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -284,6 +285,8 @@ export default function AdminDashboard() {
 
   // Analytics Period
   const [salesPeriod, setSalesPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
+  const [densityViewMode, setDensityViewMode] = useState<'weekly' | 'daily'>('weekly');
+  const [densitySelectedDayIdx, setDensitySelectedDayIdx] = useState<number>(0);
 
   // Image Cropper States
   const [cropperTarget, setCropperTarget] = useState<'category' | 'product' | null>(null);
@@ -333,7 +336,7 @@ export default function AdminDashboard() {
   // Redirect if not admin
   useEffect(() => {
     if (!user) {
-      navigate('/admin/login');
+      navigate('/login');
     } else if (user.role !== 'admin') {
       toast.error('أنت غير مصرح لك بالدخول كمدير.');
       if (user.role === 'super_admin') {
@@ -391,7 +394,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   // ==================== QUERIES ====================
@@ -1744,31 +1747,79 @@ export default function AdminDashboard() {
                           ))}
                         </div>
 
-                        {/* Recharts Area Chart */}
-                        <div className="bg-admin-bg-elevated border border-admin-border rounded-lg p-6 shadow-admin-card">
-                          <h3 className="font-extrabold text-admin-text-primary text-sm mb-5 flex items-center gap-2">
-                            <BarChart3 className="w-4 h-4 text-admin-accent" />
-                            <span>مخطط نمو المبيعات</span>
-                          </h3>
-                          <div className="w-full h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#c5a85c" stopOpacity={0.25}/>
-                                    <stop offset="95%" stopColor="#c5a85c" stopOpacity={0}/>
-                                  </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
-                                <XAxis dataKey="label" stroke="#8c95a5" fontSize={11} tickLine={false} />
-                                <YAxis stroke="#8c95a5" fontSize={11} tickLine={false} axisLine={false} />
-                                <ChartTooltip 
-                                  contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px', fontSize: '12px' }}
-                                  labelFormatter={(value) => `الفترة: ${value}`}
-                                />
-                                <Area type="monotone" dataKey="amount" name="المبيعات" stroke="#c5a85c" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
-                              </AreaChart>
-                            </ResponsiveContainer>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                          {/* Recharts Area Chart */}
+                          <div className="bg-admin-bg-elevated border border-admin-border rounded-lg p-6 shadow-admin-card lg:col-span-2">
+                            <h3 className="font-extrabold text-admin-text-primary text-sm mb-5 flex items-center gap-2">
+                              <BarChart3 className="w-4 h-4 text-admin-accent" />
+                              <span>مخطط نمو المبيعات</span>
+                            </h3>
+                            <div className="w-full h-64">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                  <defs>
+                                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor="#c5a85c" stopOpacity={0.25}/>
+                                      <stop offset="95%" stopColor="#c5a85c" stopOpacity={0}/>
+                                    </linearGradient>
+                                  </defs>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                                  <XAxis dataKey="label" stroke="#8c95a5" fontSize={11} tickLine={false} />
+                                  <YAxis stroke="#8c95a5" fontSize={11} tickLine={false} axisLine={false} />
+                                  <ChartTooltip 
+                                    contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px', fontSize: '12px' }}
+                                    labelFormatter={(value) => `الفترة: ${value}`}
+                                  />
+                                  <Area type="monotone" dataKey="amount" name="المبيعات" stroke="#c5a85c" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
+                                </AreaChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+
+                          {/* Payment Methods Breakdown */}
+                          <div className="bg-admin-bg-elevated border border-admin-border rounded-lg p-6 shadow-admin-card flex flex-col justify-between">
+                            <div>
+                              <h3 className="font-extrabold text-admin-text-primary text-sm mb-5 flex items-center gap-2">
+                                <span className="text-admin-accent text-sm">💵</span>
+                                <span>توزيع طرق الدفع</span>
+                              </h3>
+                              
+                              <div className="space-y-4">
+                                {[
+                                  { label: 'نقدي (Cash)', amount: salesStats.payments?.cash || 0, color: 'bg-emerald-500', textColor: 'text-emerald-500', icon: '💵' },
+                                  { label: 'فيزا (Visa)', amount: salesStats.payments?.card || 0, color: 'bg-blue-500', textColor: 'text-blue-500', icon: '💳' },
+                                  { label: 'محفظة (Wallet)', amount: salesStats.payments?.wallet || 0, color: 'bg-amber-500', textColor: 'text-amber-500', icon: '📱' },
+                                ].map((pMethod) => {
+                                  const totalPayments = (salesStats.payments?.cash || 0) + (salesStats.payments?.card || 0) + (salesStats.payments?.wallet || 0);
+                                  const percentage = totalPayments > 0 ? Math.round((pMethod.amount / totalPayments) * 100) : 0;
+                                  
+                                  return (
+                                    <div key={pMethod.label} className="space-y-1.5">
+                                      <div className="flex justify-between text-xs font-bold">
+                                        <span className="text-admin-text-primary flex items-center gap-1.5">
+                                          <span>{pMethod.icon}</span>
+                                          <span>{pMethod.label}</span>
+                                        </span>
+                                        <span className="text-admin-text-secondary font-mono">{pMethod.amount} ج.م ({percentage}%)</span>
+                                      </div>
+                                      <div className="w-full bg-admin-bg-base rounded-full h-2 overflow-hidden border border-admin-border">
+                                        <div 
+                                          className={`h-full rounded-full ${pMethod.color}`}
+                                          style={{ width: `${percentage}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            <div className="mt-6 pt-4 border-t border-admin-border/50 flex justify-between items-center text-xs font-bold">
+                              <span className="text-admin-text-muted">مجموع المدفوعات المستلمة:</span>
+                              <span className="font-mono text-emerald-500">
+                                {((salesStats.payments?.cash || 0) + (salesStats.payments?.card || 0) + (salesStats.payments?.wallet || 0))} ج.م
+                              </span>
+                            </div>
                           </div>
                         </div>
 
@@ -1825,67 +1876,142 @@ export default function AdminDashboard() {
                             </div>
                           </div>
 
-                          {/* Weekly Sales Hourly Density Heatmap Grid */}
+                          {/* Weekly/Daily Sales Hourly Density Heatmap/Chart */}
                           <div className="bg-admin-bg-elevated border border-admin-border rounded-lg p-6 lg:col-span-2 shadow-admin-card overflow-hidden">
-                            <h3 className="font-extrabold text-admin-text-primary text-sm mb-2 flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-admin-accent" />
-                              <span>كثافة المبيعات الأسبوعية (أيام × ساعات)</span>
-                            </h3>
-                            <p className="text-[11px] text-admin-text-muted mb-6">يوضح الكثافة البيعية بالأيام والساعات لجدولة العمالة والتحضيرات بشكل مثالي.</p>
-                            
-                            <div className="overflow-x-auto pb-4 scrollbar-hide">
-                              <div className="min-w-[760px] space-y-2">
-                                {/* Hour Headers (0 to 23) */}
-                                <div className="flex items-center gap-1.5 mr-[64px] pb-1 border-b border-admin-border/30">
-                                  {Array.from({ length: 24 }).map((_, hour) => (
-                                    <div key={hour} className="flex-1 text-center text-[9px] font-mono text-admin-text-muted">
-                                      {hour === 0 ? '12ص' : hour === 12 ? '12م' : hour > 12 ? `${hour - 12}م` : `${hour}ص`}
-                                    </div>
-                                  ))}
-                                </div>
-                                
-                                {/* Heatmap Rows */}
-                                {(() => {
-                                  const heatmapMatrix = generateHeatmapMatrix(peakHours);
-                                  const maxVal = Math.max(...heatmapMatrix.flatMap(d => d.hours), 1);
-                                  
-                                  return heatmapMatrix.map((row, dayIdx) => (
-                                    <div key={dayIdx} className="flex items-center gap-1.5">
-                                      <div className="w-[60px] text-xs font-bold text-admin-text-secondary truncate text-right">
-                                        {row.day}
-                                      </div>
-                                      <div className="flex-1 flex gap-1.5">
-                                        {row.hours.map((val, hourIdx) => {
-                                          const level = Math.min(5, Math.floor((val / maxVal) * 5));
-                                          return (
-                                            <div
-                                              key={hourIdx}
-                                              className={`flex-1 aspect-square rounded-sm transition-all duration-300 density-cell level-${level} hover:scale-110 cursor-pointer relative group`}
-                                              title={`${row.day} - ساعة ${hourIdx}: ${val} طلب`}
-                                            >
-                                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-[#1e2330] text-white text-[9px] font-bold py-1 px-2 rounded-md whitespace-nowrap z-50">
-                                                {val} طلبات
-                                              </span>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  ));
-                                })()}
-                                
-                                {/* Legend */}
-                                <div className="flex justify-end gap-3 pt-4 text-[10px] text-admin-text-muted font-semibold items-center">
-                                  <span>أقل نشاطاً</span>
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#f1f3f5]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#fdf6e2]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#f7e7c4]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#f3d492]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#e5b95a]" />
-                                  <div className="w-3.5 h-3.5 rounded-sm bg-[#c5a85c]" />
-                                  <span>أكثر نشاطاً</span>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                              <div>
+                                <h3 className="font-extrabold text-admin-text-primary text-sm flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-admin-accent" />
+                                  <span>كثافة الطلبات (مبيعات الساعات)</span>
+                                </h3>
+                                <p className="text-[11px] text-admin-text-muted mt-1">يوضح الكثافة البيعية بالأيام والساعات لجدولة العمالة والتحضيرات بشكل مثالي.</p>
+                              </div>
+                              
+                              <div className="flex gap-2">
+                                <div className="bg-admin-bg-base border border-admin-border rounded-lg p-0.5 flex gap-1">
+                                  <button
+                                    onClick={() => setDensityViewMode('weekly')}
+                                    className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                                      densityViewMode === 'weekly'
+                                        ? 'bg-admin-accent text-white shadow-sm'
+                                        : 'text-admin-text-secondary hover:text-admin-text-primary'
+                                    }`}
+                                  >
+                                    أسبوعي (شبكة)
+                                  </button>
+                                  <button
+                                    onClick={() => setDensityViewMode('daily')}
+                                    className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                                      densityViewMode === 'daily'
+                                        ? 'bg-admin-accent text-white shadow-sm'
+                                        : 'text-admin-text-secondary hover:text-admin-text-primary'
+                                    }`}
+                                  >
+                                    يومي (أعمدة)
+                                  </button>
                                 </div>
                               </div>
+                            </div>
+
+                            {densityViewMode === 'daily' && (
+                              <div className="flex gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-hide border-b border-admin-border/40">
+                                {['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map((day, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => setDensitySelectedDayIdx(idx)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black whitespace-nowrap transition-all cursor-pointer border ${
+                                      densitySelectedDayIdx === idx
+                                        ? 'bg-admin-accent/15 border-admin-accent/40 text-admin-accent'
+                                        : 'bg-white/5 border-transparent text-admin-text-secondary hover:text-admin-text-primary'
+                                    }`}
+                                  >
+                                    {day}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="overflow-x-auto pb-4 scrollbar-hide">
+                              {densityViewMode === 'weekly' ? (
+                                <div className="min-w-[760px] space-y-2">
+                                  {/* Hour Headers (0 to 23) */}
+                                  <div className="flex items-center gap-1.5 mr-[64px] pb-1 border-b border-admin-border/30">
+                                    {Array.from({ length: 24 }).map((_, hour) => (
+                                      <div key={hour} className="flex-1 text-center text-[9px] font-mono text-admin-text-muted">
+                                        {hour === 0 ? '12ص' : hour === 12 ? '12م' : hour > 12 ? `${hour - 12}م` : `${hour}ص`}
+                                      </div>
+                                    ))}
+                                  </div>
+                                  
+                                  {/* Heatmap Rows */}
+                                  {(() => {
+                                    const heatmapMatrix = generateHeatmapMatrix(peakHours);
+                                    const maxVal = Math.max(...heatmapMatrix.flatMap(d => d.hours), 1);
+                                    
+                                    return heatmapMatrix.map((row, dayIdx) => (
+                                      <div key={dayIdx} className="flex items-center gap-1.5">
+                                        <div className="w-[60px] text-xs font-bold text-admin-text-secondary truncate text-right">
+                                          {row.day}
+                                        </div>
+                                        <div className="flex-1 flex gap-1.5">
+                                          {row.hours.map((val, hourIdx) => {
+                                            const level = Math.min(5, Math.floor((val / maxVal) * 5));
+                                            return (
+                                              <div
+                                                key={hourIdx}
+                                                className={`flex-1 aspect-square rounded-sm transition-all duration-300 density-cell level-${level} hover:scale-110 cursor-pointer relative group`}
+                                                title={`${row.day} - ساعة ${hourIdx}: ${val} طلب`}
+                                              >
+                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-[#1e2330] text-white text-[9px] font-bold py-1 px-2 rounded-md whitespace-nowrap z-50">
+                                                  {val} طلبات
+                                                </span>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    ));
+                                  })()}
+                                  
+                                  {/* Legend */}
+                                  <div className="flex justify-end gap-3 pt-4 text-[10px] text-admin-text-muted font-semibold items-center">
+                                    <span>أقل نشاطاً</span>
+                                    <div className="w-3.5 h-3.5 rounded-sm bg-[#f1f3f5]" />
+                                    <div className="w-3.5 h-3.5 rounded-sm bg-[#fdf6e2]" />
+                                    <div className="w-3.5 h-3.5 rounded-sm bg-[#f7e7c4]" />
+                                    <div className="w-3.5 h-3.5 rounded-sm bg-[#f3d492]" />
+                                    <div className="w-3.5 h-3.5 rounded-sm bg-[#e5b95a]" />
+                                    <div className="w-3.5 h-3.5 rounded-sm bg-[#c5a85c]" />
+                                    <span>أكثر نشاطاً</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="min-w-[600px] h-[260px]">
+                                  {(() => {
+                                    const heatmapMatrix = generateHeatmapMatrix(peakHours);
+                                    const selectedDayData = heatmapMatrix[densitySelectedDayIdx] || { day: '', hours: [] };
+                                    const barChartData = (selectedDayData.hours || []).map((count, hour) => ({
+                                      hourLabel: hour === 0 ? '12ص' : hour === 12 ? '12م' : hour > 12 ? `${hour - 12}م` : `${hour}ص`,
+                                      'عدد الطلبات': count,
+                                    }));
+
+                                    return (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                                          <XAxis dataKey="hourLabel" stroke="#8c95a5" fontSize={10} tickLine={false} />
+                                          <YAxis stroke="#8c95a5" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                                          <ChartTooltip
+                                            contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px', fontSize: '11px' }}
+                                            labelFormatter={(value) => `الساعة: ${value}`}
+                                          />
+                                          <Bar dataKey="عدد الطلبات" fill="#c5a85c" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                      </ResponsiveContainer>
+                                    );
+                                  })()}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>

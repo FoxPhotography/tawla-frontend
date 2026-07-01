@@ -26,7 +26,7 @@ export default function SuperAdminDashboard() {
   // Redirect if not super_admin
   useEffect(() => {
     if (!user) {
-      navigate('/admin/login');
+      navigate('/login');
     } else if (user.role !== 'super_admin') {
       toast.error('غير مصرح لك بدخول لوحة تحكم مطور النظام.');
       if (user.role === 'admin') {
@@ -39,7 +39,7 @@ export default function SuperAdminDashboard() {
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   // Queries

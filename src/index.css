@@ -25,29 +25,29 @@
   --c-success:          #4ADE80;
   --c-error:            #F87171;
 
-  /* ============ STAFF DASHBOARD — Dark Focused ============ */
-  --s-bg-base:          #0D0F12;
-  --s-bg-elevated:      #141720;
-  --s-bg-panel:         #1C2030;
-  --s-border:           rgba(255,255,255,0.07);
-  --s-border-accent:    rgba(99,102,241,0.30);
+  /* ============ STAFF DASHBOARD — White, Orange, & Black Premium ============ */
+  --s-bg-base:          #FAF9F6;                    /* أبيض ألبستر فاخر ودافي */
+  --s-bg-elevated:      #FFFFFF;                    /* أبيض ناصع للكروت والأسطح */
+  --s-bg-panel:         #F3F3F6;                    /* رمادي هادئ جداً للمكونات الداخلية */
+  --s-border:           rgba(9,9,11,0.06);          /* حدود رقيقة جداً بلون داكن */
+  --s-border-accent:    rgba(255,85,0,0.20);        /* حدود بلون برتقالي شفاف */
 
-  --s-accent:           #6366F1;                    /* Indigo — إحساس control */
-  --s-accent-glow:      rgba(99,102,241,0.20);
-  --s-accent-soft:      rgba(99,102,241,0.10);
+  --s-accent:           #FF5500;                    /* برتقالي ملكي فاخر */
+  --s-accent-glow:      rgba(255,85,0,0.15);        /* توهج برتقالي ناعم */
+  --s-accent-soft:      rgba(255,85,0,0.06);        /* خلفية برتقالية خفيفة للغاية */
 
-  /* Order Status — لازم تبان من بعيد */
-  --s-pending:          #F59E0B;
-  --s-pending-bg:       rgba(245,158,11,0.12);
-  --s-preparing:        #6366F1;
-  --s-preparing-bg:     rgba(99,102,241,0.12);
-  --s-ready:            #10B981;
-  --s-ready-bg:         rgba(16,185,129,0.12);
-  --s-delivered:        rgba(255,255,255,0.25);
+  /* Order Status — لازم تبان من بعيد ولكن بلمسة فاخرة */
+  --s-pending:          #FF7A00;                    /* برتقالي متوهج للطلبات الجديدة */
+  --s-pending-bg:       rgba(255,122,0,0.08);
+  --s-preparing:        #18181B;                    /* أسود ملكي للطلبات التي يتم تحضيرها */
+  --s-preparing-bg:     rgba(24,24,27,0.06);
+  --s-ready:            #00B074;                    /* أخضر زمردي للطلبات الجاهزة */
+  --s-ready-bg:         rgba(0,176,116,0.08);
+  --s-delivered:        rgba(9,9,11,0.40);
 
-  --s-text-primary:     #E8EAF0;
-  --s-text-secondary:   rgba(232,234,240,0.55);
-  --s-text-muted:       rgba(232,234,240,0.30);
+  --s-text-primary:     #09090B;                    /* أسود ملكي فحمى للنصوص الأساسية */
+  --s-text-secondary:   #52525B;                    /* رمادي داكن للنصوص الثانوية */
+  --s-text-muted:       #8E8E98;                    /* رمادي باهت للنص المساعد */
 
   /* ============ ADMIN DASHBOARD — Light Premium ============ */
   --a-bg-base:          #F7F7F8;
@@ -1279,5 +1279,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .density-cell.level-5 {
   background-color: #c5a85c;
+}
+
+/* Custom Font Utilities */
+.font-body {
+  font-family: var(--font-body);
+}
+.font-display {
+  font-family: var(--font-display);
+}
+.font-cairo {
+  font-family: 'Cairo', system-ui, sans-serif;
 }
 

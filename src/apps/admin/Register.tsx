@@ -53,7 +53,7 @@ export default function Register() {
           </div>
 
           <div className="pt-4 border-t border-admin-border">
-            <Link to="/admin/login" className="inline-flex w-full py-3.5 bg-admin-accent text-white font-bold rounded-lg items-center justify-center gap-2 shadow-admin-accent hover:opacity-95 transition-opacity text-sm">
+            <Link to="/login" className="inline-flex w-full py-3.5 bg-admin-accent text-white font-bold rounded-lg items-center justify-center gap-2 shadow-admin-accent hover:opacity-95 transition-opacity text-sm">
               العودة لتسجيل الدخول
             </Link>
           </div>

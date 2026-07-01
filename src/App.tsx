@@ -7,7 +7,6 @@ const CustomerMenu = React.lazy(() => import('./apps/customer/CustomerMenu.js'))
 const OrderTrack = React.lazy(() => import('./apps/customer/OrderTrack.js'));
 const StaffLogin = React.lazy(() => import('./apps/staff/StaffLogin.js'));
 const StaffDashboard = React.lazy(() => import('./apps/staff/StaffDashboard.js'));
-const AdminLogin = React.lazy(() => import('./apps/admin/AdminLogin.js'));
 const AdminDashboard = React.lazy(() => import('./apps/admin/AdminDashboard.js'));
 const Register = React.lazy(() => import('./apps/admin/Register.js'));
 const SuperAdminDashboard = React.lazy(() => import('./apps/super-admin/SuperAdminDashboard.js'));
@@ -29,12 +28,13 @@ export default function App() {
           <Route path="/menu/:restaurantSlug/table/:tableNumber" element={<CustomerMenu />} />
           <Route path="/order/:orderId/track" element={<OrderTrack />} />
 
+          {/* Unified Login Route */}
+          <Route path="/login" element={<StaffLogin />} />
+
           {/* Staff Dashboard Routes */}
-          <Route path="/staff/login" element={<StaffLogin />} />
           <Route path="/staff" element={<StaffDashboard />} />
 
           {/* Admin Dashboard Routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/register" element={<Register />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
@@ -67,12 +67,9 @@ export default function App() {
                   تأكد من كتابة الرابط بشكل صحيح أو مسح رمز الطاولة مرة أخرى
                 </p>
                 
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <a href="/staff/login" className="btn-primary flex items-center justify-center gap-2">
-                    تسجيل دخول الموظفين
-                  </a>
-                  <a href="/admin/login" className="btn-ghost flex items-center justify-center gap-2">
-                    لوحة المدير
+                <div className="flex gap-3 justify-center">
+                  <a href="/login" className="btn-primary flex items-center justify-center gap-2 px-6">
+                    تسجيل الدخول للنظام
                   </a>
                 </div>
               </motion.div>

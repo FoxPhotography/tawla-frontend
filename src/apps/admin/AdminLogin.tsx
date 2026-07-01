@@ -50,9 +50,9 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-admin-bg-base text-admin-text-primary flex items-center justify-center relative overflow-hidden" dir="rtl">
+    <div className="min-h-screen bg-[#070708] text-white flex items-center justify-center relative overflow-hidden" dir="rtl">
       <Toaster position="top-center" toastOptions={{
-        style: { background: '#ffffff', color: '#0f0f10', border: '1px solid rgba(0,0,0,0.08)' }
+        style: { background: '#09090B', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.08)' }
       }} />
 
       {/* Animated background elements */}
@@ -76,8 +76,8 @@ export default function AdminLogin() {
           <div className="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[#B8973E]/10 border border-[#B8973E]/30 flex items-center justify-center transition-all duration-300">
             <QrCode className="w-9 h-9 text-[#B8973E]" />
           </div>
-          <h1 className="text-3xl font-extrabold text-admin-text-primary mb-2">بوابة المدير</h1>
-          <p className="text-admin-text-secondary text-sm font-medium">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>
+          <h1 className="text-3xl font-extrabold text-white mb-2 font-cairo">بوابة المدير</h1>
+          <p className="text-zinc-400 text-sm font-medium font-body">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>
         </motion.div>
 
         {/* Login Card */}
@@ -85,12 +85,12 @@ export default function AdminLogin() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.4 }}
-          className="bg-admin-bg-elevated border border-admin-border rounded-xl p-8 space-y-6 shadow-admin-card"
+          className="bg-[#0D0E11] border border-white/5 rounded-3xl p-8 space-y-6 shadow-2xl text-white"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-admin-text-secondary">اسم المستخدم</label>
+              <label className="block text-sm font-semibold text-zinc-400 font-body">اسم المستخدم</label>
               <div className="relative group">
                 <input
                   type="text"
@@ -98,15 +98,15 @@ export default function AdminLogin() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="superadmin أو اسم مستخدم المطعم"
-                  className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3.5 pr-11 text-right text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted"
+                  className="w-full bg-[#18181B] border border-white/10 text-white rounded-lg px-4 py-3.5 pr-11 text-right text-sm focus:border-[#B8973E] focus:outline-none transition-all placeholder:text-zinc-600 font-bold"
                 />
-                <UserIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-admin-text-muted group-focus-within:text-admin-accent transition-colors" />
+                <UserIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500 group-focus-within:text-[#B8973E] transition-colors" />
               </div>
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-admin-text-secondary">كلمة المرور</label>
+              <label className="block text-sm font-semibold text-zinc-400 font-body">كلمة المرور</label>
               <div className="relative group">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -114,13 +114,13 @@ export default function AdminLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3.5 pr-11 pl-11 text-right text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted"
+                  className="w-full bg-[#18181B] border border-white/10 text-white rounded-lg px-4 py-3.5 pr-11 pl-11 text-right text-sm focus:border-[#B8973E] focus:outline-none transition-all placeholder:text-zinc-600 font-bold"
                 />
-                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-admin-text-muted group-focus-within:text-admin-accent transition-colors" />
+                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500 group-focus-within:text-[#B8973E] transition-colors" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-admin-text-muted hover:text-admin-text-primary transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -132,7 +132,7 @@ export default function AdminLogin() {
               type="submit"
               disabled={loginMutation.isPending}
               whileTap={{ scale: 0.97 }}
-              className="w-full py-3.5 bg-admin-accent text-white font-bold rounded-lg flex items-center justify-center gap-2.5 shadow-admin-accent hover:opacity-95 transition-opacity"
+              className="w-full py-3.5 bg-[#B8973E] text-white font-bold rounded-lg flex items-center justify-center gap-2.5 shadow-lg shadow-[#B8973E]/10 hover:opacity-95 transition-all cursor-pointer font-body border border-[#B8973E]"
             >
               {loginMutation.isPending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -147,14 +147,14 @@ export default function AdminLogin() {
 
           {/* Divider */}
           <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-admin-border" />
-            <span className="text-xs text-admin-text-muted">أو</span>
-            <div className="flex-1 h-px bg-admin-border" />
+            <div className="flex-1 h-px bg-white/5" />
+            <span className="text-xs text-zinc-500">أو</span>
+            <div className="flex-1 h-px bg-white/5" />
           </div>
 
           {/* Register Link */}
           <div className="text-center">
-            <p className="text-xs text-admin-text-secondary font-medium">
+            <p className="text-xs text-zinc-400 font-medium leading-relaxed font-body">
               التسجيل متاح فقط من خلال إدارة النظام. لتسجيل مطعم أو كافيه جديد يرجى التواصل مع مسؤول الخدمة.
             </p>
           </div>
@@ -167,8 +167,8 @@ export default function AdminLogin() {
           transition={{ delay: 0.3, duration: 0.4 }}
           className="text-center mt-6"
         >
-          <Link to="/staff/login" className="text-xs text-admin-text-muted hover:text-admin-text-primary transition-colors font-semibold">
-            دخول كموظف (كاشير / ويتر) →
+          <Link to="/staff/login" className="text-xs text-zinc-400 hover:text-white transition-colors font-semibold font-body">
+            دخول كموظف (كاشير / ويتر) ←
           </Link>
         </motion.div>
       </motion.div>

@@ -48,49 +48,73 @@ export default function StaffLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-staff-bg-base text-staff-text-primary flex items-center justify-center relative overflow-hidden noise" dir="rtl">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#09090B] flex items-center justify-center relative overflow-hidden noise" dir="rtl">
       <Toaster position="top-center" toastOptions={{
-        style: { background: '#141720', color: '#e8eaf0', border: '1px solid rgba(255,255,255,0.08)' }
+        style: { background: '#ffffff', color: '#09090B', border: '1px solid rgba(0,0,0,0.08)' }
       }} />
 
-      {/* Animated background */}
+      {/* Floating Animated Light Glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="glow-blob bg-staff-accent-glow top-1/4 -left-1/4 w-[500px] h-[500px]" />
-        <div className="glow-blob bg-staff-accent-soft bottom-1/4 -right-1/4 w-[400px] h-[400px] animation-delay-2000" />
-        <div className="absolute inset-0 dot-pattern" />
+        <motion.div 
+          animate={{ 
+            x: [0, 40, -20, 0],
+            y: [0, -30, 20, 0]
+          }}
+          transition={{
+            duration: 15,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute top-1/4 -left-1/4 w-[450px] h-[450px] rounded-full bg-[#FF5500]/5 blur-[100px]" 
+        />
+        <motion.div 
+          animate={{ 
+            x: [0, -30, 30, 0],
+            y: [0, 40, -30, 0]
+          }}
+          transition={{
+            duration: 18,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2
+          }}
+          className="absolute bottom-1/4 -right-1/4 w-[400px] h-[400px] rounded-full bg-[#FF5500]/5 blur-[90px]" 
+        />
+        <div className="absolute inset-0 dot-pattern opacity-10" />
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md mx-4"
+        initial={{ opacity: 0, y: 30, scale: 0.97 }}
+        animate={{ 
+          opacity: 1, 
+          y: 0, 
+          scale: 1,
+          transition: { type: "spring", stiffness: 280, damping: 25 }
+        }}
+        className="relative z-10 w-full max-w-[420px] mx-4"
       >
         {/* Brand Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-          className="text-center mb-8"
-        >
-          <div className="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[#B8973E]/10 border border-[#B8973E]/30 flex items-center justify-center transition-all duration-300">
-            <QrCode className="w-9 h-9 text-[#B8973E]" />
-          </div>
-          <h1 className="text-3xl font-extrabold text-staff-text-primary mb-2">تسجيل دخول الموظفين</h1>
-          <p className="text-staff-text-muted text-sm font-medium">داشبورد إدارة الكاشير والويتر والطلب</p>
-        </motion.div>
+        <div className="text-center mb-8">
+          <motion.div 
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-[#FF5500]/10 border border-[#FF5500]/20 flex items-center justify-center transition-all duration-300"
+          >
+            <QrCode className="w-7 h-7 text-[#FF5500]" />
+          </motion.div>
+          <h1 className="text-2xl font-black text-[#09090B] tracking-tight font-cairo">تسجيل الدخول</h1>
+          <p className="text-zinc-500 text-xs font-bold mt-1.5 font-body">نظام إدارة المطاعم والكافيهات الذكي - طاولة</p>
+        </div>
 
-        {/* Login Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className="bg-staff-bg-elevated border border-staff-border rounded-xl p-8 space-y-6 shadow-staff-card"
-        >
+        {/* Clean Light Card */}
+        <div className="bg-white border border-zinc-200/80 rounded-3xl p-8 space-y-6 shadow-xl relative overflow-hidden text-zinc-800">
+          
+          {/* Subtle top brand orange bar */}
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#FF5500]" />
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-staff-text-secondary">اسم المستخدم</label>
+              <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest font-body">اسم المستخدم</label>
               <div className="relative group">
                 <input
                   type="text"
@@ -98,15 +122,15 @@ export default function StaffLogin() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="اسم المستخدم الخاص بك"
-                  className="w-full bg-staff-bg-base border border-staff-border text-staff-text-primary rounded-xl px-4 py-3.5 pr-11 text-right text-sm transition-all focus:border-staff-accent focus:outline-none placeholder:text-staff-text-muted"
+                  className="w-full bg-[#F8F9FA] border border-zinc-200 text-zinc-900 rounded-xl px-4 py-3.5 pr-11 text-right text-xs transition-all focus:border-[#FF5500] focus:ring-1 focus:ring-[#FF5500]/25 focus:outline-none placeholder:text-zinc-400 font-bold"
                 />
-                <UserIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-staff-text-muted group-focus-within:text-staff-accent transition-colors" />
+                <UserIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-[#FF5500] transition-colors" />
               </div>
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-staff-text-secondary">كلمة المرور</label>
+              <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest font-body">كلمة المرور</label>
               <div className="relative group">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -114,15 +138,15 @@ export default function StaffLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-staff-bg-base border border-staff-border text-staff-text-primary rounded-xl px-4 py-3.5 pr-11 pl-11 text-right text-sm transition-all focus:border-staff-accent focus:outline-none placeholder:text-staff-text-muted"
+                  className="w-full bg-[#F8F9FA] border border-zinc-200 text-zinc-900 rounded-xl px-4 py-3.5 pr-11 pl-11 text-right text-xs transition-all focus:border-[#FF5500] focus:ring-1 focus:ring-[#FF5500]/25 focus:outline-none placeholder:text-zinc-400 font-bold"
                 />
-                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-staff-text-muted group-focus-within:text-staff-accent transition-colors" />
+                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-[#FF5500] transition-colors" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-staff-text-muted hover:text-staff-text-primary transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-900 transition-colors cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -132,31 +156,19 @@ export default function StaffLogin() {
               type="submit"
               disabled={loginMutation.isPending}
               whileTap={{ scale: 0.97 }}
-              className="w-full py-3.5 bg-staff-accent text-white font-bold rounded-xl flex items-center justify-center gap-2.5 shadow-staff-accent hover:opacity-95 transition-opacity"
+              className="w-full py-3.5 bg-[#FF5500] hover:bg-[#FF5500]/95 text-white font-black rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#FF5500]/10 active:scale-[0.98] transition-all text-xs cursor-pointer font-body border border-[#FF5500] mt-2"
             >
               {loginMutation.isPending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <ArrowLeft className="w-4 h-4" />
-                  <span>تسجيل الدخول</span>
+                  <span>تسجيل الدخول للمنظومة</span>
                 </>
               )}
             </motion.button>
           </form>
-        </motion.div>
-
-        {/* Admin link */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
-          className="text-center mt-6"
-        >
-          <a href="/admin/login" className="text-xs text-staff-text-muted hover:text-staff-text-primary transition-colors font-semibold">
-            دخول كمدير النظام ←
-          </a>
-        </motion.div>
+        </div>
       </motion.div>
     </div>
   );
