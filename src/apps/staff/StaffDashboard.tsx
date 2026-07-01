@@ -191,26 +191,10 @@ export default function StaffDashboard() {
   });
 
   // Combine offline orders and online orders
-  const allOrders = useMemo(() => {
-    const activeOffline = offlineOrders.filter(o => {
-      if (orderFilter === 'active') {
-        return ['pending', 'accepted', 'preparing', 'ready'].includes(o.status);
-      } else {
-        return ['delivered', 'cancelled'].includes(o.status);
-      }
-    });
-
-    const activeServer = serverOrders.filter((order: Order) => {
-      if (orderFilter === 'active') {
-        return ['pending', 'accepted', 'preparing', 'ready'].includes(order.status);
-      } else {
-        return ['delivered', 'cancelled'].includes(order.status);
-      }
-    });
-
-    const merged = [...activeOffline, ...activeServer];
+  const combinedOrders = useMemo(() => {
+    const merged = [...offlineOrders, ...serverOrders];
     return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [offlineOrders, serverOrders, orderFilter]);
+  }, [offlineOrders, serverOrders]);
 
   const updateLocalTableStatus = (tableNumber: number, status: 'empty' | 'occupied' | 'waitingBill', currentOrderId: string | null) => {
     queryClient.setQueryData(['staff-tables'], (old: any) => {
@@ -315,6 +299,9 @@ export default function StaffDashboard() {
         } else {
           console.log('[Socket.io]: Successfully joined restaurant room:', restaurant.id);
           setIsOnline(true);
+          // Refetch queries on connect/reconnect to sync state missed during disconnect
+          queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+          queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
         }
       });
     };
@@ -359,8 +346,17 @@ export default function StaffDashboard() {
       }
     };
 
-    const handleOrderStatusUpdated = () => {
+    const handleOrderStatusUpdated = (data: { orderId: string; status: string }) => {
+      // Update local query cache directly for instant UI feedback
+      queryClient.setQueryData(['staff-orders'], (old: any) => {
+        const list = old ? [...old] : [];
+        return list.map((o: any) => 
+          o.id === data.orderId ? { ...o, status: data.status } : o
+        );
+      });
+      // Invalidate both staff-orders and staff-tables to ensure full backend sync
       queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
     };
 
     const handleTableStatusChanged = (data: { tableId: string; tableNumber: number; status: 'empty' | 'occupied' | 'waitingBill'; currentOrderId?: string | null }) => {
@@ -741,7 +737,7 @@ export default function StaffDashboard() {
               >
                  {activeTab === 'orders' ? (
                   <OrdersTab 
-                    orders={allOrders}
+                    orders={combinedOrders}
                     orderFilter={orderFilter}
                     onSetOrderFilter={setOrderFilter}
                     onPrintReceipt={handlePrintReceipt}
@@ -753,7 +749,7 @@ export default function StaffDashboard() {
                 ) : activeTab === 'tables' ? (
                   <TablesTab 
                     tables={tables}
-                    orders={serverOrders}
+                    orders={combinedOrders}
                     onEmptyTable={(id, method) => emptyTableMutation.mutate({ tableId: id, paymentMethod: method })}
                     isEmptyTablePending={emptyTableMutation.isPending}
                     onStartOrderForTable={handleStartOrderForTable}
@@ -761,7 +757,7 @@ export default function StaffDashboard() {
                   />
                 ) : (
                   <KDSTab 
-                    orders={allOrders}
+                    orders={combinedOrders}
                     onUpdateStatus={(id, status) => updateStatusMutation.mutate({ orderId: id, nextStatus: status })}
                     isStatusPending={updateStatusMutation.isPending}
                   />
