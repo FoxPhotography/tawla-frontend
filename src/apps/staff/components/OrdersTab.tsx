@@ -210,7 +210,7 @@ export default function OrdersTab({
                         {order.customerName && (
                           <div className="text-xs text-zinc-300 font-extrabold mt-1.5 flex items-center gap-1.5 bg-white/5 border border-white/5 px-2 py-0.5 rounded-md w-fit">
                             <User className="w-3.5 h-3.5 text-staff-accent" />
-                            <span>الزبون: {order.customerName}</span>
+                            <span>الاسم: {order.customerName}</span>
                           </div>
                         )}
                         <span className="text-[9px] text-staff-text-muted font-mono block mt-1.5">

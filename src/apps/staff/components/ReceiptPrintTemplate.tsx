@@ -68,7 +68,7 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
             </tr>
             {printingOrder.customerName && (
               <tr>
-                <td className="py-0.5 font-bold text-zinc-700">الزبون:</td>
+                <td className="py-0.5 font-bold text-zinc-700">الاسم:</td>
                 <td className="py-0.5 font-bold text-black">{printingOrder.customerName}</td>
               </tr>
             )}
@@ -96,17 +96,36 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
                 {new Date(printingOrder.createdAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
               </td>
             </tr>
-            {restaurant?.receiptSettings?.phone && (
-              <tr>
-                <td className="py-0.5 font-bold text-zinc-700">الهاتف:</td>
-                <td className="py-0.5 font-mono text-zinc-900">{restaurant.receiptSettings.phone}</td>
-              </tr>
-            )}
-            {restaurant?.receiptSettings?.address && (
-              <tr>
-                <td className="py-0.5 font-bold text-zinc-700">العنوان:</td>
-                <td className="py-0.5 text-zinc-900">{restaurant.receiptSettings.address}</td>
-              </tr>
+            {printingOrder.type === 'delivery' ? (
+              <>
+                {printingOrder.customerPhone && (
+                  <tr>
+                    <td className="py-0.5 font-bold text-zinc-700">الهاتف:</td>
+                    <td className="py-0.5 font-mono text-zinc-900">{printingOrder.customerPhone}</td>
+                  </tr>
+                )}
+                {printingOrder.customerAddress && (
+                  <tr>
+                    <td className="py-0.5 font-bold text-zinc-700">العنوان:</td>
+                    <td className="py-0.5 text-zinc-900">{printingOrder.customerAddress}</td>
+                  </tr>
+                )}
+              </>
+            ) : (
+              <>
+                {restaurant?.receiptSettings?.phone && (
+                  <tr>
+                    <td className="py-0.5 font-bold text-zinc-700">الهاتف:</td>
+                    <td className="py-0.5 font-mono text-zinc-900">{restaurant.receiptSettings.phone}</td>
+                  </tr>
+                )}
+                {restaurant?.receiptSettings?.address && (
+                  <tr>
+                    <td className="py-0.5 font-bold text-zinc-700">العنوان:</td>
+                    <td className="py-0.5 text-zinc-900">{restaurant.receiptSettings.address}</td>
+                  </tr>
+                )}
+              </>
             )}
             {restaurant?.receiptSettings?.taxNumber && (
               <tr>
