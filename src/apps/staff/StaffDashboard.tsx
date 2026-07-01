@@ -260,11 +260,6 @@ export default function StaffDashboard() {
       return res.data.data;
     },
     onSuccess: (data, variables) => {
-      // Print receipt if it's a delivery order and the new status is delivered
-      if (data && data.status === 'delivered' && data.type === 'delivery') {
-        handlePrintReceipt(data);
-      }
-
       if (!variables.orderId.startsWith('offline_')) {
         toast.success('تم تحديث حالة الطلب بنجاح.');
         

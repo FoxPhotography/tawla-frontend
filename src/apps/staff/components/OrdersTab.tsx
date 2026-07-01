@@ -242,26 +242,26 @@ export default function OrdersTab({
                     {/* Customer Delivery Details */}
                     {order.type === 'delivery' && (
                       <div className="bg-rose-500/[0.02] border border-rose-500/10 rounded-xl p-3.5 space-y-2 text-xs text-staff-text-secondary font-bold font-body">
-                        <div className="flex justify-between border-b border-white/5 pb-1 items-center">
+                        <div className="flex justify-between border-b border-staff-border/20 pb-1 items-center">
                           <span className="text-zinc-400 flex items-center gap-1">
                             <User className="w-3.5 h-3.5 text-zinc-500" />
                             <span>الاسم:</span>
                           </span>
-                          <span className="text-white font-black">{(order as any).customerName}</span>
+                          <span className="text-staff-text-primary font-black">{(order as any).customerName}</span>
                         </div>
-                        <div className="flex justify-between border-b border-white/5 pb-1 items-center">
+                        <div className="flex justify-between border-b border-staff-border/20 pb-1 items-center">
                           <span className="text-zinc-400 flex items-center gap-1">
                             <Phone className="w-3.5 h-3.5 text-zinc-500" />
                             <span>الموبايل:</span>
                           </span>
-                          <span className="font-mono text-white select-all">{(order as any).customerPhone}</span>
+                          <span className="font-mono text-staff-text-primary select-all">{(order as any).customerPhone}</span>
                         </div>
                         <div className="text-zinc-400 space-y-1">
                           <span className="flex items-center gap-1 mb-1">
                             <MapPin className="w-3.5 h-3.5 text-zinc-500" />
                             <span>العنوان:</span>
                           </span>
-                          <span className="block font-medium leading-relaxed bg-[#111112] p-2 rounded-lg border border-white/5 select-all text-white">{(order as any).customerAddress}</span>
+                          <span className="block font-medium leading-relaxed bg-staff-bg-panel p-2.5 rounded-lg border border-staff-border/40 select-all text-staff-text-primary">{(order as any).customerAddress}</span>
                         </div>
                       </div>
                     )}
@@ -306,7 +306,12 @@ export default function OrdersTab({
                           </motion.button>
                           {action && (
                             <motion.button
-                              onClick={() => onUpdateStatus(order.id, action.next)}
+                              onClick={() => {
+                                if (order.type === 'delivery' && action.next === 'delivered') {
+                                  onPrintReceipt(order);
+                                }
+                                onUpdateStatus(order.id, action.next);
+                              }}
                               whileTap={{ scale: 0.95 }}
                               disabled={isStatusPending}
                               className={`flex items-center gap-1.5 py-2 px-4.5 rounded-xl text-xs font-black transition-all shadow-sm cursor-pointer ${action.actionClass}`}
@@ -317,7 +322,12 @@ export default function OrdersTab({
                           )}
                           {action && order.status !== 'ready' && (
                             <motion.button
-                              onClick={() => onUpdateStatus(order.id, 'delivered')}
+                              onClick={() => {
+                                if (order.type === 'delivery') {
+                                  onPrintReceipt(order);
+                                }
+                                onUpdateStatus(order.id, 'delivered');
+                              }}
                               whileTap={{ scale: 0.95 }}
                               disabled={isStatusPending}
                               className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/40 flex items-center gap-1 py-2 px-3.5 rounded-xl text-xs font-black transition-all shadow-sm cursor-pointer"
