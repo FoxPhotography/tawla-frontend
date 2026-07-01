@@ -382,17 +382,49 @@ export default function LandingPage() {
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
+      </motion.header>
 
-        {/* Mobile Navigation Dropdown */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
+      {/* Custom Mobile Navigation Sidebar Drawer */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            {/* Backdrop Overlay with blur */}
             <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="absolute top-[100%] left-0 right-0 bg-[#FAF8F5]/98 border-b border-[#B8973E]/10 backdrop-blur-lg overflow-hidden md:hidden z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMenuOpen(false)}
+              className="fixed inset-0 bg-[#1C1612]/30 backdrop-blur-xs z-50 md:hidden"
+            />
+            
+            {/* Slide-out Sidebar Panel */}
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 bottom-0 right-0 w-[290px] max-w-[85vw] bg-[#FAF8F5] border-l border-[#B8973E]/15 z-50 md:hidden flex flex-col shadow-[0_0_50px_rgba(28,22,18,0.15)]"
             >
-              <div className="p-6 flex flex-col gap-5 text-right">
+              {/* Header inside drawer */}
+              <div className="p-6 border-b border-[#B8973E]/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-[#B8973E]/20">
+                    <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-0.5" />
+                  </div>
+                  <span className="text-[18px] text-[#1C1612] font-semibold tracking-tight font-serif">
+                    طاولة
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 text-[#5C524C] hover:text-[#1C1612] rounded-lg hover:bg-[#B8973E]/5 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Navigation Links inside drawer */}
+              <div className="flex-1 overflow-y-auto py-6 px-6 flex flex-col gap-6 text-right">
                 {[
                   { label: "المميزات", href: "#features" },
                   { label: "شرح الماكيت", href: "#how-it-works" },
@@ -403,30 +435,32 @@ export default function LandingPage() {
                     key={link.href} 
                     href={link.href} 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-[14px] text-[#5C524C] hover:text-[#B8973E] py-1 border-b border-black/[0.03] transition-colors"
+                    className="text-[15px] font-bold text-[#5C524C] hover:text-[#B8973E] pb-2.5 border-b border-black/[0.02] transition-colors"
                   >
                     {link.label}
                   </a>
                 ))}
-                <div className="flex flex-col gap-3 pt-4">
-                  <button 
-                    onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-                    className="w-full text-center text-[14px] text-[#5C524C] hover:text-[#1C1612] py-2.5 border border-[#B8973E]/15 rounded-xl"
-                  >
-                    تسجيل دخول
-                  </button>
-                  <button 
-                    onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
-                    className="w-full text-center luxury-btn-gold font-bold text-[14px] py-3 rounded-xl"
-                  >
-                    ابدأ مجاناً
-                  </button>
-                </div>
+              </div>
+
+              {/* CTA / Action Buttons at bottom of drawer */}
+              <div className="p-6 border-t border-[#B8973E]/10 flex flex-col gap-3">
+                <button 
+                  onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                  className="w-full text-center text-[14px] text-[#5C524C] hover:text-[#1C1612] py-3 border border-[#B8973E]/15 rounded-xl font-bold bg-white hover:bg-[#B8973E]/5 transition-colors"
+                >
+                  تسجيل دخول
+                </button>
+                <button 
+                  onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
+                  className="w-full text-center luxury-btn-gold font-bold text-[14px] py-3.5 rounded-xl transition-all shadow-sm"
+                >
+                  ابدأ مجاناً
+                </button>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.header>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ═══════════════════════ HERO SECTION ═══════════════════════ */}
       <section ref={heroRef} className="relative min-h-[92vh] pt-28 pb-16 flex items-center justify-center overflow-hidden">
