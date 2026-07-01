@@ -637,7 +637,7 @@ export default function CustomerMenu() {
             animate="visible"
             exit="hidden"
             variants={fabVariants}
-            className="fixed bottom-[84px] inset-x-0 px-4 z-35 pointer-events-none flex justify-center"
+            className="fixed bottom-[96px] inset-x-0 px-4 z-45 pointer-events-none flex justify-center"
           >
             <button
               onClick={() => setIsCartOpen(true)}
