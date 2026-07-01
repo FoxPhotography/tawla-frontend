@@ -259,7 +259,7 @@ export default function StaffDashboard() {
       const res = await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
       return res.data.data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       if (!variables.orderId.startsWith('offline_')) {
         toast.success('تم تحديث حالة الطلب بنجاح.');
         
