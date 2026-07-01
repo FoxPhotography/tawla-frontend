@@ -26,6 +26,7 @@ export default function App() {
 
           {/* Customer Apps Routes */}
           <Route path="/menu/:restaurantSlug/table/:tableNumber" element={<CustomerMenu />} />
+          <Route path="/menu/:restaurantSlug" element={<CustomerMenu />} />
           <Route path="/order/:orderId/track" element={<OrderTrack />} />
 
           {/* Unified Login Route */}

@@ -191,7 +191,11 @@ export default function OrdersTab({
                           <span className="font-mono font-black text-staff-text-primary text-base">
                             #{order.id.slice(-6).toUpperCase()}
                           </span>
-                          {order.tableNumber > 0 ? (
+                          {order.type === 'delivery' ? (
+                            <span className="text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-md font-bold font-body">
+                              🛵 دليفري
+                            </span>
+                          ) : order.tableNumber > 0 ? (
                             <span className="text-[10px] bg-staff-bg-panel text-staff-text-primary border border-staff-border font-mono px-2 py-0.5 rounded-md font-bold">
                               طاولة {order.tableNumber}
                             </span>
@@ -226,6 +230,24 @@ export default function OrdersTab({
                         </div>
                       ))}
                     </div>
+
+                    {/* Customer Delivery Details */}
+                    {order.type === 'delivery' && (
+                      <div className="bg-rose-500/[0.02] border border-rose-500/10 rounded-xl p-3.5 space-y-2 text-xs text-staff-text-secondary font-bold font-body">
+                        <div className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">👤 الاسم:</span>
+                          <span className="text-white font-black">{(order as any).customerName}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">📞 الموبايل:</span>
+                          <span className="font-mono text-white select-all">{(order as any).customerPhone}</span>
+                        </div>
+                        <div className="text-zinc-400 space-y-1">
+                          <span>📍 العنوان:</span>
+                          <span className="block font-medium leading-relaxed bg-[#111112] p-2 rounded-lg border border-white/5 select-all text-white">{(order as any).customerAddress}</span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Notes & Summary */}
                     {order.specialNotes && (

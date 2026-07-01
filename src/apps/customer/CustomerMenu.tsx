@@ -73,6 +73,12 @@ export default function CustomerMenu() {
   const [isNoOrderModalOpen, setIsNoOrderModalOpen] = useState(false);
   const [submittedOrder, setSubmittedOrder] = useState<any | null>(null);
 
+  // Delivery customer details states
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [isStaffOnline, setIsStaffOnline] = useState(true);
+
   // Cache restaurant details for navigation back from order tracking
   useEffect(() => {
     if (restaurantSlug && tableNumber) {
@@ -86,7 +92,7 @@ export default function CustomerMenu() {
     queryKey: ['menu', restaurantSlug],
     queryFn: async () => {
       const response = await api.get(`/menu/${restaurantSlug}`);
-      return response.data.data as { restaurant: Restaurant; categories: Category[]; products: Product[] };
+      return response.data.data as { restaurant: Restaurant; categories: Category[]; products: Product[]; isStaffOnline?: boolean };
     },
     enabled: !!restaurantSlug,
     staleTime: 5 * 60 * 1000,
@@ -95,6 +101,12 @@ export default function CustomerMenu() {
   const restaurant = menuData?.restaurant;
   const categories = menuData?.categories || [];
   const products = menuData?.products || [];
+
+  useEffect(() => {
+    if (menuData) {
+      setIsStaffOnline((menuData as any).isStaffOnline !== false);
+    }
+  }, [menuData]);
 
   // Set document title dynamically based on customized menu title
   useEffect(() => {
@@ -133,9 +145,15 @@ export default function CustomerMenu() {
       console.log('Menu updated via socket, invalidating queries...');
       queryClient.invalidateQueries({ queryKey: ['menu', restaurantSlug] });
     });
+
+    socket.on('staff_status', (data: { isStaffOnline: boolean }) => {
+      console.log('Staff status updated via socket:', data.isStaffOnline);
+      setIsStaffOnline(data.isStaffOnline);
+    });
     
     return () => {
       socket.off('menu_updated');
+      socket.off('staff_status');
     };
   }, [restaurant?.id, restaurantSlug, queryClient]);
 
@@ -209,15 +227,25 @@ export default function CustomerMenu() {
   // Mutations
   const submitOrderMutation = useMutation({
     mutationFn: async () => {
+      if (!tableNumber) {
+        if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
+          throw new Error('MANDATORY_FIELDS_REQUIRED');
+        }
+      }
+
       const payload = {
         restaurantId: restaurant?.id,
-        tableNumber: Number(tableNumber),
+        tableNumber: Number(tableNumber || 0),
+        type: tableNumber ? 'dine_in' : 'delivery',
         items: cart.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
           notes: item.notes,
         })),
         specialNotes,
+        customerName: tableNumber ? undefined : customerName,
+        customerPhone: tableNumber ? undefined : customerPhone,
+        customerAddress: tableNumber ? undefined : customerAddress,
       };
       const response = await api.post('/orders', payload, {
         headers: { 'x-restaurant-id': restaurant?.id },
@@ -232,6 +260,10 @@ export default function CustomerMenu() {
       setSubmittedOrder(order);
     },
     onError: (err: any) => {
+      if (err.message === 'MANDATORY_FIELDS_REQUIRED') {
+        toast.error('يرجى كتابة الاسم ورقم الهاتف وعنوان التوصيل لإكمال طلب الدليفري.');
+        return;
+      }
       toast.error(err.response?.data?.error || 'فشل إرسال الطلب. حاول مجدداً.');
     },
   });
@@ -301,33 +333,82 @@ export default function CustomerMenu() {
 
       {/* ===== Hero Header ===== */}
       <div className="hero relative overflow-hidden z-10">
-        <div className="table-badge">
-          <UtensilsCrossed className="w-3 h-3" />
-          <span>طاولة {tableNumber}</span>
-        </div>
+        {tableNumber ? (
+          <div className="table-badge">
+            <UtensilsCrossed className="w-3 h-3" />
+            <span>طاولة {tableNumber}</span>
+          </div>
+        ) : (
+          <div className="table-badge bg-rose-500/10 text-rose-400 border border-rose-500/25">
+            <ShoppingBag className="w-3 h-3" />
+            <span>طلب توصيل / خارجي</span>
+          </div>
+        )}
         <h1 className="restaurant-name">{restaurant.settings?.menuTitle || restaurant.name}</h1>
         <div className="restaurant-sub">{restaurant.settings?.menuDescription || 'أهلاً بك في تجربة طعام فاخرة ومميزة'}</div>
       </div>
 
+      {/* ===== Offline Notice ===== */}
+      {!isStaffOnline && (
+        <div className="mx-4 mt-4 relative z-10 max-w-[428px] md:mx-auto bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 space-y-3 font-body text-right">
+          <div className="flex items-center gap-2 text-amber-500">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+            <h3 className="font-extrabold text-sm">⚠️ الخدمة معطلة مؤقتاً</h3>
+          </div>
+          {tableNumber ? (
+            <p className="text-xs text-amber-200/80 leading-relaxed">
+              النظام غير متصل بالإنترنت حالياً في المطعم. يرجى طلب الخدمة وإعطاء طلبك مباشرةً للويتر.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-amber-200/80 leading-relaxed">
+                تلقي الطلبات المباشرة معطل مؤقتاً لعدم اتصال الكاشير. يمكنك إرسال طلبك مباشرةً وتأكيده عبر الواتساب.
+              </p>
+              {(() => {
+                const waNumber = (restaurant.receiptSettings as any)?.whatsapp || restaurant.receiptSettings?.phone || restaurant.phone;
+                const formattedWaNumber = waNumber ? waNumber.replace(/[^\d+]/g, '') : '';
+                const cartSummary = cart.length > 0 
+                  ? `أود طلب:\n${cart.map(item => `- ${item.product.name} (عدد ${item.quantity})`).join('\n')}\nالإجمالي: ${cartTotal} ج.م`
+                  : 'أود الاستفسار عن الطلبات من المنيو';
+                const waUrl = `https://wa.me/${formattedWaNumber}?text=${encodeURIComponent(cartSummary)}`;
+                
+                return waNumber ? (
+                  <a 
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 transition-colors text-white py-2.5 px-4 rounded-xl text-xs font-bold w-full"
+                  >
+                    <span>💬 الطلب عبر واتساب</span>
+                  </a>
+                ) : null;
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ===== Quick Action Row ===== */}
-      <div className="action-row relative z-10">
-        <motion.button 
-          whileTap={{ scale: 0.97 }}
-          onClick={() => callWaiterMutation.mutate()}
-          className="action-btn"
-        >
-          <Bell className="w-4 h-4" />
-          <span>استدعاء ويتر</span>
-        </motion.button>
-        <motion.button 
-          whileTap={{ scale: 0.97 }}
-          onClick={() => requestBillMutation.mutate()}
-          className="action-btn"
-        >
-          <Receipt className="w-4 h-4" />
-          <span>طلب الحساب</span>
-        </motion.button>
-      </div>
+      {tableNumber && (
+        <div className="action-row relative z-10">
+          <motion.button 
+            whileTap={{ scale: 0.97 }}
+            onClick={() => callWaiterMutation.mutate()}
+            className="action-btn"
+          >
+            <Bell className="w-4 h-4" />
+            <span>استدعاء ويتر</span>
+          </motion.button>
+          <motion.button 
+            whileTap={{ scale: 0.97 }}
+            onClick={() => requestBillMutation.mutate()}
+            className="action-btn"
+          >
+            <Receipt className="w-4 h-4" />
+            <span>طلب الحساب</span>
+          </motion.button>
+        </div>
+      )}
 
       {/* ===== Search ===== */}
       <div className="search-box relative z-10">
@@ -689,6 +770,47 @@ export default function CustomerMenu() {
                     className="w-full bg-customer-bg-elevated border border-customer-border text-customer-text-primary rounded-xl p-3 text-sm text-right resize-none focus:border-customer-accent focus:outline-none placeholder:text-customer-text-muted"
                   />
                 </div>
+
+                {/* Delivery Form (If outside of restaurant) */}
+                {!tableNumber && (
+                  <div className="mt-4 bg-customer-bg-elevated border border-customer-border rounded-xl p-4 space-y-3 text-right">
+                    <h4 className="text-xs font-black text-customer-accent mb-2">🚚 بيانات التوصيل (الدليفري)</h4>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-zinc-400 font-bold">الاسم بالكامل</label>
+                      <input
+                        type="text"
+                        required
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="الاسم"
+                        className="w-full bg-customer-bg-overlay border border-customer-border text-customer-text-primary rounded-xl px-3 py-2 text-xs focus:border-customer-accent focus:outline-none placeholder:text-customer-text-muted"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-zinc-400 font-bold">رقم الموبايل</label>
+                      <input
+                        type="tel"
+                        required
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="مثال: 01012345678"
+                        className="w-full bg-customer-bg-overlay border border-customer-border text-customer-text-primary rounded-xl px-3 py-2 text-xs focus:border-customer-accent focus:outline-none text-left placeholder:text-customer-text-muted"
+                        dir="ltr"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-zinc-400 font-bold">العنوان بالتفصيل</label>
+                      <input
+                        type="text"
+                        required
+                        value={customerAddress}
+                        onChange={(e) => setCustomerAddress(e.target.value)}
+                        placeholder="الشارع، الدور، الشقة، علامة مميزة..."
+                        className="w-full bg-customer-bg-overlay border border-customer-border text-customer-text-primary rounded-xl px-3 py-2 text-xs focus:border-customer-accent focus:outline-none placeholder:text-customer-text-muted"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Checkout Footer */}
@@ -697,21 +819,60 @@ export default function CustomerMenu() {
                   <span className="text-customer-text-secondary font-bold">الإجمالي</span>
                   <span className="text-2xl font-extrabold text-customer-accent">{cartTotal} ج.م</span>
                 </div>
-                <motion.button
-                  onClick={() => submitOrderMutation.mutate()}
-                  disabled={submitOrderMutation.isPending}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full py-4 text-base font-bold bg-customer-accent text-customer-bg-base rounded-xl flex items-center justify-center gap-2.5 hover:opacity-95 transition-opacity"
-                >
-                  {submitOrderMutation.isPending ? (
-                    <div className="w-5 h-5 border-2 border-customer-bg-base border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span>تأكيد وإرسال الطلب</span>
-                    </>
-                  )}
-                </motion.button>
+                
+                {(() => {
+                  if (!isStaffOnline) {
+                    if (tableNumber) {
+                      return (
+                        <button
+                          disabled
+                          className="w-full py-4 text-xs font-bold bg-zinc-800 text-zinc-500 rounded-xl flex items-center justify-center gap-2.5 cursor-not-allowed border border-zinc-700/50"
+                        >
+                          <X className="w-5 h-5" />
+                          <span>الخدمة معطلة مؤقتاً (يرجى الطلب من الويتر)</span>
+                        </button>
+                      );
+                    } else {
+                      const handleWhatsappCheckout = () => {
+                        if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
+                          toast.error('يرجى كتابة الاسم ورقم الهاتف وعنوان التوصيل لإرسال الطلب عبر واتساب.');
+                          return;
+                        }
+                        const waNumber = (restaurant.receiptSettings as any)?.whatsapp || restaurant.receiptSettings?.phone || restaurant.phone;
+                        const formattedWaNumber = waNumber ? waNumber.replace(/[^\d+]/g, '') : '';
+                        const cartSummary = `أود طلب:\n${cart.map(item => `- ${item.product.name} (عدد ${item.quantity})`).join('\n')}\nالإجمالي: ${cartTotal} ج.م\nالاسم: ${customerName}\nالهاتف: ${customerPhone}\nالعنوان: ${customerAddress}`;
+                        window.open(`https://wa.me/${formattedWaNumber}?text=${encodeURIComponent(cartSummary)}`, '_blank');
+                      };
+                      return (
+                        <motion.button
+                          onClick={handleWhatsappCheckout}
+                          whileTap={{ scale: 0.97 }}
+                          className="w-full py-4 text-base font-bold bg-emerald-600 text-white rounded-xl flex items-center justify-center gap-2.5 hover:bg-emerald-700 transition-colors"
+                        >
+                          <span>💬 إرسال الطلب عبر واتساب</span>
+                        </motion.button>
+                      );
+                    }
+                  }
+
+                  return (
+                    <motion.button
+                      onClick={() => submitOrderMutation.mutate()}
+                      disabled={submitOrderMutation.isPending}
+                      whileTap={{ scale: 0.97 }}
+                      className="w-full py-4 text-base font-bold bg-customer-accent text-customer-bg-base rounded-xl flex items-center justify-center gap-2.5 hover:opacity-95 transition-opacity"
+                    >
+                      {submitOrderMutation.isPending ? (
+                        <div className="w-5 h-5 border-2 border-customer-bg-base border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-5 h-5" />
+                          <span>تأكيد وإرسال الطلب</span>
+                        </>
+                      )}
+                    </motion.button>
+                  );
+                })()}
               </div>
             </motion.div>
           </>

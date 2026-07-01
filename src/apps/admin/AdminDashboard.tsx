@@ -158,6 +158,7 @@ export default function AdminDashboard() {
   const [receiptServiceRate, setReceiptServiceRate] = useState(restaurant?.receiptSettings?.serviceRate || 0);
   const [receiptHeaderText, setReceiptHeaderText] = useState(restaurant?.receiptSettings?.headerText || '');
   const [receiptFooterText, setReceiptFooterText] = useState(restaurant?.receiptSettings?.footerText || '');
+  const [receiptWhatsapp, setReceiptWhatsapp] = useState((restaurant?.receiptSettings as any)?.whatsapp || '');
   const [showLogo, setShowLogo] = useState(restaurant?.receiptSettings?.showLogo !== false);
 
   // Menu settings states
@@ -190,6 +191,7 @@ export default function AdminDashboard() {
       setReceiptServiceRate(restaurant.receiptSettings?.serviceRate || 0);
       setReceiptHeaderText(restaurant.receiptSettings?.headerText || '');
       setReceiptFooterText(restaurant.receiptSettings?.footerText || '');
+      setReceiptWhatsapp((restaurant.receiptSettings as any)?.whatsapp || '');
       setShowLogo(restaurant.receiptSettings?.showLogo !== false);
 
       // Sync menu settings
@@ -223,6 +225,7 @@ export default function AdminDashboard() {
       serviceRate: Number(receiptServiceRate),
       headerText: receiptHeaderText,
       footerText: receiptFooterText,
+      whatsapp: receiptWhatsapp,
     });
   };
 
@@ -2192,7 +2195,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <form onSubmit={handleSaveReceiptSettings} className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">هاتف الفاتورة</label>
                           <input
@@ -2201,6 +2204,17 @@ export default function AdminDashboard() {
                             onChange={(e) => setReceiptPhone(e.target.value)}
                             placeholder="مثال: 01012345678"
                             className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">رقم الواتساب للطلبات الخارجية</label>
+                          <input
+                            type="text"
+                            value={receiptWhatsapp}
+                            onChange={(e) => setReceiptWhatsapp(e.target.value)}
+                            placeholder="مثال: 201012345678"
+                            className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors text-left"
+                            dir="ltr"
                           />
                         </div>
                         <div>

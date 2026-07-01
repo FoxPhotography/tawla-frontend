@@ -75,7 +75,7 @@ export default function StaffDashboard() {
   }, []);
 
   // Sound Synthesizer for Staff Dashboard alerts
-  const playAlertSound = (type: 'call_waiter' | 'bill' | 'new_order') => {
+  const playAlertSound = (type: 'call_waiter' | 'bill' | 'new_order' | 'delivery_order') => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       if (audioCtx.state === 'suspended') {
@@ -87,7 +87,7 @@ export default function StaffDashboard() {
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.value = frequency;
-        gain.gain.setValueAtTime(0.15, startTime);
+        gain.gain.setValueAtTime(0.2, startTime);
         gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -95,7 +95,11 @@ export default function StaffDashboard() {
         osc.stop(startTime + duration);
       };
 
-      if (type === 'new_order') {
+      if (type === 'delivery_order') {
+        playNote(587.33, audioCtx.currentTime, 0.08);
+        playNote(698.46, audioCtx.currentTime + 0.08, 0.08);
+        playNote(880.00, audioCtx.currentTime + 0.16, 0.3);
+      } else if (type === 'new_order') {
         playNote(880.00, audioCtx.currentTime, 0.15); // A5
         playNote(1046.50, audioCtx.currentTime + 0.12, 0.3); // C6
       } else if (type === 'bill') {
@@ -317,11 +321,20 @@ export default function StaffDashboard() {
         }
         return list;
       });
-      playAlertSound('new_order');
+      
+      const isDelivery = data.order.type === 'delivery';
+      playAlertSound(isDelivery ? 'delivery_order' : 'new_order');
       setNewOrderDetails(data.order);
       setShowNewOrderToast(true);
       setTimeout(() => setShowNewOrderToast(false), 5000);
-      toast.success(`طلب جديد من طاولة رقم ${data.order.tableNumber}`);
+      
+      if (isDelivery) {
+        toast.success(`طلب دليفري جديد باسم: ${data.order.customerName || 'عميل خارجي'}`);
+      } else if (data.order.tableNumber > 0) {
+        toast.success(`طلب جديد من طاولة رقم ${data.order.tableNumber}`);
+      } else {
+        toast.success(`طلب سفري جديد`);
+      }
     });
 
     socket.on('order_status_updated', () => {

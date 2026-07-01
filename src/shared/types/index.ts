@@ -86,12 +86,15 @@ export interface Order {
   restaurantId: string;
   tableId?: string;
   tableNumber: number;
-  type?: 'dine_in' | 'takeaway';
+  type?: 'dine_in' | 'takeaway' | 'delivery';
   paymentMethod?: 'cash' | 'card' | 'wallet';
   items: OrderItem[];
   totalAmount: number;
   status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   specialNotes?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
   createdAt: string;
   updatedAt: string;
 }

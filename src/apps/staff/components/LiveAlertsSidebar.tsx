@@ -82,30 +82,30 @@ export default function LiveAlertsSidebar({ alerts, onDismissAlert, onSetActiveT
                     }`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 ${
+                      <span className={`text-xs font-black px-3.5 py-1.5 rounded-full inline-flex items-center gap-1.5 ${
                         isBill 
                           ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/15' 
                           : 'bg-staff-accent-soft text-staff-accent border border-staff-accent-glow'
                       }`}>
                         {isBill ? (
-                          <><CreditCard className="w-3 h-3" /> طلب حساب</>
+                          <><CreditCard className="w-4 h-4" /> طلب حساب</>
                         ) : (
-                          <><Bell className="w-3 h-3" /> نداء ويتر</>
+                          <><Bell className="w-4 h-4 animate-bounce" /> نداء ويتر</>
                         )}
                       </span>
                       <button 
                         onClick={() => onDismissAlert(alert.id)} 
-                        className="text-staff-text-muted hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-500/5"
+                        className="text-staff-text-muted hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-500/5 cursor-pointer"
                         title="إلغاء التنبيه"
                       >
                         <XCircle className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div className="text-sm text-staff-text-primary font-bold">
-                      طاولة رقم <span className="font-black text-staff-text-primary text-xl font-mono mx-1">{alert.tableNumber}</span>
+                    <div className="text-base text-staff-text-primary font-black font-body">
+                      طاولة رقم <span className="font-black text-staff-text-primary text-2xl font-mono mx-1">{alert.tableNumber}</span>
                       {isBill && alert.totalAmount && (
-                        <span> بمبلغ <span className="font-extrabold text-emerald-600 font-mono">{alert.totalAmount} ج.م</span></span>
+                        <span> بمبلغ <span className="font-black text-emerald-600 font-mono">{alert.totalAmount} ج.م</span></span>
                       )}
                     </div>
 
