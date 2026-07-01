@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Calendar, ShoppingBag, Info } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { api } from '../../../shared/services/api';
 import type { Order } from '../../../shared/types';
 import CustomSelect from './CustomSelect.js';

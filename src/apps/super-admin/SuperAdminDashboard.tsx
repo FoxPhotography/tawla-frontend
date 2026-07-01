@@ -81,6 +81,29 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative overflow-x-hidden selection:bg-indigo-500/30 select-none outline-none" dir="rtl">
+      <style>{`
+        /* SuperAdmin Premium Stylesheet */
+        input, select, textarea {
+          background-color: rgba(2, 6, 23, 0.7) !important;
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.05) !important;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        input:focus, select:focus, textarea:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 15px rgba(99, 102, 241, 0.15) !important;
+          transform: translateY(-1px);
+        }
+        .luxury-panel {
+          background: rgba(15, 23, 42, 0.6) !important;
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.03) !important;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        .luxury-panel:hover {
+          border-color: rgba(99, 102, 241, 0.15) !important;
+        }
+      `}</style>
       {/* Decorative Blur Background Blobs */}
       <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 blur-[150px] pointer-events-none z-0" />
       <div className="absolute bottom-[-5%] left-[-10%] w-[600px] h-[600px] rounded-full bg-violet-500/10 blur-[150px] pointer-events-none z-0" />

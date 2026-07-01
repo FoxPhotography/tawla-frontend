@@ -23,6 +23,7 @@ export interface Restaurant {
   receiptSettings?: {
     showLogo: boolean;
     phone?: string;
+    whatsapp?: string;
     address?: string;
     taxNumber?: string;
     taxRate: number;

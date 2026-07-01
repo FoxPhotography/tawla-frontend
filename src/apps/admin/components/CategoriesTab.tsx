@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'react-wrap-balancer'; // Wait, standard framer-motion is cleaner!
-import { motion as fMotion, AnimatePresence as fAnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FolderPlus, Edit2, Trash2, GripVertical, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
@@ -195,8 +194,8 @@ export default function CategoriesTab() {
             <div className="space-y-1.5">
               <label className="block text-xs text-admin-text-secondary font-bold">صورة القسم التوضيحية</label>
               <ImageUploadZone
-                previewUrl={catImagePreview}
-                onChange={handleCatImageChange}
+                preview={catImagePreview}
+                onFileChange={handleCatImageChange}
                 onClear={() => {
                   setCatImage(null);
                   setCatImagePreview(null);
@@ -205,7 +204,7 @@ export default function CategoriesTab() {
             </div>
 
             <div className="flex gap-2.5 pt-2">
-              <fMotion.button
+              <motion.button
                 type="submit"
                 disabled={catMutation.isPending}
                 whileTap={{ scale: 0.97 }}
@@ -216,7 +215,7 @@ export default function CategoriesTab() {
                 ) : (
                   <span>{editingCatId ? 'حفظ التعديلات' : 'إضافة القسم'}</span>
                 )}
-              </fMotion.button>
+              </motion.button>
               {editingCatId && (
                 <button
                   type="button"
@@ -247,11 +246,11 @@ export default function CategoriesTab() {
             </div>
           ) : (
             <div className="space-y-2 relative">
-              <fAnimatePresence initial={false}>
+              <AnimatePresence initial={false}>
                 {categories
                   .sort((a, b) => a.order - b.order)
                   .map((category, index) => (
-                    <fMotion.div
+                    <motion.div
                       key={category.id}
                       layout
                       initial={{ opacity: 0, y: 10 }}
@@ -259,9 +258,9 @@ export default function CategoriesTab() {
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       draggable={true}
-                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragStart={(e) => handleDragStart(e as any, index)}
                       onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, index)}
+                      onDrop={(e) => handleDrop(e as any, index)}
                       className="bg-admin-bg-elevated border border-admin-border rounded-xl p-4 flex justify-between items-center gap-4 hover:border-admin-accent/20 transition-all cursor-move shadow-sm"
                     >
                       <div className="flex items-center gap-3">
@@ -300,9 +299,9 @@ export default function CategoriesTab() {
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </fMotion.div>
+                    </motion.div>
                   ))}
-              </fAnimatePresence>
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -312,8 +311,7 @@ export default function CategoriesTab() {
       {cropperSrc && cropperFile && (
         <ImageCropperModal
           src={cropperSrc}
-          fileName={cropperFile.name}
-          aspectRatio={1}
+          file={cropperFile}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />

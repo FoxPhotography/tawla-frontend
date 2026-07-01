@@ -21,9 +21,21 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   const [offerBasicPrice, setOfferBasicPrice] = useState(800);
   const [offerProPrice, setOfferProPrice] = useState(1200);
   const [offerEndsAt, setOfferEndsAt] = useState('');
-  const [limitTrial, setLimitTrial] = useState(5);
-  const [limitBasic, setLimitBasic] = useState(10);
-  const [limitPro, setLimitPro] = useState(20);
+  
+  // Tables limits states
+  const [limitTrialTables, setLimitTrialTables] = useState(5);
+  const [limitBasicTables, setLimitBasicTables] = useState(10);
+  const [limitProTables, setLimitProTables] = useState(20);
+
+  // Products limits states
+  const [limitTrialProducts, setLimitTrialProducts] = useState(15);
+  const [limitBasicProducts, setLimitBasicProducts] = useState(50);
+  const [limitProProducts, setLimitProProducts] = useState(9999);
+
+  // Categories limits states
+  const [limitTrialCategories, setLimitTrialCategories] = useState(5);
+  const [limitBasicCategories, setLimitBasicCategories] = useState(15);
+  const [limitProCategories, setLimitProCategories] = useState(9999);
 
   // Sync settings
   useEffect(() => {
@@ -48,9 +60,20 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
       }
 
       if (systemSettings.limits) {
-        setLimitTrial(systemSettings.limits.trial || 5);
-        setLimitBasic(systemSettings.limits.basic || 10);
-        setLimitPro(systemSettings.limits.pro || 20);
+        // Tables
+        setLimitTrialTables(systemSettings.limits.tables?.trial ?? systemSettings.limits.trial ?? 5);
+        setLimitBasicTables(systemSettings.limits.tables?.basic ?? systemSettings.limits.basic ?? 10);
+        setLimitProTables(systemSettings.limits.tables?.pro ?? systemSettings.limits.pro ?? 20);
+
+        // Products
+        setLimitTrialProducts(systemSettings.limits.products?.trial ?? 15);
+        setLimitBasicProducts(systemSettings.limits.products?.basic ?? 50);
+        setLimitProProducts(systemSettings.limits.products?.pro ?? 9999);
+
+        // Categories
+        setLimitTrialCategories(systemSettings.limits.categories?.trial ?? 5);
+        setLimitBasicCategories(systemSettings.limits.categories?.basic ?? 15);
+        setLimitProCategories(systemSettings.limits.categories?.pro ?? 9999);
       }
     }
   }, [systemSettings]);
@@ -71,15 +94,31 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
           endsAt: offerEndsAt ? new Date(offerEndsAt).toISOString() : undefined,
         },
         limits: {
-          trial: Number(limitTrial),
-          basic: Number(limitBasic),
-          pro: Number(limitPro),
+          tables: {
+            trial: Number(limitTrialTables),
+            basic: Number(limitBasicTables),
+            pro: Number(limitProTables),
+          },
+          products: {
+            trial: Number(limitTrialProducts),
+            basic: Number(limitBasicProducts),
+            pro: Number(limitProProducts),
+          },
+          categories: {
+            trial: Number(limitTrialCategories),
+            basic: Number(limitBasicCategories),
+            pro: Number(limitProCategories),
+          },
+          // Keep old fields for backward compatibility
+          trial: Number(limitTrialTables),
+          basic: Number(limitBasicTables),
+          pro: Number(limitProTables),
         },
       };
       return api.put('/super-admin/system-settings', payload);
     },
     onSuccess: () => {
-      toast.success('تم حفظ إعدادات النظام وتحديث الأسعار والعروض فورياً!');
+      toast.success('تم حفظ إعدادات النظام وتحديث الأسعار والعروض والقيود فورياً!');
       queryClient.invalidateQueries({ queryKey: ['super-admin-system-settings'] });
     },
     onError: (err: any) => {
@@ -132,51 +171,142 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
         </div>
 
         {/* Limits Configuration */}
-        <div className="border-t border-slate-800 pt-5 space-y-4">
-          <h3 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
-            <Sliders className="w-4 h-4" />
-            <span>الحد الأقصى للطاولات والكيو آر كود</span>
-          </h3>
-          <p className="text-xs text-slate-400 font-bold">حدد السقف الأعلى من الطاولات الذكية المسموح بإنشائها لكل فئة اشتراك.</p>
+        <div className="border-t border-slate-800 pt-5 space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
+              <Sliders className="w-4 h-4" />
+              <span>الحد الأقصى للطاولات والكيو آر كود</span>
+            </h3>
+            <p className="text-xs text-slate-400 font-bold">حدد السقف الأعلى من الطاولات الذكية المسموح بإنشائها لكل فئة اشتراك.</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Trial limit */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-300">الباقة التجريبية (TRIAL) *</label>
-              <input
-                type="number"
-                required
-                min="1"
-                value={limitTrial}
-                onChange={(e) => setLimitTrial(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة التجريبية (TRIAL) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitTrialTables}
+                  onChange={(e) => setLimitTrialTables(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة الأساسية (BASIC) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitBasicTables}
+                  onChange={(e) => setLimitBasicTables(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة الاحترافية (PRO) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitProTables}
+                  onChange={(e) => setLimitProTables(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
             </div>
+          </div>
 
-            {/* Basic limit */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-300">الباقة الأساسية (BASIC) *</label>
-              <input
-                type="number"
-                required
-                min="1"
-                value={limitBasic}
-                onChange={(e) => setLimitBasic(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
-              />
+          <div className="space-y-4 pt-4 border-t border-slate-800/50">
+            <h3 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
+              <Sliders className="w-4 h-4" />
+              <span>الحد الأقصى للمنتجات (Products Limit)</span>
+            </h3>
+            <p className="text-xs text-slate-400 font-bold">حدد الحد الأقصى للمنتجات المسموح بإضافتها للمنيو لكل فئة اشتراك.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة التجريبية (TRIAL) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitTrialProducts}
+                  onChange={(e) => setLimitTrialProducts(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة الأساسية (BASIC) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitBasicProducts}
+                  onChange={(e) => setLimitBasicProducts(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة الاحترافية (PRO) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitProProducts}
+                  onChange={(e) => setLimitProProducts(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
             </div>
+          </div>
 
-            {/* Pro limit */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-300">الباقة المتقدمة (PRO) *</label>
-              <input
-                type="number"
-                required
-                min="1"
-                value={limitPro}
-                onChange={(e) => setLimitPro(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
-              />
+          <div className="space-y-4 pt-4 border-t border-slate-800/50">
+            <h3 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
+              <Sliders className="w-4 h-4" />
+              <span>الحد الأقصى للتصنيفات (Categories Limit)</span>
+            </h3>
+            <p className="text-xs text-slate-400 font-bold">حدد الحد الأقصى لأقسام المنيو/التصنيفات المسموح بإنشائها لكل فئة اشتراك.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة التجريبية (TRIAL) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitTrialCategories}
+                  onChange={(e) => setLimitTrialCategories(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة الأساسية (BASIC) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitBasicCategories}
+                  onChange={(e) => setLimitBasicCategories(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-300">الباقة الاحترافية (PRO) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={limitProCategories}
+                  onChange={(e) => setLimitProCategories(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm transition-all font-mono focus:outline-none outline-none font-bold"
+                />
+              </div>
             </div>
           </div>
         </div>

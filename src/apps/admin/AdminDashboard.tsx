@@ -29,16 +29,15 @@ export default function AdminDashboard() {
 
   const plan = restaurant?.subscription?.plan || 'trial';
 
-  // Navigation Items
   const navItems = [
-    { id: 'categories', label: 'التصنيفات', icon: FolderPlus },
-    { id: 'products', label: 'المنتجات', icon: ShoppingBag },
-    { id: 'tables', label: 'الطاولات & QR', icon: MapPin },
-    { id: 'orders', label: 'أرشيف الطلبات', icon: ClipboardList },
+    { id: 'categories', label: 'التصنيفات', icon: FolderPlus, premium: false },
+    { id: 'products', label: 'المنتجات', icon: ShoppingBag, premium: false },
+    { id: 'tables', label: 'الطاولات & QR', icon: MapPin, premium: false },
+    { id: 'orders', label: 'أرشيف الطلبات', icon: ClipboardList, premium: false },
     { id: 'analytics', label: 'التقارير والتحليلات', icon: BarChart3, premium: true },
     { id: 'audit', label: 'سجلات العمليات', icon: ClipboardList, premium: true },
-    { id: 'subscription', label: 'الاشتراك والنظام', icon: Crown },
-    { id: 'staff', label: 'حسابات الموظفين', icon: Users },
+    { id: 'subscription', label: 'الاشتراك والنظام', icon: Crown, premium: false },
+    { id: 'staff', label: 'حسابات الموظفين', icon: Users, premium: false },
   ] as const;
 
   return (

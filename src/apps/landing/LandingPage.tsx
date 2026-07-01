@@ -28,6 +28,9 @@ interface SystemSettings {
     trial: number;
     basic: number;
     pro: number;
+    tables?: { trial: number; basic: number; pro: number };
+    products?: { trial: number; basic: number; pro: number };
+    categories?: { trial: number; basic: number; pro: number };
   };
 }
 
@@ -254,22 +257,30 @@ export default function LandingPage() {
     }
   ];
 
+  const basicTablesLimit = settings.limits?.tables?.basic ?? settings.limits?.basic ?? 10;
+  const basicProductsLimit = settings.limits?.products?.basic ?? 50;
+  const basicCategoriesLimit = settings.limits?.categories?.basic ?? 15;
+
+  const proTablesLimit = settings.limits?.tables?.pro ?? settings.limits?.pro ?? 20;
+  const proProductsLimit = settings.limits?.products?.pro ?? 9999;
+  const proCategoriesLimit = settings.limits?.categories?.pro ?? 9999;
+
   const pricingFeaturesBasic = [
     "منيو تفاعلي بـ QR لا نهائي للأصناف",
     "إرسال طلبات فوري للمطبخ والويترات",
     "استدعاء الويتر وطلب الحساب",
-    "تعديل الأطعمة وتفعيل/إخفاء الأطباق",
-    "تقارير المبيعات والأطباق الأكثر طلباً",
-    `دعم حتى ${settings.limits?.basic || 10} طاولات`
+    `دعم حتى ${basicTablesLimit} طاولات ذكية`,
+    `إضافة حتى ${basicProductsLimit} منتجات بالمنيو`,
+    `تقسيم المنيو حتى ${basicCategoriesLimit} أقسام/تصنيفات`,
   ];
 
   const pricingFeaturesPro = [
     "كل مميزات الباقة الأساسية بلا استثناء",
-    `دعم حتى ${settings.limits?.pro || 20} طاولة`,
-    "تصميم وضبط إيصالات الدفع واللوجو",
-    "تفعيل الضرائب والخدمة للفواتير",
-    "تثبيت كتطبيق سطح مكتب والعمل بالكامل أوفلاين (PWA)",
-    "دعم فني خاص ذو أولوية على الواتساب"
+    proTablesLimit >= 9999 ? "دعم طاولات ذكية غير محدود" : `دعم حتى ${proTablesLimit} طاولة ذكية`,
+    proProductsLimit >= 9999 ? "إضافة منتجات غير محدودة بالمنيو" : `إضافة حتى ${proProductsLimit} منتج بالمنيو`,
+    proCategoriesLimit >= 9999 ? "تقسيم أقسام وتصنيفات غير محدود" : `تقسيم المنيو حتى ${proCategoriesLimit} قسم/تصنيف`,
+    "تصميم وضبط إيصالات الدفع ولوجو المطعم",
+    "تفعيل الضرائب ورسوم الخدمة للفواتير",
   ];
 
   return (

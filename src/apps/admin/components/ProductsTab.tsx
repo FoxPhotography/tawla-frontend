@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion as fMotion, AnimatePresence as fAnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, Edit2, Trash2, Check, GripVertical, Search, Plus, X, ListPlus 
 } from 'lucide-react';
@@ -366,8 +366,8 @@ export default function ProductsTab() {
             <div className="space-y-1.5">
               <label className="block text-xs text-admin-text-secondary font-bold">صورة المنتج</label>
               <ImageUploadZone
-                previewUrl={prodImagePreview}
-                onChange={handleProdImageChange}
+                preview={prodImagePreview}
+                onFileChange={handleProdImageChange}
                 onClear={() => {
                   setProdImage(null);
                   setProdImagePreview(null);
@@ -507,7 +507,7 @@ export default function ProductsTab() {
             </div>
 
             <div className="flex gap-2.5 pt-3">
-              <fMotion.button
+              <motion.button
                 type="submit"
                 disabled={prodMutation.isPending}
                 whileTap={{ scale: 0.97 }}
@@ -518,7 +518,7 @@ export default function ProductsTab() {
                 ) : (
                   <span>{editingProdId ? 'حفظ التعديلات' : 'إضافة المنتج للمينيو'}</span>
                 )}
-              </fMotion.button>
+              </motion.button>
               {editingProdId && (
                 <button
                   type="button"
@@ -580,12 +580,12 @@ export default function ProductsTab() {
                       <p className="text-[11px] text-admin-text-muted text-center py-4">لا توجد منتجات مسجلة في هذا القسم.</p>
                     ) : (
                       <div className="divide-y divide-admin-border">
-                        <fAnimatePresence initial={false}>
+                        <AnimatePresence initial={false}>
                           {filtered.map((prod) => {
                             const isEditingPrice = inlinePriceEdit?.id === prod.id;
                             
                             return (
-                              <fMotion.div
+                              <motion.div
                                 key={prod.id}
                                 layout
                                 initial={{ opacity: 0 }}
@@ -698,10 +698,10 @@ export default function ProductsTab() {
                                     </button>
                                   </div>
                                 </div>
-                              </fMotion.div>
+                               </motion.div>
                             );
                           })}
-                        </fAnimatePresence>
+                        </AnimatePresence>
                       </div>
                     )}
                   </div>
@@ -716,8 +716,7 @@ export default function ProductsTab() {
       {cropperSrc && cropperFile && (
         <ImageCropperModal
           src={cropperSrc}
-          fileName={cropperFile.name}
-          aspectRatio={1.33}
+          file={cropperFile}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />

@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer,
   BarChart, Bar
 } from 'recharts';
-import { Crown, Sparkles, BarChart3, Clock, ShoppingBag, MapPin, ArrowUpRight } from 'lucide-react';
+import { Crown, Sparkles, BarChart3, Clock, ShoppingBag, ArrowUpRight } from 'lucide-react';
 import { api } from '../../../shared/services/api';
 import { useAuthStore } from '../../../shared/store/authStore';
 
@@ -53,14 +53,6 @@ export default function AnalyticsTab() {
     enabled: !isLocked,
   });
 
-  const { data: tableStats = [] } = useQuery({
-    queryKey: ['admin-analytics-tables'],
-    queryFn: async () => {
-      const res = await api.get('/analytics/tables');
-      return res.data.data;
-    },
-    enabled: !isLocked,
-  });
 
   const { data: peakHours = [] } = useQuery({
     queryKey: ['admin-analytics-peak-hours'],

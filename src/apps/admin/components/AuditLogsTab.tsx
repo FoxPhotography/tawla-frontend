@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../shared/services/api';
-import { Clock, ShieldAlert, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { ShieldAlert, ChevronLeft, ChevronRight, User } from 'lucide-react';
 
 export default function AuditLogsTab() {
   const [page, setPage] = useState(1);
   const limit = 20;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<{ logs: any[]; total: number }>({
     queryKey: ['admin-audit-logs', page],
     queryFn: async () => {
       const response = await api.get(`/analytics/audit-logs?page=${page}&limit=${limit}`);
       return response.data.data;
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const logs = data?.logs || [];
