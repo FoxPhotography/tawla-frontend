@@ -90,7 +90,7 @@ export interface Table {
     generatedAt: string;
   };
   status: 'empty' | 'occupied' | 'waitingBill';
-  currentOrderId?: string;
+  currentOrderId?: string | null;
 }
 
 export interface SelectedOption {
