@@ -142,7 +142,7 @@ export default function StaffDashboard() {
       }
     },
     enabled: !!user,
-    refetchInterval: 10000,
+    staleTime: Infinity,
   });
 
   // Fetch Tables

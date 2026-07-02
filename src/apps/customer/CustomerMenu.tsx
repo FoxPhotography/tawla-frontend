@@ -470,7 +470,16 @@ export default function CustomerMenu() {
                   formattedWaNumber = '2' + formattedWaNumber;
                 }
                 const cartSummary = cart.length > 0 
-                  ? `أود طلب:\n${cart.map(item => `- ${item.product.name} (عدد ${item.quantity})`).join('\n')}\nالإجمالي: ${cartTotal} ج.م`
+                  ? `أود طلب:\n${cart.map(item => {
+                      const optionsText = item.selectedOptions && item.selectedOptions.length > 0
+                        ? ` (${item.selectedOptions.map(o => `${o.name}: ${o.value}`).join(', ')})`
+                        : '';
+                      const modifiersText = item.selectedModifiers && item.selectedModifiers.length > 0
+                        ? ` [إضافات: ${item.selectedModifiers.map(m => m.value).join(', ')}]`
+                        : '';
+                      const itemNotesText = item.notes ? ` (ملحوظة: ${item.notes})` : '';
+                      return `- ${item.product.name}${optionsText}${modifiersText} (عدد ${item.quantity})${itemNotesText}`;
+                    }).join('\n')}${specialNotes ? `\n\nملحوظة خاصة بالطلب: ${specialNotes}` : ''}`
                   : 'أود الاستفسار عن الطلبات من المنيو';
                 const waUrl = `https://wa.me/${formattedWaNumber}?text=${encodeURIComponent(cartSummary)}`;
                 

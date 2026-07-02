@@ -3,9 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Ghost } from 'lucide-react';
 
-import CustomerMenu from './apps/customer/CustomerMenu.js';
-import OrderTrack from './apps/customer/OrderTrack.js';
-
 function lazyWithRetry(componentImport: () => Promise<any>) {
   return React.lazy(async () => {
     try {
@@ -18,6 +15,8 @@ function lazyWithRetry(componentImport: () => Promise<any>) {
   });
 }
 
+const CustomerMenu = lazyWithRetry(() => import('./apps/customer/CustomerMenu.js'));
+const OrderTrack = lazyWithRetry(() => import('./apps/customer/OrderTrack.js'));
 const StaffLogin = lazyWithRetry(() => import('./apps/staff/StaffLogin.js'));
 const StaffDashboard = lazyWithRetry(() => import('./apps/staff/StaffDashboard.js'));
 const AdminDashboard = lazyWithRetry(() => import('./apps/admin/AdminDashboard.js'));
