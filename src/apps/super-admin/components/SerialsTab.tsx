@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Key, Activity, Sliders, Calendar, Copy, Check, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Key, Activity, Sliders, Calendar, Copy, Check, ShieldCheck, RefreshCw, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import type { SerialKey } from '../../../shared/types';
@@ -22,7 +22,7 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Mutation
+  // Mutations
   const generateSerialMutation = useMutation({
     mutationFn: async () => {
       const days = serialDuration === 'custom' ? Number(customDays) : Number(serialDuration);
@@ -37,6 +37,25 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
       toast.error(err.response?.data?.error || 'فشل توليد الكود.');
     },
   });
+
+  const deleteSerialMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.delete(`/super-admin/serials/${id}`);
+    },
+    onSuccess: () => {
+      toast.success('تم حذف كود التفعيل بنجاح.');
+      queryClient.invalidateQueries({ queryKey: ['super-admin-serials'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل حذف كود التفعيل.');
+    },
+  });
+
+  const handleDeleteSerial = (id: string) => {
+    if (confirm('هل أنت متأكد تماماً من حذف كود التفعيل هذا؟')) {
+      deleteSerialMutation.mutate(id);
+    }
+  };
 
   const handleGenerateSerial = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +114,7 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         
         {/* Serial Key Generator */}
-        <div className="lg:col-span-2 bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card relative overflow-hidden self-start">
+        <div className="lg:col-span-2 bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card relative self-start">
           <h2 className="text-base font-extrabold text-admin-text-primary mb-5 flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-admin-accent/10 border border-admin-accent/20 flex items-center justify-center text-admin-accent">
               <Key className="w-5 h-5" />
@@ -219,6 +238,14 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
                         title="نسخ"
                       >
                         {copiedKey === item.key ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-admin-accent" />}
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => handleDeleteSerial(item.id)}
+                        className="p-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-650 transition-all cursor-pointer outline-none focus:outline-none flex items-center justify-center"
+                        title="حذف"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-admin-text-secondary font-bold uppercase">

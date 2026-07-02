@@ -94,7 +94,7 @@ export default function RestaurantsTab({
   return (
     <div className="space-y-6 text-right" dir="rtl">
       {/* Create Restaurant Form */}
-      <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card relative overflow-hidden">
+      <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card relative">
         <h2 className="text-base font-extrabold text-admin-text-primary mb-5 flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-admin-accent/10 border border-admin-accent/20 flex items-center justify-center text-admin-accent">
             <Plus className="w-5 h-5" />

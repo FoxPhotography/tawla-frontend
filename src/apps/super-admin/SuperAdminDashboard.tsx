@@ -130,9 +130,8 @@ export default function SuperAdminDashboard() {
 
         {/* Footer Logout */}
         <div className="pt-6 border-t border-zinc-200 mt-8 flex justify-between items-center">
-          <div className="text-[10px] text-zinc-700 font-semibold">
-            <div>مرحباً، {user?.name}</div>
-            <div className="mt-0.5 text-zinc-500">الدور: مشرف المشرفين</div>
+          <div className="text-[10px] text-zinc-700 font-bold">
+            <div>مرحبا ابراهيم</div>
           </div>
           <button
             onClick={handleLogout}
