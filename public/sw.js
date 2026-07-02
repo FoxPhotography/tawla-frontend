@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tawla-cache-v2'; // Bumped cache name
+const CACHE_NAME = 'tawla-cache-v3'; // Bumped cache name
 const ASSETS_TO_CACHE = [
   '/staff',
   '/index.html',
