@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer,
   BarChart, Bar
 } from 'recharts';
-import { Crown, Sparkles, BarChart3, Clock, ShoppingBag, ArrowUpRight } from 'lucide-react';
+import { Crown, Sparkles, BarChart3, Clock, ShoppingBag, ArrowUpRight, CreditCard, Coins, Wallet } from 'lucide-react';
 import { api } from '../../../shared/services/api';
 import { useAuthStore } from '../../../shared/store/authStore';
 
@@ -35,7 +35,7 @@ export default function AnalyticsTab() {
   const [densitySelectedDayIdx, setDensitySelectedDayIdx] = useState(0);
 
   // Queries (only active if unlocked to avoid wasted backend loads)
-  const { data: salesData = { sales: [], totalRevenue: 0, totalOrders: 0, averageOrderValue: 0 } } = useQuery({
+  const { data: salesData = { sales: [], totalRevenue: 0, totalOrders: 0, averageOrderValue: 0, payments: { cash: 0, card: 0, wallet: 0 } } } = useQuery({
     queryKey: ['admin-analytics-sales', period],
     queryFn: async () => {
       const res = await api.get(`/analytics/sales?period=${period}`);
@@ -44,6 +44,7 @@ export default function AnalyticsTab() {
         totalRevenue: raw.total || 0,
         totalOrders: raw.ordersCount || 0,
         averageOrderValue: raw.avgOrderValue || 0,
+        payments: raw.payments || { cash: 0, card: 0, wallet: 0 },
         sales: (raw.timeline || []).map((t: any) => ({
           label: t.label,
           sales: t.amount || 0,
@@ -142,29 +143,59 @@ export default function AnalyticsTab() {
       </div>
 
       {/* Analytics Stats Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-sm space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-sm flex flex-col justify-between min-h-[110px]">
           <div className="flex justify-between items-center text-admin-text-secondary">
             <span className="text-xs font-bold">إجمالي المبيعات</span>
             <BarChart3 className="w-4.5 h-4.5 text-admin-accent" />
           </div>
-          <h3 className="text-xl font-black text-admin-text-primary font-mono">{salesData.totalRevenue} ج.م</h3>
+          <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{salesData.totalRevenue} ج.م</h3>
         </div>
 
-        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-sm space-y-2">
+        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-4 shadow-sm flex flex-col justify-between min-h-[110px]">
+          <div className="flex justify-between items-center text-admin-text-secondary">
+            <span className="text-xs font-bold">تفصيل طرق الدفع</span>
+            <Wallet className="w-4.5 h-4.5 text-amber-500" />
+          </div>
+          <div className="space-y-1 text-[10px] font-bold mt-2">
+            <div className="flex justify-between items-center pb-0.5 border-b border-admin-border/30">
+              <div className="flex items-center gap-1 text-admin-text-secondary">
+                <Coins className="w-3 h-3 text-yellow-600" />
+                <span>نقدي</span>
+              </div>
+              <span className="font-mono text-admin-text-primary">{salesData.payments?.cash || 0} ج.م</span>
+            </div>
+            <div className="flex justify-between items-center pb-0.5 border-b border-admin-border/30">
+              <div className="flex items-center gap-1 text-admin-text-secondary">
+                <CreditCard className="w-3 h-3 text-blue-500" />
+                <span>فيزا</span>
+              </div>
+              <span className="font-mono text-admin-text-primary">{salesData.payments?.card || 0} ج.م</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-1 text-admin-text-secondary">
+                <Wallet className="w-3 h-3 text-emerald-500" />
+                <span>محفظة</span>
+              </div>
+              <span className="font-mono text-admin-text-primary">{salesData.payments?.wallet || 0} ج.م</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-sm flex flex-col justify-between min-h-[110px]">
           <div className="flex justify-between items-center text-admin-text-secondary">
             <span className="text-xs font-bold">عدد الطلبات المكتملة</span>
             <ShoppingBag className="w-4.5 h-4.5 text-emerald-500" />
           </div>
-          <h3 className="text-xl font-black text-admin-text-primary font-mono">{salesData.totalOrders} طلب</h3>
+          <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{salesData.totalOrders} طلب</h3>
         </div>
 
-        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-sm space-y-2">
+        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-sm flex flex-col justify-between min-h-[110px]">
           <div className="flex justify-between items-center text-admin-text-secondary">
             <span className="text-xs font-bold">متوسط قيمة الطلب الواحد</span>
             <ArrowUpRight className="w-4.5 h-4.5 text-blue-500" />
           </div>
-          <h3 className="text-xl font-black text-admin-text-primary font-mono">{Math.round(salesData.averageOrderValue)} ج.م</h3>
+          <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{Math.round(salesData.averageOrderValue)} ج.م</h3>
         </div>
       </div>
 
