@@ -10,7 +10,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket';
-import logoImg from '../../assets/logo.png';
+import logoImg from '../../assets/newlogo.svg';
 
 interface SystemSettings {
   pricing: {

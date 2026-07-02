@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Key, LogOut, Coffee, ShieldAlert, Sliders, QrCode
+  Key, LogOut, Coffee, Sliders
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { SerialKey } from '../../shared/types';
+import logoImg from '../../assets/newlogo.svg';
 
 // Sub-components
 import StatsGrid from './components/StatsGrid';
@@ -79,93 +80,72 @@ export default function SuperAdminDashboard() {
   const totalSerialsCount = serialKeys.length;
   const unusedSerialsCount = serialKeys.filter((k: any) => !k.isUsed).length;
 
+  const navItems = [
+    { id: 'restaurants' as const, label: 'الاشتراكات والمطاعم', icon: Coffee },
+    { id: 'serials' as const, label: 'أكواد التفعيل (Serials)', icon: Key },
+    { id: 'settings' as const, label: 'إعدادات المنصة والأسعار', icon: Sliders }
+  ] as const;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative overflow-x-hidden selection:bg-indigo-500/30 select-none outline-none" dir="rtl">
-      <style>{`
-        /* SuperAdmin Premium Stylesheet */
-        input, select, textarea {
-          background-color: rgba(2, 6, 23, 0.7) !important;
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.05) !important;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        }
-        input:focus, select:focus, textarea:focus {
-          border-color: #6366f1 !important;
-          box-shadow: 0 0 15px rgba(99, 102, 241, 0.15) !important;
-          transform: translateY(-1px);
-        }
-        .luxury-panel {
-          background: rgba(15, 23, 42, 0.6) !important;
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.03) !important;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        }
-        .luxury-panel:hover {
-          border-color: rgba(99, 102, 241, 0.15) !important;
-        }
-      `}</style>
-      {/* Decorative Blur Background Blobs */}
-      <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 blur-[150px] pointer-events-none z-0" />
-      <div className="absolute bottom-[-5%] left-[-10%] w-[600px] h-[600px] rounded-full bg-violet-500/10 blur-[150px] pointer-events-none z-0" />
-
-      <Toaster position="top-center" toastOptions={{
-        style: { 
-          background: 'rgba(15, 23, 42, 0.97)', 
-          color: '#f8fafc', 
-          border: '1px solid rgba(99, 102, 241, 0.12)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '16px',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
-          fontSize: '13px',
-          fontWeight: 'bold'
-        }
-      }} />
-
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800 py-5 px-6 flex justify-between items-center sticky top-0 z-30 shadow-md">
-        <div className="flex items-center gap-3.5">
-          <motion.div 
-            initial={{ rotate: -15, scale: 0.8 }}
-            animate={{ rotate: 0, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 220 }}
-            className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-lg shadow-indigo-600/15 overflow-hidden"
-          >
-            <QrCode className="w-6 h-6 text-indigo-400" />
-          </motion.div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black tracking-tight bg-gradient-to-r from-indigo-400 to-indigo-300 bg-clip-text text-transparent">
-                Tawla OS SuperAdmin
-              </h1>
-              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/15 text-indigo-300 tracking-wider uppercase">
-                System Suite
-              </span>
+    <div className="min-h-screen bg-[#09090B] flex flex-col md:flex-row text-right" dir="rtl">
+      {/* Sidebar Navigation */}
+      <aside className="w-full md:w-64 bg-white border-l border-zinc-200/80 flex flex-col justify-between p-6 flex-shrink-0 text-zinc-900">
+        <div className="space-y-8">
+          {/* Logo / Header */}
+          <div className="flex items-center gap-3 pb-6 border-b border-zinc-200/85">
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200/80 flex items-center justify-center bg-white shadow-sm flex-shrink-0">
+              <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
             </div>
-            <p className="text-xs text-slate-400 mt-0.5 font-bold">لوحة التحكم والمراقبة العامة للبنية التحتية للاشتراكات والتراخيص</p>
+            <div>
+              <h1 className="text-sm font-black tracking-wide text-zinc-900">Tawla OS SuperAdmin</h1>
+              <span className="text-[10px] text-zinc-500 font-bold">الدور: <span className="text-indigo-600 font-black uppercase">مشرف النظام</span></span>
+            </div>
           </div>
+
+          {/* Nav List */}
+          <nav className="space-y-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as any)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15'
+                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-white' : 'text-zinc-500'}`} />
+                    <span>{item.label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        <div className="flex items-center gap-3.5">
-          <div className="hidden md:flex flex-col text-left pr-3.5 border-r border-slate-800">
-            <span className="text-xs font-black text-slate-200">{user?.name}</span>
-            <span className="text-[10px] text-indigo-400 font-mono">@{user?.username}</span>
+        {/* Footer Logout */}
+        <div className="pt-6 border-t border-zinc-200 mt-8 flex justify-between items-center">
+          <div className="text-[10px] text-zinc-700 font-semibold">
+            <div>مرحباً، {user?.name}</div>
+            <div className="mt-0.5 text-zinc-500">الدور: مشرف المشرفين</div>
           </div>
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={handleLogout}
-            className="px-4 py-2.5 rounded-xl border border-red-500/20 bg-red-950/20 text-red-400 hover:text-white hover:bg-red-650 hover:border-red-500 transition-all outline-none focus:outline-none cursor-pointer font-black text-xs"
+            className="p-2 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
             title="تسجيل الخروج"
           >
-            <LogOut className="w-4 h-4 inline-block ml-1.5" />
-            <span>تسجيل الخروج</span>
-          </motion.button>
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
-      </header>
+      </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6 z-10">
-        
+      {/* Main Content Workspace */}
+      <main className="flex-1 bg-zinc-50 p-6 md:p-8 overflow-y-auto max-h-screen space-y-6">
         {/* Statistics Grid */}
         <StatsGrid 
           restaurantsCount={totalRestaurantsCount}
@@ -176,93 +156,37 @@ export default function SuperAdminDashboard() {
           loadingSerials={loadingSerials}
         />
 
-        {/* Dashboard Panels */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          
-          {/* Sidebar Nav */}
-          <aside className="lg:col-span-1 space-y-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-2.5 space-y-1.5 shadow-md">
-              {[
-                { key: 'restaurants' as const, label: 'الاشتراكات والمطاعم', icon: Coffee },
-                { key: 'serials' as const, label: 'أكواد التفعيل (Serials)', icon: Key },
-                { key: 'settings' as const, label: 'إعدادات المنصة والأسعار', icon: Sliders }
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-black transition-all border outline-none focus:outline-none relative overflow-hidden group cursor-pointer ${
-                    activeTab === tab.key
-                      ? 'bg-indigo-600 border-indigo-500/20 text-white shadow-lg shadow-indigo-600/15'
-                      : 'bg-transparent border-transparent text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10'
-                  }`}
-                >
-                  {activeTab === tab.key && (
-                    <motion.div 
-                      layoutId="activeTabGlow"
-                      className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-violet-500/5 filter blur-sm"
-                    />
-                  )}
-                  <tab.icon className={`w-4.5 h-4.5 flex-shrink-0 relative z-10 ${activeTab === tab.key ? 'text-indigo-300' : 'text-slate-400 group-hover:text-indigo-400'}`} />
-                  <span className="relative z-10">{tab.label}</span>
-                </button>
-              ))}
-            </div>
-            
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="p-5 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-slate-300 leading-relaxed shadow-sm relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
-              <h4 className="font-black flex items-center gap-2 mb-2.5 text-indigo-400 text-sm">
-                <ShieldAlert className="w-4.5 h-4.5 text-indigo-400" />
-                <span>إرشادات الإدارة والأمان</span>
-              </h4>
-              <p className="font-bold text-slate-350">
-                الرابط الفريد (Slug) هو العنوان الذي يظهر في روابط الـ QR، احرص على أن يحتوي على أحرف إنجليزية وأرقام وعلامة (-) فقط.
-              </p>
-              <p className="mt-2.5 font-bold text-slate-355">
-                توليد الترخيص يتم عبر توليد كود فريد بصلاحية محددة. لا تكشف الأكواد لأي شخص خارج النظام قبل استلام الدفعة.
-              </p>
-            </motion.div>
-          </aside>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.2 }}
+          >
+            {activeTab === 'restaurants' && (
+              <RestaurantsTab 
+                restaurants={restaurants}
+                loadingRest={loadingRest}
+                onOpenRestDetails={setSelectedRest}
+              />
+            )}
 
-          {/* Tab Content Panel */}
-          <main className="lg:col-span-3 min-w-0">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                {activeTab === 'restaurants' && (
-                  <RestaurantsTab 
-                    restaurants={restaurants}
-                    loadingRest={loadingRest}
-                    onOpenRestDetails={setSelectedRest}
-                  />
-                )}
+            {activeTab === 'serials' && (
+              <SerialsTab 
+                serialKeys={serialKeys}
+                loadingSerials={loadingSerials}
+              />
+            )}
 
-                {activeTab === 'serials' && (
-                  <SerialsTab 
-                    serialKeys={serialKeys}
-                    loadingSerials={loadingSerials}
-                  />
-                )}
-
-                {activeTab === 'settings' && (
-                  <SettingsTab 
-                    systemSettings={systemSettings}
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </main>
-        </div>
-      </div>
+            {activeTab === 'settings' && (
+              <SettingsTab 
+                systemSettings={systemSettings}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
 
       {/* Details & Edit Restaurant Modal */}
       <AnimatePresence>
@@ -273,6 +197,10 @@ export default function SuperAdminDashboard() {
           />
         )}
       </AnimatePresence>
+
+      <Toaster position="top-center" toastOptions={{
+        style: { background: '#ffffff', color: '#09090B', border: '1px solid rgba(0,0,0,0.08)' }
+      }} />
     </div>
   );
 }

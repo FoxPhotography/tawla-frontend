@@ -91,15 +91,14 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-right" dir="rtl">
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         
         {/* Serial Key Generator */}
-        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg relative overflow-hidden self-start">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
-          <h2 className="text-base font-black text-white mb-5 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-              <Key className="w-5 h-5 animate-pulse" />
+        <div className="lg:col-span-2 bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card relative overflow-hidden self-start">
+          <h2 className="text-base font-extrabold text-admin-text-primary mb-5 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-admin-accent/10 border border-admin-accent/20 flex items-center justify-center text-admin-accent">
+              <Key className="w-5 h-5" />
             </div>
             <span>توليد كود ترخيص جديد</span>
           </h2>
@@ -125,24 +124,23 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
 
             {serialDuration === 'custom' && (
               <div className="space-y-2">
-                <label className="block text-sm font-black text-slate-300">عدد الأيام المطلوبة *</label>
+                <label className="block text-xs font-bold text-admin-text-secondary">عدد الأيام المطلوبة *</label>
                 <input
                   type="number"
                   required
                   value={customDays}
                   onChange={(e) => setCustomDays(e.target.value)}
                   placeholder="مثال: 180"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors outline-none font-bold"
+                  className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold focus:outline-none transition-colors outline-none"
                 />
               </div>
             )}
 
             <motion.button
-              whileHover={{ scale: 1.02, boxShadow: '0 4px 20px rgba(79, 70, 229, 0.3)' }}
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={generateSerialMutation.isPending}
-              className="w-full py-3.5 bg-indigo-650 hover:bg-indigo-550 active:scale-98 text-white font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer border border-indigo-500/30 hover:border-indigo-500/50 outline-none focus:outline-none"
+              className="w-full py-3 px-6 bg-admin-accent hover:opacity-95 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-2 shadow-admin-accent cursor-pointer border-none outline-none focus:outline-none"
             >
               {generateSerialMutation.isPending ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -160,17 +158,17 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mt-6 p-5 bg-slate-950 border border-slate-800 rounded-xl text-center space-y-3 shadow-inner"
+              className="mt-6 p-5 bg-admin-bg-base border border-admin-border rounded-xl text-center space-y-3 shadow-inner"
             >
-              <span className="text-xs text-slate-400 font-extrabold block">كود الترخيص الخاص بكافيه العميل جاهز:</span>
-              <span className="text-sm font-mono font-black text-indigo-400 tracking-wider block bg-slate-900 border border-slate-800 py-2.5 rounded-lg select-all">
+              <span className="text-xs text-admin-text-secondary font-bold block">كود الترخيص الخاص بكافيه العميل جاهز:</span>
+              <span className="text-sm font-mono font-black text-admin-accent tracking-wider block bg-admin-bg-elevated border border-admin-border py-2.5 rounded-lg select-all">
                 {generatedKey}
               </span>
               <button
                 onClick={() => copyToClipboard(generatedKey)}
-                className="inline-flex items-center justify-center gap-1.5 text-xs text-indigo-300 font-bold hover:text-white bg-indigo-500/10 hover:bg-indigo-600 border border-indigo-500/30 rounded-lg px-4 py-2 transition-colors cursor-pointer outline-none focus:outline-none hover:scale-103 active:scale-97 w-full shadow-md"
+                className="inline-flex items-center justify-center gap-1.5 text-xs text-admin-accent font-bold hover:opacity-90 bg-admin-accent/10 border border-admin-accent/25 rounded-lg px-4 py-2.5 transition-colors cursor-pointer outline-none focus:outline-none w-full shadow-sm"
               >
-                {copiedKey === generatedKey ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-indigo-400" />}
+                {copiedKey === generatedKey ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-admin-accent" />}
                 <span>{copiedKey === generatedKey ? 'تم النسخ بنجاح!' : 'نسخ كود التفعيل الفريد'}</span>
               </button>
             </motion.div>
@@ -178,23 +176,22 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
         </div>
 
         {/* Generated Keys Logs */}
-        <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg relative overflow-hidden">
-          <div className="absolute bottom-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
-          <h2 className="text-base font-black text-white mb-5 flex justify-between items-center">
+        <div className="lg:col-span-3 bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card relative overflow-hidden">
+          <h2 className="text-base font-extrabold text-admin-text-primary mb-5 flex justify-between items-center">
             <span className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-violet-400" />
+              <Activity className="w-5 h-5 text-admin-accent" />
               <span>أرشيف التراخيص المصدرة</span>
             </span>
-            <span className="text-xs font-black bg-violet-500/10 text-violet-300 border border-violet-500/20 px-3 py-1 rounded-full">{serialKeys.length} ترخيص</span>
+            <span className="text-xs font-bold bg-admin-accent/10 text-admin-accent border border-admin-accent/20 px-3 py-1 rounded-full">{serialKeys.length} ترخيص</span>
           </h2>
 
           {loadingSerials ? (
             <div className="py-16 flex justify-center items-center">
-              <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin" />
+              <RefreshCw className="w-8 h-8 text-admin-accent animate-spin" />
             </div>
           ) : serialKeys.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl bg-slate-950/20">
-              <p className="text-sm text-slate-500">لم يتم إصدار أي أكواد ترخيص بعد.</p>
+            <div className="text-center py-12 border border-dashed border-admin-border rounded-xl bg-admin-bg-base">
+              <p className="text-xs text-admin-text-muted font-bold">لم يتم إصدار أي أكواد ترخيص بعد.</p>
             </div>
           ) : (
             <motion.div 
@@ -209,22 +206,22 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
                   key={item.id}
                   className={`border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all ${
                     item.isUsed 
-                      ? 'bg-slate-950/40 border-slate-850 opacity-40' 
-                      : 'bg-slate-950 border border-slate-800 hover:border-indigo-500/25 shadow-sm'
+                      ? 'bg-admin-bg-subtle/50 border-admin-border opacity-60' 
+                      : 'bg-admin-bg-elevated border border-admin-border hover:border-admin-accent/25 shadow-admin-card'
                   }`}
                 >
                   <div className="space-y-1.5 text-right">
                     <div className="flex items-center gap-2.5">
-                      <span className="font-mono font-black text-slate-200 text-sm tracking-wider">{item.key}</span>
+                      <span className="font-mono font-bold text-admin-text-primary text-sm tracking-wider">{item.key}</span>
                       <button 
                         onClick={() => copyToClipboard(item.key)}
-                        className="p-1.5 rounded-lg border border-slate-800 bg-slate-900/50 hover:bg-slate-800 text-indigo-400 hover:text-white transition-all cursor-pointer outline-none focus:outline-none flex items-center justify-center"
+                        className="p-1.5 rounded-lg border border-admin-border bg-admin-bg-base hover:bg-admin-bg-subtle text-admin-accent transition-all cursor-pointer outline-none focus:outline-none flex items-center justify-center"
                         title="نسخ"
                       >
-                        {copiedKey === item.key ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-indigo-400" />}
+                        {copiedKey === item.key ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-admin-accent" />}
                       </button>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-400 font-extrabold uppercase">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-admin-text-secondary font-bold uppercase">
                       <span className="flex items-center gap-1">
                         <Sliders className="w-3.5 h-3.5" />
                         <span>الباقة: {item.plan.toUpperCase()}</span>
@@ -239,20 +236,20 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
                   <div className="text-left font-semibold text-xs">
                     {item.isUsed ? (
                       <div className="space-y-1 text-left md:text-left">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 font-bold">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-admin-bg-base text-admin-text-muted border border-admin-border font-bold">
                           مستخدم
                         </span>
-                        <span className="block text-xs text-slate-400 font-bold">
-                          بواسطة: <span className="text-indigo-400 font-black text-xs">{item.usedByRestaurantName || 'كافيه نشط'}</span>
+                        <span className="block text-xs text-admin-text-secondary font-bold">
+                          بواسطة: <span className="text-admin-accent font-extrabold text-xs">{item.usedByRestaurantName || 'كافيه نشط'}</span>
                         </span>
                         {item.usedAt && (
-                          <span className="block text-[10px] text-slate-500 font-medium">
+                          <span className="block text-[10px] text-admin-text-muted font-medium">
                             تفعيل: {new Date(item.usedAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
                           </span>
                         )}
                       </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                         <ShieldCheck className="w-3.5 h-3.5" />
                         <span>فعال وجاهز للتفعيل</span>
                       </span>

@@ -147,30 +147,30 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
   if (!rest) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/40 backdrop-blur-sm overflow-y-auto">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl text-right my-8 flex flex-col overflow-hidden outline-none"
+        className="w-full max-w-3xl bg-admin-bg-elevated border border-admin-border rounded-xl shadow-admin-elevated text-right my-8 flex flex-col overflow-hidden outline-none"
       >
         {/* Modal Header */}
-        <div className="p-5 border-b border-slate-800 bg-slate-950/40 flex justify-between items-center">
+        <div className="p-5 border-b border-admin-border bg-admin-bg-base flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/15 flex items-center justify-center text-indigo-400">
+            <div className="w-12 h-12 rounded-2xl bg-admin-accent/10 border border-admin-accent/20 flex items-center justify-center text-admin-accent">
               <Coffee className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-white text-base">{editName || rest.name}</h3>
+              <h3 className="font-extrabold text-admin-text-primary text-base">{editName || rest.name}</h3>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-indigo-400 font-mono font-bold" dir="ltr">/{editSlug || rest.slug}</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-650" />
-                <span className="text-[10px] text-slate-500 font-black">ID: {rest.id}</span>
+                <span className="text-xs text-admin-accent font-mono font-bold" dir="ltr">/{editSlug || rest.slug}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-admin-accent/30" />
+                <span className="text-[10px] text-admin-text-muted font-bold">ID: {rest.id}</span>
               </div>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl font-black text-xs cursor-pointer outline-none focus:outline-none flex items-center justify-center w-8 h-8"
+            className="p-1.5 border border-admin-border hover:bg-admin-bg-base text-admin-text-secondary hover:text-admin-text-primary rounded-lg font-bold text-xs cursor-pointer outline-none focus:outline-none flex items-center justify-center w-8 h-8"
           >
             ✕
           </button>
@@ -180,57 +180,57 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
         <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6">
           
           {/* 1. Main Edit Form */}
-          <form onSubmit={handleSubmit} className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-5">
-            <h4 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
-              <Sliders className="w-4 h-4 text-indigo-500" />
+          <form onSubmit={handleSubmit} className="bg-admin-bg-base border border-admin-border rounded-xl p-5 space-y-5">
+            <h4 className="text-sm font-extrabold text-admin-accent flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-admin-accent" />
               <span>تعديل معلومات المطعم وباقة الترخيص</span>
             </h4>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="block text-sm font-black text-slate-300">اسم الكافيه أو المطعم *</label>
+                <label className="block text-xs font-bold text-admin-text-secondary">اسم الكافيه أو المطعم *</label>
                 <input
                   type="text"
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors outline-none font-bold"
+                  className="w-full bg-admin-bg-elevated border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold focus:outline-none transition-colors outline-none"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-black text-slate-300">رابط الـ QR الفريد (Slug) *</label>
+                <label className="block text-xs font-bold text-admin-text-secondary">رابط الـ QR الفريد (Slug) *</label>
                 <input
                   type="text"
                   required
                   value={editSlug}
                   onChange={(e) => setEditSlug(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors font-mono outline-none font-bold"
+                  className="w-full bg-admin-bg-elevated border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold focus:outline-none transition-colors font-mono outline-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="block text-sm font-black text-slate-300">رقم الهاتف</label>
+                <label className="block text-xs font-bold text-admin-text-secondary">رقم الهاتف</label>
                 <input
                   type="text"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors outline-none font-bold"
+                  className="w-full bg-admin-bg-elevated border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold focus:outline-none transition-colors outline-none"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-black text-slate-300">العنوان بالتفصيل</label>
+                <label className="block text-xs font-bold text-admin-text-secondary">العنوان بالتفصيل</label>
                 <input
                   type="text"
                   value={editAddress}
                   onChange={(e) => setEditAddress(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors outline-none font-bold"
+                  className="w-full bg-admin-bg-elevated border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold focus:outline-none transition-colors outline-none"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-850">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-admin-border">
               <div className="space-y-2">
                 <CustomSelect
                   value={editPlan}
@@ -254,7 +254,7 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
               <button
                 type="submit"
                 disabled={updateRestMutation.isPending}
-                className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer border border-indigo-500/30 hover:border-indigo-500/50 outline-none focus:outline-none flex items-center justify-center gap-1.5"
+                className="py-2.5 px-5 bg-admin-accent hover:opacity-95 text-white font-bold text-xs rounded-lg transition-all shadow-admin-accent cursor-pointer outline-none focus:outline-none border-none flex items-center justify-center gap-1.5"
               >
                 {updateRestMutation.isPending && (
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -265,49 +265,49 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
           </form>
 
           {/* 2. Admin Credentials & Reset Password */}
-          <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-5">
-            <h4 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
-              <Lock className="w-4 h-4 text-indigo-500" />
+          <div className="bg-admin-bg-base border border-admin-border rounded-xl p-5 space-y-5">
+            <h4 className="text-sm font-extrabold text-admin-accent flex items-center gap-1.5">
+              <Lock className="w-4 h-4 text-admin-accent" />
               <span>بيانات مدير النظام المشرف للمطعم</span>
             </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="block text-sm font-black text-slate-300">الاسم الكامل للمدير</label>
+                <label className="block text-xs font-bold text-admin-text-secondary">الاسم الكامل للمدير</label>
                 <input
                   type="text"
                   value={editOwnerName}
                   onChange={(e) => setEditOwnerName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors outline-none font-bold"
+                  className="w-full bg-admin-bg-elevated border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold focus:outline-none transition-colors outline-none"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-black text-slate-300">اسم المستخدم للمدير (Username)</label>
+                <label className="block text-xs font-bold text-admin-text-secondary">اسم المستخدم للمدير (Username)</label>
                 <input
                   type="text"
                   value={editOwnerUsername}
                   onChange={(e) => setEditOwnerUsername(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors font-mono outline-none font-bold"
+                  className="w-full bg-admin-bg-elevated border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold focus:outline-none transition-colors font-mono outline-none"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end pt-2 border-t border-slate-850">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end pt-2 border-t border-admin-border">
               <div className="space-y-2">
-                <label className="block text-sm font-black text-slate-300">رمز مرور جديد للمدير</label>
+                <label className="block text-xs font-bold text-admin-text-secondary">رمز مرور جديد للمدير</label>
                 <input
                   type="text"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="اتركها فارغة لعدم التغيير"
-                  className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors outline-none font-bold"
+                  className="w-full bg-admin-bg-elevated border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold focus:outline-none transition-colors outline-none"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleResetPassword}
                 disabled={!newPassword || newPassword.length < 4 || resetPasswordMutation.isPending}
-                className="py-2.5 px-5 bg-indigo-650 hover:bg-indigo-550 active:scale-98 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer h-10 flex items-center justify-center gap-1.5 outline-none focus:outline-none shadow-md border border-indigo-500/30 hover:border-indigo-500/50"
+                className="py-2.5 px-5 bg-admin-accent hover:opacity-95 text-white font-bold text-xs rounded-lg transition-all cursor-pointer h-10 flex items-center justify-center gap-1.5 border-none outline-none focus:outline-none shadow-admin-accent"
               >
                 {resetPasswordMutation.isPending && (
                   <div className="w-3.5 h-3.5 border-2 border-slate-200 border-t-transparent rounded-full animate-spin" />
@@ -318,34 +318,34 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
           </div>
 
           {/* 3. Restaurant Staff */}
-          <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-5">
-            <h4 className="text-sm font-black text-indigo-400 flex items-center justify-between">
+          <div className="bg-admin-bg-base border border-admin-border rounded-xl p-5 space-y-5">
+            <h4 className="text-sm font-extrabold text-admin-accent flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-indigo-500" />
+                <Users className="w-4 h-4 text-admin-accent" />
                 <span>موظفي الكافيه (Staff Users)</span>
               </span>
-              <span className="text-xs font-black bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full border border-indigo-500/20">
+              <span className="text-xs font-bold bg-admin-accent/10 text-admin-accent px-3 py-1 rounded-full border border-admin-accent/20">
                 {restStaff.length} موظف
               </span>
             </h4>
 
             {loadingRestStaff ? (
               <div className="py-6 flex justify-center items-center">
-                <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />
+                <RefreshCw className="w-5 h-5 text-admin-accent animate-spin" />
               </div>
             ) : restStaff.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-500 font-bold">
+              <div className="text-center py-6 text-xs text-admin-text-muted font-bold">
                 لم يقم مالك الكافيه بإضافة أي موظفين بالنظام حتى الآن.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {restStaff.map((staff: any) => (
-                  <div key={staff.id} className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex justify-between items-center">
+                  <div key={staff.id} className="bg-admin-bg-elevated border border-admin-border rounded-xl p-3.5 flex justify-between items-center">
                     <div className="text-right">
-                      <span className="font-black text-white text-xs block">{staff.name}</span>
-                      <span className="font-mono text-[10px] text-slate-500 mt-0.5 block">@{staff.username}</span>
+                      <span className="font-extrabold text-admin-text-primary text-xs block">{staff.name}</span>
+                      <span className="font-mono text-[10px] text-admin-text-muted mt-0.5 block">@{staff.username}</span>
                     </div>
-                    <span className="text-xs font-black px-2.5 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-850">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-admin-bg-base text-admin-text-secondary border border-admin-border">
                       موظف
                     </span>
                   </div>
@@ -357,12 +357,12 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-slate-950 border-t border-slate-800 flex justify-between items-center gap-3">
+        <div className="p-4 bg-admin-bg-base border-t border-admin-border flex justify-between items-center gap-3">
           <button
             type="button"
             onClick={handleDelete}
             disabled={deleteRestMutation.isPending}
-            className="py-2.5 px-4 bg-red-500/10 hover:bg-red-600 hover:text-white border border-red-500/20 hover:border-red-500 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer outline-none focus:outline-none shadow-md"
+            className="py-2.5 px-4 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-200 hover:border-red-600 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer outline-none focus:outline-none shadow-sm"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>حذف المطعم من الشبكة نهائياً</span>
@@ -370,7 +370,7 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
           <button
             type="button"
             onClick={onClose}
-            className="py-2.5 px-5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer outline-none focus:outline-none"
+            className="py-2.5 px-5 bg-admin-bg-base hover:bg-admin-bg-subtle text-admin-text-secondary hover:text-admin-text-primary border border-admin-border rounded-lg text-xs font-bold transition-all cursor-pointer outline-none focus:outline-none"
           >
             إغلاق
           </button>

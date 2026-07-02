@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { User as UserIcon, Lock, Eye, EyeOff, ArrowLeft, QrCode } from 'lucide-react';
+import { User as UserIcon, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
+import logoImg from '../../assets/newlogo.svg';
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -97,9 +98,9 @@ export default function StaffLogin() {
         <div className="text-center mb-8">
           <motion.div 
             whileHover={{ scale: 1.05, rotate: 5 }}
-            className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-[#FF5500]/10 border border-[#FF5500]/20 flex items-center justify-center transition-all duration-300"
+            className="mx-auto mb-4 w-14 h-14 rounded-2xl overflow-hidden border border-zinc-200/80 flex items-center justify-center transition-all duration-300 bg-white shadow-sm"
           >
-            <QrCode className="w-7 h-7 text-[#FF5500]" />
+            <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
           </motion.div>
           <h1 className="text-2xl font-black text-[#09090B] tracking-tight font-cairo">تسجيل الدخول</h1>
           <p className="text-zinc-500 text-xs font-bold mt-1.5 font-body">نظام إدارة المطاعم والكافيهات الذكي - طاولة</p>

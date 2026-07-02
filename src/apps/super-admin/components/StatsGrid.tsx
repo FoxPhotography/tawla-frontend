@@ -68,19 +68,19 @@ export default function StatsGrid({
           <motion.div 
             key={idx}
             whileHover={{ y: -2, scale: 1.01, transition: { duration: 0.15 } }}
-            className={`bg-slate-900 border ${stat.border} bg-gradient-to-b ${stat.bg} rounded-2xl p-5 shadow-md flex items-center justify-between group transition-all duration-300 hover:shadow-lg`}
+            className="bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-admin-card flex items-center justify-between group transition-all duration-300 hover:shadow-admin-elevated cursor-pointer"
           >
             <div className="space-y-1.5 text-right">
-              <span className="text-xs font-black text-slate-400 block">{stat.label}</span>
-              <span className="text-2xl font-black text-white tracking-tight block font-mono">
+              <span className="text-xs font-bold text-admin-text-secondary block">{stat.label}</span>
+              <span className="text-2xl font-black text-admin-text-primary tracking-tight block font-mono">
                 {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-admin-accent border-t-transparent rounded-full animate-spin" />
                 ) : (
                   stat.value
                 )}
               </span>
             </div>
-            <div className={`w-12 h-12 rounded-xl bg-slate-950/60 border ${stat.border} flex items-center justify-center ${stat.color} group-hover:scale-105 transition-transform shadow-inner`}>
+            <div className="w-12 h-12 rounded-xl bg-admin-accent/10 border border-admin-accent/5 flex items-center justify-center text-admin-accent group-hover:scale-105 transition-transform shadow-sm flex-shrink-0">
               <Icon className="w-5 h-5" />
             </div>
           </motion.div>

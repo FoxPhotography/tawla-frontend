@@ -199,10 +199,10 @@ export default function CustomDateTimePicker({
         onClick={() => handleDaySelect(day)}
         className={`w-8 h-8 rounded-lg text-xs font-bold transition-all flex items-center justify-center outline-none focus:outline-none cursor-pointer ${
           isSelected 
-            ? 'bg-indigo-600 text-white shadow-md' 
+            ? 'bg-admin-accent text-white shadow-md' 
             : isToday
-            ? 'bg-indigo-500/10 text-indigo-400 font-extrabold border border-indigo-500/20'
-            : 'text-slate-300 hover:bg-indigo-500/10 hover:text-indigo-400'
+            ? 'bg-admin-accent/10 text-admin-accent font-extrabold border border-admin-accent/20'
+            : 'text-admin-text-secondary hover:bg-admin-accent/10 hover:text-admin-accent'
         }`}
       >
         {day}
@@ -220,16 +220,16 @@ export default function CustomDateTimePicker({
 
   return (
     <div className="relative w-full">
-      {label && <label className="block text-[11px] font-black text-slate-350 mb-1.5">{label} {required && '*'}</label>}
+      {label && <label className="block text-[11px] font-bold text-admin-text-secondary mb-1.5">{label} {required && '*'}</label>}
       
       {/* Trigger Button */}
       <button
         type="button"
         onClick={() => { setIsOpen(true); setStep('calendar'); }}
-        className="w-full flex items-center justify-between bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-200 rounded-xl px-4 py-3 text-sm transition-all focus:outline-none outline-none focus:ring-1 focus:ring-indigo-500/10 cursor-pointer shadow-inner text-right"
+        className="w-full flex items-center justify-between bg-admin-bg-base hover:bg-admin-bg-subtle border border-admin-border text-admin-text-primary rounded-xl px-4 py-3 text-xs font-bold transition-all focus:outline-none outline-none focus:ring-1 focus:ring-admin-accent/10 cursor-pointer shadow-sm text-right"
       >
-        <span className="truncate font-bold text-slate-105 group-hover:text-indigo-400 transition-colors">{getFormattedValue()}</span>
-        <div className="flex items-center gap-1.5 text-indigo-400 group-hover:text-indigo-300 transition-colors">
+        <span className="truncate group-hover:text-admin-accent transition-colors">{getFormattedValue()}</span>
+        <div className="flex items-center gap-1.5 text-admin-text-secondary group-hover:text-admin-accent transition-colors">
           {type === 'datetime' ? <Clock className="w-4 h-4" /> : <CalendarIcon className="w-4 h-4" />}
         </div>
       </button>
@@ -237,23 +237,23 @@ export default function CustomDateTimePicker({
       {/* Popover Centered Modal */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/40 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="w-full max-w-[320px] bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl p-5 text-slate-100 relative overflow-hidden flex flex-col focus:outline-none outline-none"
+              className="w-full max-w-[320px] bg-admin-bg-elevated border border-admin-border shadow-admin-elevated rounded-2xl p-5 text-admin-text-primary relative overflow-hidden flex flex-col focus:outline-none outline-none"
             >
               {/* Header block with close button */}
-              <div className="flex items-center justify-between pb-3.5 border-b border-slate-800 mb-3.5">
-                <span className="text-xs font-black text-slate-300">
+              <div className="flex items-center justify-between pb-3.5 border-b border-admin-border mb-3.5">
+                <span className="text-xs font-bold text-admin-text-secondary">
                   {type === 'datetime' ? 'إعدادات الجدولة والترخيص' : 'تحديد تاريخ الصلاحية'}
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer outline-none focus:outline-none"
+                  className="p-1.5 rounded-lg hover:bg-admin-bg-base text-admin-text-secondary hover:text-admin-text-primary transition-colors cursor-pointer outline-none focus:outline-none"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -261,27 +261,27 @@ export default function CustomDateTimePicker({
 
               {/* Step Stepper navigation */}
               {type === 'datetime' && (
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3.5 text-[10px] font-black text-slate-400">
+                <div className="flex items-center justify-between border-b border-admin-border pb-3 mb-3.5 text-[10px] font-bold text-admin-text-secondary">
                   <button
                     type="button"
                     onClick={() => setStep('calendar')}
-                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer outline-none focus:outline-none ${step === 'calendar' ? 'text-indigo-400 bg-indigo-500/10 font-black' : 'hover:text-indigo-300'}`}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer outline-none focus:outline-none ${step === 'calendar' ? 'text-admin-accent bg-admin-accent/10 font-bold' : 'hover:text-admin-accent'}`}
                   >
                     1. اليوم
                   </button>
-                  <ChevronLeft className="w-3 h-3 text-slate-700" />
+                  <ChevronLeft className="w-3 h-3 text-admin-border-strong" />
                   <button
                     type="button"
                     onClick={() => setStep('hours')}
-                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer outline-none focus:outline-none ${step === 'hours' ? 'text-indigo-400 bg-indigo-500/10 font-black' : 'hover:text-indigo-300'}`}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer outline-none focus:outline-none ${step === 'hours' ? 'text-admin-accent bg-admin-accent/10 font-bold' : 'hover:text-admin-accent'}`}
                   >
                     2. الساعة
                   </button>
-                  <ChevronLeft className="w-3 h-3 text-slate-700" />
+                  <ChevronLeft className="w-3 h-3 text-admin-border-strong" />
                   <button
                     type="button"
                     onClick={() => setStep('minutes')}
-                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer outline-none focus:outline-none ${step === 'minutes' ? 'text-indigo-400 bg-indigo-500/10 font-black' : 'hover:text-indigo-300'}`}
+                    className={`px-2 py-0.5 rounded transition-colors cursor-pointer outline-none focus:outline-none ${step === 'minutes' ? 'text-admin-accent bg-admin-accent/10 font-bold' : 'hover:text-admin-accent'}`}
                   >
                     3. الدقيقة
                   </button>
@@ -304,26 +304,26 @@ export default function CustomDateTimePicker({
                       <button
                         type="button"
                         onClick={handleMonthPrev}
-                        className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer outline-none focus:outline-none"
+                        className="p-1.5 rounded-lg hover:bg-admin-bg-base text-admin-text-secondary hover:text-admin-text-primary transition-colors cursor-pointer outline-none focus:outline-none"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
                       
-                      <span className="text-xs font-black text-slate-200">
+                      <span className="text-xs font-bold text-admin-text-primary">
                         {MONTHS_AR[currentMonth]} {currentYear}
                       </span>
                       
                       <button
                         type="button"
                         onClick={handleMonthNext}
-                        className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer outline-none focus:outline-none"
+                        className="p-1.5 rounded-lg hover:bg-admin-bg-base text-admin-text-secondary hover:text-admin-text-primary transition-colors cursor-pointer outline-none focus:outline-none"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                     </div>
 
                     {/* Week days header */}
-                    <div className="grid grid-cols-7 text-center gap-y-1 mb-1 text-[9px] font-black text-slate-500">
+                    <div className="grid grid-cols-7 text-center gap-y-1 mb-1 text-[9px] font-bold text-admin-text-muted">
                       {WEEKDAYS_AR.map((wd, i) => (
                         <span key={`wd-${i}`}>{wd}</span>
                       ))}
@@ -335,8 +335,8 @@ export default function CustomDateTimePicker({
                     </div>
 
                     {/* Subscription Quick Shortcuts */}
-                    <div className="border-t border-slate-800 pt-3 mt-1.5 space-y-1.5">
-                      <span className="text-[10px] font-extrabold text-slate-400 block text-right">جدولة سريعة:</span>
+                    <div className="border-t border-admin-border pt-3 mt-1.5 space-y-1.5">
+                      <span className="text-[10px] font-bold text-admin-text-secondary block text-right">جدولة سريعة:</span>
                       <div className="grid grid-cols-3 gap-1.5">
                         {[
                           { label: '+30 يوم', val: 30 },
@@ -347,7 +347,7 @@ export default function CustomDateTimePicker({
                             key={idx}
                             type="button"
                             onClick={() => applyShortcut(sc.val)}
-                            className="py-1 rounded-lg border border-slate-850 bg-slate-950 text-slate-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 text-[10px] font-black transition-all cursor-pointer text-center outline-none focus:outline-none"
+                            className="py-1 rounded-lg border border-admin-border bg-admin-bg-base text-admin-text-secondary hover:bg-admin-accent hover:text-white hover:border-admin-accent text-[10px] font-bold transition-all cursor-pointer text-center outline-none focus:outline-none"
                           >
                             {sc.label}
                           </button>
@@ -365,20 +365,20 @@ export default function CustomDateTimePicker({
                     className="flex flex-col items-center space-y-3"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-black text-slate-300">حدد ساعة الموعد</span>
+                      <span className="text-xs font-bold text-admin-text-secondary">حدد ساعة الموعد</span>
                       {/* AM/PM toggle pill */}
-                      <div className="flex bg-slate-950 border border-slate-800 p-0.5 rounded-lg text-[9px] font-black shadow-inner" dir="ltr">
+                      <div className="flex bg-admin-bg-base border border-admin-border p-0.5 rounded-lg text-[9px] font-bold shadow-sm" dir="ltr">
                         <button
                           type="button"
                           onClick={() => togglePM(false)}
-                          className={`px-3 py-1 rounded-md transition-all cursor-pointer outline-none focus:outline-none ${!isPM ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10'}`}
+                          className={`px-3 py-1 rounded-md transition-all cursor-pointer outline-none focus:outline-none ${!isPM ? 'bg-admin-accent text-white shadow-sm' : 'text-admin-text-secondary hover:text-admin-accent hover:bg-admin-accent/10'}`}
                         >
                           AM
                         </button>
                         <button
                           type="button"
                           onClick={() => togglePM(true)}
-                          className={`px-3 py-1 rounded-md transition-all cursor-pointer outline-none focus:outline-none ${isPM ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10'}`}
+                          className={`px-3 py-1 rounded-md transition-all cursor-pointer outline-none focus:outline-none ${isPM ? 'bg-admin-accent text-white shadow-sm' : 'text-admin-text-secondary hover:text-admin-accent hover:bg-admin-accent/10'}`}
                         >
                           PM
                         </button>
@@ -386,13 +386,13 @@ export default function CustomDateTimePicker({
                     </div>
 
                     {/* Circular clock dial */}
-                    <div className="relative w-[190px] h-[190px] bg-slate-950 border border-slate-800 rounded-full flex items-center justify-center shadow-inner mt-1">
+                    <div className="relative w-[190px] h-[190px] bg-admin-bg-base border border-admin-border rounded-full flex items-center justify-center shadow-inner mt-1">
                       {/* Clock center cap */}
-                      <div className="absolute w-2 h-2 bg-indigo-500 rounded-full z-20 shadow-md" />
+                      <div className="absolute w-2 h-2 bg-admin-accent rounded-full z-20 shadow-md" />
                       
                       {/* Clock pointer hand */}
                       <motion.div
-                        className="absolute bottom-1/2 left-1/2 w-0.5 bg-indigo-500 origin-bottom z-10"
+                        className="absolute bottom-1/2 left-1/2 w-0.5 bg-admin-accent origin-bottom z-10"
                         style={{
                           height: '58px',
                           transform: `translate(-50%, 0) rotate(${selectedHour * 30}deg)`,
@@ -416,10 +416,10 @@ export default function CustomDateTimePicker({
                               top: `${pos.y}px`,
                               transform: 'translate(-50%, -50%)'
                             }}
-                            className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all cursor-pointer outline-none focus:outline-none z-20 ${
+                            className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all cursor-pointer outline-none focus:outline-none z-20 ${
                               isSelected 
-                                ? 'bg-indigo-600 text-white shadow-md' 
-                                : 'text-slate-400 hover:bg-indigo-600 hover:text-white hover:scale-110'
+                                ? 'bg-admin-accent text-white shadow-md' 
+                                : 'text-admin-text-secondary hover:bg-admin-accent hover:text-white hover:scale-110'
                             }`}
                           >
                             {h}
@@ -438,20 +438,20 @@ export default function CustomDateTimePicker({
                     className="flex flex-col items-center space-y-3"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-black text-slate-300">حدد الدقيقة للموعد</span>
-                      <span className="text-[10px] font-black text-indigo-400 font-mono bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                      <span className="text-xs font-bold text-admin-text-secondary">حدد الدقيقة للموعد</span>
+                      <span className="text-[10px] font-bold text-admin-accent font-mono bg-admin-accent/10 px-2 py-0.5 rounded border border-admin-accent/20">
                         {selectedHour}:{String(selectedMinute).padStart(2, '0')} {isPM ? 'م' : 'ص'}
                       </span>
                     </div>
 
                     {/* Circular clock dial */}
-                    <div className="relative w-[190px] h-[190px] bg-slate-950 border border-slate-800 rounded-full flex items-center justify-center shadow-inner mt-1">
+                    <div className="relative w-[190px] h-[190px] bg-admin-bg-base border border-admin-border rounded-full flex items-center justify-center shadow-inner mt-1">
                       {/* Clock center cap */}
-                      <div className="absolute w-2 h-2 bg-indigo-500 rounded-full z-20 shadow-md" />
+                      <div className="absolute w-2 h-2 bg-admin-accent rounded-full z-20 shadow-md" />
                       
                       {/* Clock pointer hand */}
                       <motion.div
-                        className="absolute bottom-1/2 left-1/2 w-0.5 bg-indigo-500 origin-bottom z-10"
+                        className="absolute bottom-1/2 left-1/2 w-0.5 bg-admin-accent origin-bottom z-10"
                         style={{
                           height: '62px',
                           transform: `translate(-50%, 0) rotate(${selectedMinute * 6}deg)`,
@@ -475,10 +475,10 @@ export default function CustomDateTimePicker({
                               top: `${pos.y}px`,
                               transform: 'translate(-50%, -50%)'
                             }}
-                            className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all cursor-pointer outline-none focus:outline-none z-20 ${
+                            className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold font-mono transition-all cursor-pointer outline-none focus:outline-none z-20 ${
                               isSelected 
-                                ? 'bg-indigo-600 text-white shadow-md' 
-                                : 'text-slate-400 hover:bg-indigo-600 hover:text-white hover:scale-110'
+                                ? 'bg-admin-accent text-white shadow-md' 
+                                : 'text-admin-text-secondary hover:bg-admin-accent hover:text-white hover:scale-110'
                             }`}
                           >
                             {String(m).padStart(2, '0')}
@@ -490,12 +490,12 @@ export default function CustomDateTimePicker({
                 )}
 
                 {/* Navigation Footer */}
-                <div className="flex items-center justify-between border-t border-slate-800 pt-3 mt-4 gap-2 text-xs">
+                <div className="flex items-center justify-between border-t border-admin-border pt-3 mt-4 gap-2 text-xs">
                   {step !== 'calendar' ? (
                     <button
                       type="button"
                       onClick={() => setStep(step === 'minutes' ? 'hours' : 'calendar')}
-                      className="py-1.5 px-3.5 rounded-lg border border-slate-805 bg-slate-900 text-slate-300 font-bold hover:bg-slate-800 hover:text-white transition-colors cursor-pointer outline-none focus:outline-none"
+                      className="py-1.5 px-3.5 rounded-lg border border-admin-border bg-admin-bg-base text-admin-text-secondary font-bold hover:bg-admin-bg-subtle hover:text-admin-text-primary transition-colors cursor-pointer outline-none focus:outline-none"
                     >
                       السابق
                     </button>
@@ -506,7 +506,7 @@ export default function CustomDateTimePicker({
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="py-1.5 px-4.5 rounded-lg bg-indigo-650 hover:bg-indigo-550 text-white font-extrabold transition-colors cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/15 outline-none focus:outline-none hover:scale-103 active:scale-97"
+                    className="py-1.5 px-4.5 rounded-lg bg-admin-accent hover:opacity-95 text-white font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-md shadow-admin-accent outline-none focus:outline-none"
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>تأكيد الاختيار</span>

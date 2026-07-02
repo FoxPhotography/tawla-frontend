@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { useAuthStore } from '../../shared/store/authStore';
+import logoImg from '../../assets/newlogo.svg';
 import CategoriesTab from './components/CategoriesTab.js';
 import ProductsTab from './components/ProductsTab.js';
 import TablesTab from './components/TablesTab.js';
@@ -47,8 +48,8 @@ export default function AdminDashboard() {
         <div className="space-y-8">
           {/* Logo / Header */}
           <div className="flex items-center gap-3 pb-6 border-b border-zinc-200/85">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-admin-accent to-orange-500 flex items-center justify-center text-white font-black shadow-md shadow-admin-accent/20">
-              T
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200/80 flex items-center justify-center bg-white shadow-sm flex-shrink-0">
+              <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
             </div>
             <div>
               <h1 className="text-sm font-black tracking-wide text-zinc-900">{restaurant?.name || 'لوحة المدير'}</h1>

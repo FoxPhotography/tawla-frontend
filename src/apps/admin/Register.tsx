@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
-import { QrCode } from 'lucide-react';
+import logoImg from '../../assets/newlogo.svg';
 
 export default function Register() {
   return (
@@ -28,8 +28,8 @@ export default function Register() {
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[#B8973E]/10 border border-[#B8973E]/30 flex items-center justify-center transition-all duration-300">
-            <QrCode className="w-9 h-9 text-[#B8973E]" />
+          <div className="mx-auto mb-5 w-16 h-16 rounded-2xl overflow-hidden border border-[#B8973E]/30 flex items-center justify-center transition-all duration-300 bg-white shadow-sm">
+            <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
           </div>
           <h1 className="text-2xl font-extrabold text-admin-text-primary mb-2">التسجيل المباشر غير متاح</h1>
           <p className="text-admin-text-secondary text-sm font-medium">
