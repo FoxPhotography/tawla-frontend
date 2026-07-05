@@ -45,6 +45,7 @@ export interface Category {
   };
   order: number;
   isActive: boolean;
+  delayLimit?: number;
 }
 
 export interface ProductOption {

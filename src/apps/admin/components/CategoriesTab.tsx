@@ -13,6 +13,7 @@ export default function CategoriesTab() {
 
   const [catName, setCatName] = useState('');
   const [catDesc, setCatDesc] = useState('');
+  const [catDelayLimit, setCatDelayLimit] = useState<number | ''>('');
   const [catImage, setCatImage] = useState<File | null>(null);
   const [catImagePreview, setCatImagePreview] = useState<string | null>(null);
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export default function CategoriesTab() {
   const resetCatForm = () => {
     setCatName('');
     setCatDesc('');
+    setCatDelayLimit('');
     setCatImage(null);
     setCatImagePreview(null);
     setEditingCatId(null);
@@ -114,6 +116,7 @@ export default function CategoriesTab() {
     const fd = new FormData();
     fd.append('name', catName);
     fd.append('description', catDesc);
+    fd.append('delayLimit', catDelayLimit !== '' ? String(catDelayLimit) : '20');
     if (catImage) {
       fd.append('image', catImage);
     }
@@ -187,6 +190,20 @@ export default function CategoriesTab() {
                 onChange={(e) => setCatDesc(e.target.value)}
                 placeholder="مثال: محضرة على الفحم الطازج"
                 className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs text-admin-text-secondary font-bold">وقت تحضير القسم (بالدقائق) *</label>
+              <input
+                type="number"
+                required
+                min={1}
+                max={120}
+                value={catDelayLimit}
+                onChange={(e) => setCatDelayLimit(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="مثال: 15 (الافتراضي 20 دقيقة)"
+                className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors text-right"
               />
             </div>
 
@@ -275,7 +292,12 @@ export default function CategoriesTab() {
                           </div>
                         )}
                         <div>
-                          <h4 className="font-extrabold text-sm text-admin-text-primary">{category.name}</h4>
+                          <h4 className="font-extrabold text-sm text-admin-text-primary flex items-center gap-2">
+                            <span>{category.name}</span>
+                            <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
+                              {category.delayLimit !== undefined ? category.delayLimit : 20} دقيقة
+                            </span>
+                          </h4>
                           {category.description && <p className="text-[10px] text-admin-text-secondary mt-0.5">{category.description}</p>}
                         </div>
                       </div>
@@ -287,6 +309,7 @@ export default function CategoriesTab() {
                             setCatName(category.name);
                             setCatDesc(category.description || '');
                             setCatImagePreview(category.image?.url || null);
+                            setCatDelayLimit(category.delayLimit !== undefined ? category.delayLimit : '');
                           }}
                           className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors cursor-pointer"
                         >

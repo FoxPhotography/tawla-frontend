@@ -754,6 +754,19 @@ export default function CustomerMenu() {
         )}
       </div>
 
+      {/* ===== Branded Footer ===== */}
+      <div className="text-center py-8 pb-24 relative z-10 max-w-[428px] mx-auto opacity-75">
+        <a 
+          href="https://tawla.site" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 bg-customer-bg-elevated border border-customer-border hover:border-customer-accent/40 rounded-xl px-4 py-2.5 text-[10px] font-bold text-customer-text-secondary transition-all"
+        >
+          <span>Powered by:</span>
+          <span className="text-customer-accent font-extrabold tracking-wider font-mono">tawla.site</span>
+        </a>
+      </div>
+
       {/* ===== Floating Cart FAB ===== */}
       <AnimatePresence>
         {cart.length > 0 && !isCartOpen && !isReadOnly && (

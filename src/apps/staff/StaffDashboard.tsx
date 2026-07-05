@@ -745,6 +745,7 @@ export default function StaffDashboard() {
                     isStatusPending={updateStatusMutation.isPending}
                     onUpdateOrder={(id, items, status) => updateOrderMutation.mutateAsync({ orderId: id, items, status })}
                     isUpdatePending={updateOrderMutation.isPending}
+                    isDeliveryEnabled={restaurant?.settings?.isDeliveryEnabled !== false}
                   />
                 ) : activeTab === 'tables' ? (
                   <TablesTab 
@@ -758,8 +759,11 @@ export default function StaffDashboard() {
                 ) : (
                   <KDSTab 
                     orders={combinedOrders}
+                    categories={menuData.categories}
+                    products={menuData.products}
                     onUpdateStatus={(id, status) => updateStatusMutation.mutate({ orderId: id, nextStatus: status })}
                     isStatusPending={updateStatusMutation.isPending}
+                    isDeliveryEnabled={restaurant?.settings?.isDeliveryEnabled !== false}
                   />
                 )}
               </motion.div>

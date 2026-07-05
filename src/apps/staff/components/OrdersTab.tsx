@@ -15,6 +15,7 @@ interface OrdersTabProps {
   isStatusPending: boolean;
   onUpdateOrder: (orderId: string, items: any[], status?: string) => Promise<void>;
   isUpdatePending: boolean;
+  isDeliveryEnabled?: boolean;
 }
 
 const listContainerVariants: Variants = {
@@ -103,46 +104,93 @@ export default function OrdersTab({
   onUpdateStatus,
   isStatusPending,
   onUpdateOrder,
-  isUpdatePending
+  isUpdatePending,
+  isDeliveryEnabled = true
 }: OrdersTabProps) {
   // Modal / Popup States
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [returnOrder, setReturnOrder] = useState<Order | null>(null);
   const [returnItems, setReturnItems] = useState<{ productId: string; name: string; price: number; quantity: number; notes?: string }[]>([]);
 
-  // Filter orders by active vs archived
-  const filteredOrders = orders.filter(o => {
-    if (orderFilter === 'active') {
-      return ['pending', 'accepted', 'preparing', 'ready'].includes(o.status);
+  const [activeNavTab, setActiveNavTab] = useState<'all_active' | 'dine_in' | 'takeaway' | 'delivery' | 'archived'>('all_active');
+
+  const handleNavTabClick = (tab: 'all_active' | 'dine_in' | 'takeaway' | 'delivery' | 'archived') => {
+    setActiveNavTab(tab);
+    if (tab === 'archived') {
+      onSetOrderFilter('archived');
     } else {
+      onSetOrderFilter('active');
+    }
+  };
+
+  const filteredOrders = orders.filter(o => {
+    if (activeNavTab === 'archived') {
       return ['delivered', 'cancelled'].includes(o.status);
     }
+    const isActive = ['pending', 'accepted', 'preparing', 'ready'].includes(o.status);
+    if (!isActive) return false;
+    if (activeNavTab === 'all_active') return true;
+    return o.type === activeNavTab;
   });
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      {/* Tab Filter Toggles */}
-      <div className="flex justify-between items-center bg-staff-bg-elevated border border-staff-border p-1.5 rounded-2xl max-w-xs">
-        <button
-          onClick={() => onSetOrderFilter('active')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black transition-all cursor-pointer font-body ${
-            orderFilter === 'active'
-              ? 'bg-staff-accent text-white shadow-sm'
-              : 'text-staff-text-secondary hover:text-staff-text-primary'
-          }`}
-        >
-          الطلبات النشطة ({orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status)).length})
-        </button>
-        <button
-          onClick={() => onSetOrderFilter('archived')}
-          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black transition-all cursor-pointer font-body ${
-            orderFilter === 'archived'
-              ? 'bg-staff-accent text-white shadow-sm'
-              : 'text-staff-text-secondary hover:text-staff-text-primary'
-          }`}
-        >
-          الأرشيف ({orders.filter(o => ['delivered', 'cancelled'].includes(o.status)).length})
-        </button>
+    <div className="flex flex-col gap-6 h-full text-right" dir="rtl">
+      <div className="flex flex-wrap gap-4 items-center justify-between">
+        {/* Unified Premium Navigation Bar */}
+        <div className="flex items-center gap-1 bg-staff-bg-elevated border border-staff-border p-1.5 rounded-2xl w-fit overflow-x-auto scrollbar-hide max-w-full shadow-sm">
+          <button
+            onClick={() => handleNavTabClick('all_active')}
+            className={`py-2 px-4 rounded-xl text-xs font-black transition-all cursor-pointer font-body whitespace-nowrap ${
+              activeNavTab === 'all_active'
+                ? 'bg-staff-accent text-white shadow-sm'
+                : 'text-staff-text-secondary hover:text-staff-text-primary'
+            }`}
+          >
+            كل النشطة ({orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status)).length})
+          </button>
+          <button
+            onClick={() => handleNavTabClick('dine_in')}
+            className={`py-2 px-4 rounded-xl text-xs font-black transition-all cursor-pointer font-body whitespace-nowrap ${
+              activeNavTab === 'dine_in'
+                ? 'bg-staff-accent text-white shadow-sm'
+                : 'text-staff-text-secondary hover:text-staff-text-primary'
+            }`}
+          >
+            صالة ({orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status) && o.type === 'dine_in').length})
+          </button>
+          <button
+            onClick={() => handleNavTabClick('takeaway')}
+            className={`py-2 px-4 rounded-xl text-xs font-black transition-all cursor-pointer font-body whitespace-nowrap ${
+              activeNavTab === 'takeaway'
+                ? 'bg-staff-accent text-white shadow-sm'
+                : 'text-staff-text-secondary hover:text-staff-text-primary'
+            }`}
+          >
+            تيك أواي ({orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status) && o.type === 'takeaway').length})
+          </button>
+          {isDeliveryEnabled && (
+            <button
+              onClick={() => handleNavTabClick('delivery')}
+              className={`py-2 px-4 rounded-xl text-xs font-black transition-all cursor-pointer font-body whitespace-nowrap ${
+                activeNavTab === 'delivery'
+                  ? 'bg-staff-accent text-white shadow-sm'
+                  : 'text-staff-text-secondary hover:text-staff-text-primary'
+              }`}
+            >
+              دليفري ({orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status) && o.type === 'delivery').length})
+            </button>
+          )}
+          <button
+            onClick={() => handleNavTabClick('archived')}
+            className={`py-2 px-4 rounded-xl text-xs font-black transition-all cursor-pointer font-body whitespace-nowrap ${
+              activeNavTab === 'archived'
+                ? 'bg-staff-accent text-white shadow-sm'
+                : 'text-staff-text-secondary hover:text-staff-text-primary'
+            }`}
+          >
+            الأرشيف ({orders.filter(o => ['delivered', 'cancelled'].includes(o.status)).length})
+          </button>
+        </div>
       </div>
 
       {/* Orders Grid/List */}
@@ -156,6 +204,7 @@ export default function OrdersTab({
         </div>
       ) : (
         <motion.div 
+          key={activeNavTab}
           variants={listContainerVariants}
           initial="hidden"
           animate="visible"

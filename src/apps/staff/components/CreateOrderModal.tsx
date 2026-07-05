@@ -36,7 +36,7 @@ export default function CreateOrderModal({
   const [selectedTableNumber, setSelectedTableNumber] = useState<number | ''>('');
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
   const [menuSelectedCategory, setMenuSelectedCategory] = useState<string>('all');
-  const [newOrderCart, setNewOrderCart] = useState<{ product: any; quantity: number; notes: string }[]>([]);
+  const [newOrderCart, setNewOrderCart] = useState<{ product: any; quantity: number; notes: string; selectedOptions?: any[]; selectedModifiers?: any[]; calculatedPrice: number }[]>([]);
   const [newOrderSpecialNotes, setNewOrderSpecialNotes] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
@@ -44,6 +44,13 @@ export default function CreateOrderModal({
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'wallet'>('cash');
   const tableDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Customization States
+  const [customizingProduct, setCustomizingProduct] = useState<any | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, { value: string; priceAdjustment: number }>>({});
+  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, { value: string; price: number }>>({});
+  const [customizingNotes, setCustomizingNotes] = useState('');
+  const [customizingQty, setCustomizingQty] = useState(1);
 
   // Pre-select table when modal opens
   useEffect(() => {
@@ -68,6 +75,126 @@ export default function CreateOrderModal({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Sync customization options when dialog opens
+  useEffect(() => {
+    if (customizingProduct) {
+      const defaultOpts: Record<string, { value: string; priceAdjustment: number }> = {};
+      customizingProduct.options?.forEach((opt: any) => {
+        if (opt.required && opt.choices.length > 0) {
+          defaultOpts[opt.name] = {
+            value: opt.choices[0].name,
+            priceAdjustment: opt.choices[0].priceAdjustment,
+          };
+        }
+      });
+      setSelectedOptions(defaultOpts);
+      setSelectedModifiers({});
+      setCustomizingNotes('');
+      setCustomizingQty(1);
+    }
+  }, [customizingProduct]);
+
+  const handleSelectOption = (groupName: string, choiceName: string, priceAdjustment: number) => {
+    setSelectedOptions((prev) => ({
+      ...prev,
+      [groupName]: { value: choiceName, priceAdjustment },
+    }));
+  };
+
+  const handleToggleModifier = (choiceName: string, price: number) => {
+    setSelectedModifiers((prev) => {
+      const copy = { ...prev };
+      if (copy[choiceName]) {
+        delete copy[choiceName];
+      } else {
+        copy[choiceName] = { value: choiceName, price };
+      }
+      return copy;
+    });
+  };
+
+  const calculatedCustomTotal = useMemo(() => {
+    if (!customizingProduct) return 0;
+    const base = customizingProduct.price;
+    const opts = Object.values(selectedOptions).reduce((sum, o) => sum + o.priceAdjustment, 0);
+    const mods = Object.values(selectedModifiers).reduce((sum, m) => sum + m.price, 0);
+    return base + opts + mods;
+  }, [customizingProduct, selectedOptions, selectedModifiers]);
+
+  const addToCart = (
+    product: any,
+    quantity = 1,
+    notes = '',
+    selectedOptions?: { name: string; value: string; priceAdjustment: number }[],
+    selectedModifiers?: { name: string; value: string; price: number }[]
+  ) => {
+    const base = product.price;
+    const opts = (selectedOptions || []).reduce((sum, o) => sum + o.priceAdjustment, 0);
+    const mods = (selectedModifiers || []).reduce((sum, m) => sum + m.price, 0);
+    const calculatedPrice = base + opts + mods;
+
+    setNewOrderCart((prev) => {
+      const existingIdx = prev.findIndex((item) => {
+        const matchesProduct = item.product.id === product.id;
+        const matchesOptions = JSON.stringify(item.selectedOptions || []) === JSON.stringify(selectedOptions || []);
+        const matchesModifiers = JSON.stringify(item.selectedModifiers || []) === JSON.stringify(selectedModifiers || []);
+        return matchesProduct && matchesOptions && matchesModifiers;
+      });
+
+      if (existingIdx > -1) {
+        return prev.map((item, idx) => {
+          if (idx === existingIdx) {
+            return { ...item, quantity: item.quantity + quantity };
+          }
+          return item;
+        });
+      } else {
+        return [...prev, {
+          product,
+          quantity,
+          notes,
+          selectedOptions,
+          selectedModifiers,
+          calculatedPrice
+        }];
+      }
+    });
+    toast.success(`أضيف ${product.name}`);
+  };
+
+  const handleConfirmCustomization = () => {
+    if (!customizingProduct) return;
+    const missing = customizingProduct.options?.filter((o: any) => o.required && !selectedOptions[o.name]);
+    if (missing && missing.length > 0) {
+      toast.error(`يرجى تحديد: ${missing.map((o: any) => o.name).join(', ')}`);
+      return;
+    }
+
+    const optionsArr = Object.entries(selectedOptions).map(([name, detail]) => ({
+      name,
+      value: detail.value,
+      priceAdjustment: detail.priceAdjustment,
+    }));
+
+    const modifiersArr = Object.values(selectedModifiers).map(detail => ({
+      name: 'الإضافات',
+      value: detail.value,
+      price: detail.price,
+    }));
+
+    addToCart(customizingProduct, customizingQty, customizingNotes, optionsArr, modifiersArr);
+    setCustomizingProduct(null);
+  };
+
+  const handleProductClick = (product: any) => {
+    const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
+    if (isCustom) {
+      setCustomizingProduct(product);
+    } else {
+      addToCart(product);
+    }
+  };
 
   const modalFilteredProducts = useMemo(() => {
     const products = menuData?.products || [];
@@ -94,7 +221,7 @@ export default function CreateOrderModal({
     }
 
     setIsSubmitting(true);
-    const totalAmount = newOrderCart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+    const totalAmount = newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0);
 
     const orderPayload = {
       restaurantId,
@@ -102,9 +229,11 @@ export default function CreateOrderModal({
       items: newOrderCart.map(item => ({
         productId: item.product.id,
         name: item.product.name,
-        price: item.product.price,
+        price: item.calculatedPrice,
         quantity: item.quantity,
-        notes: item.notes
+        notes: item.notes,
+        selectedOptions: item.selectedOptions,
+        selectedModifiers: item.selectedModifiers
       })),
       specialNotes: newOrderSpecialNotes,
       totalAmount,
@@ -122,7 +251,9 @@ export default function CreateOrderModal({
           items: orderPayload.items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
-            notes: item.notes
+            notes: item.notes,
+            selectedOptions: item.selectedOptions,
+            selectedModifiers: item.selectedModifiers
           })),
           specialNotes: orderPayload.specialNotes,
           status: 'accepted',
@@ -427,14 +558,26 @@ export default function CreateOrderModal({
                 </div>
               ) : (
                 newOrderCart.map((item, idx) => (
-                  <div key={idx} className="bg-[#18181B] border border-white/5 rounded-xl p-3 space-y-2.5 shadow-sm">
+                  <div key={idx} className="bg-[#18181B] border border-white/5 rounded-xl p-3 space-y-2.5 shadow-sm text-right">
                     <div className="flex justify-between items-start gap-2">
                       <div>
                         <h5 className="text-xs font-black text-white leading-snug">{item.product.name}</h5>
-                        <span className="text-[10px] text-staff-accent font-black font-mono">{item.product.price} ج.م</span>
+                        <span className="text-[10px] text-staff-accent font-black font-mono">{item.calculatedPrice} ج.م</span>
+                        
+                        {/* Options & Modifiers display */}
+                        {item.selectedOptions && item.selectedOptions.length > 0 && (
+                          <div className="text-[9px] text-zinc-400 font-bold mt-1">
+                            {item.selectedOptions.map((o: any) => `${o.name}: ${o.value}`).join(' | ')}
+                          </div>
+                        )}
+                        {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+                          <div className="text-[9px] text-zinc-400 font-bold mt-0.5">
+                            الإضافات: {item.selectedModifiers.map((m: any) => m.value).join(', ')}
+                          </div>
+                        )}
                       </div>
                       <button
-                        onClick={() => setNewOrderCart(prev => prev.filter(i => i.product.id !== item.product.id))}
+                        onClick={() => setNewOrderCart(prev => prev.filter((_, i) => i !== idx))}
                         className="w-6 h-6 rounded-md hover:bg-red-500/15 text-zinc-500 hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -446,8 +589,8 @@ export default function CreateOrderModal({
                       <div className="flex items-center bg-[#09090B] border border-white/10 rounded-lg p-0.5">
                         <button
                           onClick={() => {
-                            setNewOrderCart(prev => prev.map(i => 
-                              i.product.id === item.product.id 
+                            setNewOrderCart(prev => prev.map((i, index) => 
+                              index === idx 
                                 ? { ...i, quantity: Math.max(1, i.quantity - 1) } 
                                 : i
                             ));
@@ -459,8 +602,8 @@ export default function CreateOrderModal({
                         <span className="font-mono text-xs font-black w-6 text-center text-white">{item.quantity}</span>
                         <button
                           onClick={() => {
-                            setNewOrderCart(prev => prev.map(i => 
-                              i.product.id === item.product.id 
+                            setNewOrderCart(prev => prev.map((i, index) => 
+                              index === idx 
                                 ? { ...i, quantity: i.quantity + 1 } 
                                 : i
                             ));
@@ -476,8 +619,8 @@ export default function CreateOrderModal({
                         placeholder="إضافة ملاحظة على الوجبة..."
                         value={item.notes}
                         onChange={(e) => {
-                          setNewOrderCart(prev => prev.map(i => 
-                            i.product.id === item.product.id 
+                          setNewOrderCart(prev => prev.map((i, index) => 
+                            index === idx 
                               ? { ...i, notes: e.target.value } 
                               : i
                           ));
@@ -495,7 +638,7 @@ export default function CreateOrderModal({
               <div className="flex justify-between items-center bg-[#09090B] border border-white/10 px-4 py-3 rounded-xl">
                 <span className="text-[10px] font-black text-zinc-400">إجمالي الحساب:</span>
                 <span className="font-mono text-base font-black text-staff-accent">
-                  {newOrderCart.reduce((acc, item) => acc + item.product.price * item.quantity, 0)} ج.م
+                  {newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0)} ج.م
                 </span>
               </div>
 
@@ -573,7 +716,9 @@ export default function CreateOrderModal({
                   </div>
                 ) : (
                   modalFilteredProducts.map((prod: any) => {
-                    const inCart = newOrderCart.find(i => i.product.id === prod.id);
+                    const qtyInCart = newOrderCart
+                      .filter((item) => item.product.id === prod.id)
+                      .reduce((sum, item) => sum + item.quantity, 0);
                     return (
                       <div key={prod.id} className="flex h-full">
                         <motion.div
@@ -612,25 +757,14 @@ export default function CreateOrderModal({
                               {prod.price} <span className="text-[9px] font-bold text-staff-text-muted">ج.م</span>
                             </span>
                             <button
-                              onClick={() => {
-                                if (inCart) {
-                                  setNewOrderCart(prev => prev.map(i => 
-                                    i.product.id === prod.id 
-                                      ? { ...i, quantity: i.quantity + 1 } 
-                                      : i
-                                  ));
-                                } else {
-                                  setNewOrderCart(prev => [...prev, { product: prod, quantity: 1, notes: '' }]);
-                                  toast.success(`أضيف ${prod.name}`);
-                                }
-                              }}
+                              onClick={() => handleProductClick(prod)}
                               className={`text-[9px] font-black px-2.5 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
-                                inCart 
+                                qtyInCart > 0 
                                   ? 'bg-staff-text-primary text-white'
                                   : 'bg-staff-accent-soft hover:bg-staff-accent text-staff-accent hover:text-white border border-staff-accent-glow'
                               }`}
                             >
-                              {inCart ? `مضاف (${inCart.quantity})` : 'إضافة +'}
+                              {qtyInCart > 0 ? `مضاف (${qtyInCart})` : 'إضافة +'}
                             </button>
                           </div>
                         </motion.div>
@@ -643,6 +777,151 @@ export default function CreateOrderModal({
           </div>
         </div>
       </motion.div>
+
+      {/* ===== Product Customization Dialog ===== */}
+      <AnimatePresence>
+        {customizingProduct && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setCustomizingProduct(null)}
+              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 200 }}
+              className="fixed bottom-0 inset-x-0 bg-[#18181B] border-t border-white/10 rounded-t-3xl z-50 p-6 shadow-xl text-right max-w-[430px] mx-auto max-h-[85vh] overflow-y-auto text-white"
+              dir="rtl"
+            >
+              <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
+                <h3 className="font-extrabold text-white text-base">تخصيص الصنف</h3>
+                <button
+                  onClick={() => setCustomizingProduct(null)}
+                  className="p-1 text-zinc-400 hover:text-white"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-4 flex items-center gap-3">
+                {customizingProduct.image?.url && (
+                  <img src={customizingProduct.image.url} alt="" className="w-16 h-16 rounded-xl object-cover border border-white/5" />
+                )}
+                <div>
+                  <h4 className="font-bold text-white text-sm">{customizingProduct.name}</h4>
+                  <p className="text-xs text-zinc-400 mt-1">{customizingProduct.description || 'اختر إضافات وتفاصيل طلبك'}</p>
+                </div>
+              </div>
+
+              {/* Options Groups */}
+              {customizingProduct.options?.map((option: any, groupIdx: number) => {
+                const selected = selectedOptions[option.name];
+                return (
+                  <div key={groupIdx} className="mb-5 bg-[#09090B] p-3 rounded-2xl border border-white/5">
+                    <h5 className="font-bold text-xs text-white mb-3 flex justify-between">
+                      <span>{option.name}</span>
+                      {option.required && (
+                        <span className="text-[10px] bg-staff-accent/15 text-staff-accent px-1.5 py-0.5 rounded font-extrabold">مطلوب</span>
+                      )}
+                    </h5>
+                    <div className="space-y-2">
+                      {option.choices.map((choice: any, choiceIdx: number) => (
+                        <label key={choiceIdx} className="flex justify-between items-center cursor-pointer text-xs p-1.5 rounded-lg hover:bg-white/5 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`option-${option.name}`}
+                              checked={selected?.value === choice.name}
+                              onChange={() => handleSelectOption(option.name, choice.name, choice.priceAdjustment)}
+                              className="text-staff-accent focus:ring-staff-accent h-4 w-4"
+                            />
+                            <span className="text-white font-bold">{choice.name}</span>
+                          </div>
+                          {choice.priceAdjustment > 0 ? (
+                            <span className="text-zinc-400 font-mono">+{choice.priceAdjustment} ج.م</span>
+                          ) : (
+                            <span className="text-zinc-400 font-bold">مشمول</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Modifiers Groups */}
+              {customizingProduct.modifiers?.map((modifier: any, groupIdx: number) => (
+                <div key={groupIdx} className="mb-5 bg-[#09090B] p-3 rounded-2xl border border-white/5">
+                  <h5 className="font-bold text-xs text-white mb-3">{modifier.name}</h5>
+                  <div className="space-y-2">
+                    {modifier.choices.map((choice: any, choiceIdx: number) => {
+                      const isSelected = !!selectedModifiers[choice.name];
+                      return (
+                        <label key={choiceIdx} className="flex justify-between items-center cursor-pointer text-xs p-1.5 rounded-lg hover:bg-white/5 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleModifier(choice.name, choice.price)}
+                              className="text-staff-accent focus:ring-staff-accent h-4 w-4 rounded font-mono"
+                            />
+                            <span className="text-white font-bold">{choice.name}</span>
+                          </div>
+                          {choice.price > 0 && (
+                            <span className="text-zinc-400 font-mono">+{choice.price} ج.م</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Customization Note */}
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-zinc-400 mb-2">ملاحظات الصنف:</label>
+                <input
+                  type="text"
+                  placeholder="مثال: زيادة صوص، بدون ثوم..."
+                  value={customizingNotes}
+                  onChange={(e) => setCustomizingNotes(e.target.value)}
+                  className="w-full bg-[#09090B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-colors"
+                />
+              </div>
+
+              {/* Bottom Customization Add Panel */}
+              <div className="flex items-center gap-4 border-t border-white/5 pt-4">
+                <div className="flex items-center bg-[#09090B] border border-white/10 rounded-xl p-1">
+                  <button
+                    onClick={() => setCustomizingQty(prev => Math.max(1, prev - 1))}
+                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="font-mono text-sm font-black w-8 text-center text-white">{customizingQty}</span>
+                  <button
+                    onClick={() => setCustomizingQty(prev => prev + 1)}
+                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleConfirmCustomization}
+                  className="flex-1 bg-staff-accent text-white font-black py-3 rounded-xl hover:opacity-95 transition-opacity text-xs"
+                >
+                  إضافة {customizingQty} للطلب ({calculatedCustomTotal * customizingQty} ج.م)
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>,
     document.body
   );
