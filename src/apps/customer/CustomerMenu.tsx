@@ -94,6 +94,7 @@ export default function CustomerMenu() {
   const restaurant = menuData?.restaurant;
   const categories = menuData?.categories || [];
   const products = menuData?.products || [];
+  const isReadOnly = !tableNumber && restaurant?.settings?.isDeliveryEnabled === false;
 
   useEffect(() => {
     if (menuData) {
@@ -136,7 +137,7 @@ export default function CustomerMenu() {
     
     socket.on('menu_updated', () => {
       console.log('Menu updated via socket, invalidating queries...');
-      queryClient.invalidateQueries({ queryKey: ['menu', restaurantSlug] });
+      queryClient.invalidateQueries({ queryKey: ['customer-menu', restaurantSlug] });
     });
 
     socket.on('staff_status', (data: { isStaffOnline: boolean }) => {
@@ -437,6 +438,11 @@ export default function CustomerMenu() {
             <UtensilsCrossed className="w-3 h-3" />
             <span>طاولة {tableNumber}</span>
           </div>
+        ) : isReadOnly ? (
+          <div className="table-badge bg-zinc-500/10 text-zinc-400 border border-zinc-500/25">
+            <ShoppingBag className="w-3 h-3" />
+            <span>منيو رقمي للعرض فقط</span>
+          </div>
         ) : (
           <div className="table-badge bg-rose-500/10 text-rose-400 border border-rose-500/25">
             <ShoppingBag className="w-3 h-3" />
@@ -448,7 +454,7 @@ export default function CustomerMenu() {
       </div>
 
       {/* ===== Offline Notice ===== */}
-      {!isStaffOnline && (
+      {!isStaffOnline && !isReadOnly && (
         <div className="mx-4 mt-4 relative z-10 max-w-[428px] md:mx-auto bg-amber-50 border border-amber-200/60 rounded-2xl p-4 space-y-3 font-body text-right shadow-sm">
           <div className="flex items-center gap-2 text-amber-600">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
@@ -551,8 +557,10 @@ export default function CustomerMenu() {
               return (
                 <div 
                   key={prod.id}
-                  onClick={() => addToCart(prod)}
-                  className={`flex-shrink-0 w-36 bg-customer-bg-elevated border rounded-2xl p-3 flex flex-col justify-between shadow-customer-card relative overflow-hidden cursor-pointer transition-all ${
+                  onClick={() => !isReadOnly && addToCart(prod)}
+                  className={`flex-shrink-0 w-36 bg-customer-bg-elevated border rounded-2xl p-3 flex flex-col justify-between shadow-customer-card relative overflow-hidden transition-all ${
+                    isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                  } ${
                     inCartItem 
                       ? 'border-customer-accent ring-1 ring-customer-accent/20' 
                       : 'border-customer-border hover:border-customer-accent/40'
@@ -571,30 +579,32 @@ export default function CustomerMenu() {
                     <span className="text-[11px] font-bold text-customer-accent block mt-0.5">{prod.price} ج.م</span>
                   </div>
                   
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      addToCart(prod);
-                    }}
-                    className={`w-full py-1.5 rounded-xl border text-[10px] font-bold transition-all flex items-center justify-center gap-1 ${
-                      inCartItem
-                        ? 'bg-customer-accent text-customer-bg-base border-customer-accent'
-                        : 'bg-customer-accent/10 border-customer-accent/20 text-customer-accent hover:bg-customer-accent hover:text-customer-bg-base'
-                    }`}
-                  >
-                    {inCartItem ? (
-                      <>
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>تمت الإضافة</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-3 h-3" />
-                        <span>إضافة</span>
-                      </>
-                    )}
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart(prod);
+                      }}
+                      className={`w-full py-1.5 rounded-xl border text-[10px] font-bold transition-all flex items-center justify-center gap-1 ${
+                        inCartItem
+                          ? 'bg-customer-accent text-customer-bg-base border-customer-accent'
+                          : 'bg-customer-accent/10 border-customer-accent/20 text-customer-accent hover:bg-customer-accent hover:text-customer-bg-base'
+                      }`}
+                    >
+                      {inCartItem ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>تمت الإضافة</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3 h-3" />
+                          <span>إضافة</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -676,8 +686,8 @@ export default function CustomerMenu() {
                 initial="hidden"
                 animate="visible"
                 custom={idx}
-                onClick={() => isAvailable && handleProductClick(product)}
-                className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''}`}
+                onClick={() => !isReadOnly && isAvailable && handleProductClick(product)}
+                className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 {/* Image on the Right (First child in RTL) */}
                 {product.image?.url ? (
@@ -707,29 +717,31 @@ export default function CustomerMenu() {
                     </span>
 
                     {/* Quantity Adjustment / Add button */}
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      {inCartItem ? (
-                        <div className="flex items-center gap-2 bg-customer-bg-overlay rounded-full p-0.5 border border-customer-border">
-                          <button onClick={() => updateQuantity(inCartIndex, -1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="text-xs font-bold text-customer-text-primary min-w-[12px] text-center">
-                            {inCartItem.quantity}
-                          </span>
-                          <button onClick={() => updateQuantity(inCartIndex, 1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <motion.div
-                          whileTap={addButtonTap}
-                          onClick={() => handleProductClick(product)}
-                          className="add-btn"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </motion.div>
-                      )}
-                    </div>
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {inCartItem ? (
+                          <div className="flex items-center gap-2 bg-customer-bg-overlay rounded-full p-0.5 border border-customer-border">
+                            <button onClick={() => updateQuantity(inCartIndex, -1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="text-xs font-bold text-customer-text-primary min-w-[12px] text-center">
+                              {inCartItem.quantity}
+                            </span>
+                            <button onClick={() => updateQuantity(inCartIndex, 1)} className="p-1 text-customer-text-secondary hover:text-customer-text-primary transition-colors">
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <motion.div
+                            whileTap={addButtonTap}
+                            onClick={() => handleProductClick(product)}
+                            className="add-btn"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </motion.div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -744,7 +756,7 @@ export default function CustomerMenu() {
 
       {/* ===== Floating Cart FAB ===== */}
       <AnimatePresence>
-        {cart.length > 0 && !isCartOpen && (
+        {cart.length > 0 && !isCartOpen && !isReadOnly && (
           <CartFAB
             cartCount={cartCount}
             cartTotal={cartTotal}

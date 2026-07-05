@@ -28,7 +28,24 @@ const generateHeatmapMatrix = (peakHours: any[]) => {
 export default function AnalyticsTab() {
   const { restaurant } = useAuthStore();
   const plan = restaurant?.subscription?.plan || 'trial';
-  const isLocked = plan !== 'pro';
+
+  const { data: systemSettings } = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: async () => {
+      const response = await api.get('/system-settings');
+      return response.data.data;
+    }
+  });
+
+  const isFeatureAllowed = () => {
+    if (!systemSettings) {
+      return plan === 'pro';
+    }
+    const allowedPlans = systemSettings.features?.analytics || ['pro'];
+    return allowedPlans.includes(plan);
+  };
+
+  const isLocked = !isFeatureAllowed();
 
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [densityViewMode, setDensityViewMode] = useState<'weekly' | 'daily'>('weekly');

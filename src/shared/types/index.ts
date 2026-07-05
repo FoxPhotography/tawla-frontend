@@ -19,6 +19,7 @@ export interface Restaurant {
     timezone: string;
     menuTitle?: string;
     menuDescription?: string;
+    isDeliveryEnabled?: boolean;
   };
   receiptSettings?: {
     showLogo: boolean;
@@ -153,4 +154,32 @@ export interface SerialKey {
   usedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SystemSettings {
+  id?: string;
+  pricing: {
+    basic: number;
+    pro: number;
+  };
+  offer: {
+    active: boolean;
+    title: string;
+    basicPrice: number;
+    proPrice: number;
+    endsAt?: string;
+  };
+  limits: {
+    trial: number;
+    basic: number;
+    pro: number;
+    tables?: { trial: number; basic: number; pro: number };
+    products?: { trial: number; basic: number; pro: number };
+    categories?: { trial: number; basic: number; pro: number };
+  };
+  features?: {
+    analytics?: ('trial' | 'basic' | 'pro')[];
+    audit?: ('trial' | 'basic' | 'pro')[];
+    delivery?: ('trial' | 'basic' | 'pro')[];
+  };
 }

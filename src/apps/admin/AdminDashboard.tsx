@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList
 } from 'lucide-react';
 
 import { useAuthStore } from '../../shared/store/authStore';
+import { api } from '../../shared/services/api';
+import { socket } from '../../shared/services/socket.js';
 import logoImg from '../../assets/newlogo.svg';
 import CategoriesTab from './components/CategoriesTab.js';
 import ProductsTab from './components/ProductsTab.js';
@@ -20,6 +23,7 @@ import AuditLogsTab from './components/AuditLogsTab.js';
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, restaurant, logout } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit'>('categories');
 
@@ -30,16 +34,49 @@ export default function AdminDashboard() {
 
   const plan = restaurant?.subscription?.plan || 'trial';
 
+  const { data: systemSettings } = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: async () => {
+      const response = await api.get('/system-settings');
+      return response.data.data;
+    }
+  });
+
+  const isFeatureAllowed = (featureName: 'analytics' | 'audit' | 'delivery') => {
+    if (!systemSettings) {
+      return plan === 'pro';
+    }
+    const allowedPlans = systemSettings.features?.[featureName] || ['pro'];
+    return allowedPlans.includes(plan);
+  };
+
+  useEffect(() => {
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    const handleSettingsUpdate = () => {
+      console.log('System settings updated via socket, invalidating queries in AdminDashboard...');
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+    };
+
+    socket.on('system_settings_updated', handleSettingsUpdate);
+
+    return () => {
+      socket.off('system_settings_updated', handleSettingsUpdate);
+    };
+  }, [queryClient]);
+
   const navItems = [
     { id: 'categories', label: 'التصنيفات', icon: FolderPlus, premium: false },
     { id: 'products', label: 'المنتجات', icon: ShoppingBag, premium: false },
     { id: 'tables', label: 'الطاولات & QR', icon: MapPin, premium: false },
     { id: 'orders', label: 'أرشيف الطلبات', icon: ClipboardList, premium: false },
-    { id: 'analytics', label: 'التقارير والتحليلات', icon: BarChart3, premium: true },
-    { id: 'audit', label: 'سجلات العمليات', icon: ClipboardList, premium: true },
+    { id: 'analytics', label: 'التقارير والتحليلات', icon: BarChart3, premium: !isFeatureAllowed('analytics') },
+    { id: 'audit', label: 'سجلات العمليات', icon: ClipboardList, premium: !isFeatureAllowed('audit') },
     { id: 'subscription', label: 'الاشتراك والنظام', icon: Crown, premium: false },
     { id: 'staff', label: 'حسابات الموظفين', icon: Users, premium: false },
-  ] as const;
+  ];
 
   return (
     <div className="min-h-screen bg-[#09090B] flex flex-col md:flex-row text-right" dir="rtl">

@@ -37,6 +37,11 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   const [limitBasicCategories, setLimitBasicCategories] = useState(15);
   const [limitProCategories, setLimitProCategories] = useState(9999);
 
+  // Features permissions states
+  const [featureAnalytics, setFeatureAnalytics] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
+  const [featureAudit, setFeatureAudit] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
+  const [featureDelivery, setFeatureDelivery] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
+
   // Sync settings
   useEffect(() => {
     if (systemSettings) {
@@ -74,6 +79,16 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
         setLimitTrialCategories(systemSettings.limits.categories?.trial ?? 5);
         setLimitBasicCategories(systemSettings.limits.categories?.basic ?? 15);
         setLimitProCategories(systemSettings.limits.categories?.pro ?? 9999);
+      }
+
+      if (systemSettings.features) {
+        setFeatureAnalytics(systemSettings.features.analytics || ['pro']);
+        setFeatureAudit(systemSettings.features.audit || ['pro']);
+        setFeatureDelivery(systemSettings.features.delivery || ['pro']);
+      } else {
+        setFeatureAnalytics(['pro']);
+        setFeatureAudit(['pro']);
+        setFeatureDelivery(['pro']);
       }
     }
   }, [systemSettings]);
@@ -113,6 +128,11 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
           trial: Number(limitTrialTables),
           basic: Number(limitBasicTables),
           pro: Number(limitProTables),
+        },
+        features: {
+          analytics: featureAnalytics,
+          audit: featureAudit,
+          delivery: featureDelivery,
         },
       };
       return api.put('/super-admin/system-settings', payload);
@@ -390,6 +410,102 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Permissions / Plan features configuration section */}
+        <div className="border-t border-admin-border pt-5 space-y-4">
+          <div>
+            <h3 className="text-sm font-extrabold text-admin-accent flex items-center gap-1.5">
+              <Sliders className="w-5 h-5" />
+              <span>صلاحيات ومميزات الباقات (Plan Features & Permissions)</span>
+            </h3>
+            <p className="text-xs text-admin-text-muted mt-0.5 font-bold">
+              حدد أي فئات اشتراك (Trial, Basic, Pro) مسموح لها بالوصول إلى الميزات المتقدمة التالية.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 bg-admin-bg-base border border-admin-border rounded-xl p-5">
+            {/* Feature: Analytics */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-admin-border/50">
+              <div>
+                <span className="text-xs font-black text-admin-text-primary block">التقارير والتحليلات المتقدمة (Analytics Dashboard)</span>
+                <span className="text-[10px] text-admin-text-secondary font-medium">تتيح للمطعم رؤية رسوم المبيعات البيانية والمنتجات الأكثر طلباً وساعات الذروة.</span>
+              </div>
+              <div className="flex items-center gap-4">
+                {['trial', 'basic', 'pro'].map((p) => (
+                  <label key={p} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-admin-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={featureAnalytics.includes(p as any)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFeatureAnalytics([...featureAnalytics, p as any]);
+                        } else {
+                          setFeatureAnalytics(featureAnalytics.filter(x => x !== p));
+                        }
+                      }}
+                      className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"
+                    />
+                    <span className="uppercase">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Feature: Audit Logs */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-admin-border/50">
+              <div>
+                <span className="text-xs font-black text-admin-text-primary block">سجلات العمليات والرقابة (Audit Logs)</span>
+                <span className="text-[10px] text-admin-text-secondary font-medium">سجل تفصيلي بكافة التعديلات الإدارية لمنع التلاعب والسرقة الداخلية وتتبع الكاشير.</span>
+              </div>
+              <div className="flex items-center gap-4">
+                {['trial', 'basic', 'pro'].map((p) => (
+                  <label key={p} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-admin-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={featureAudit.includes(p as any)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFeatureAudit([...featureAudit, p as any]);
+                        } else {
+                          setFeatureAudit(featureAudit.filter(x => x !== p));
+                        }
+                      }}
+                      className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"
+                    />
+                    <span className="uppercase">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Feature: Delivery */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-black text-admin-text-primary block">تلقي طلبات التوصيل / الدليفري الخارجية (Delivery Mode)</span>
+                <span className="text-[10px] text-admin-text-secondary font-medium">تتيح للمطعم استقبال طلبات دليفري من المينيو العام وتعديل خيارات التوصيل من الإعدادات.</span>
+              </div>
+              <div className="flex items-center gap-4">
+                {['trial', 'basic', 'pro'].map((p) => (
+                  <label key={p} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-admin-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={featureDelivery.includes(p as any)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFeatureDelivery([...featureDelivery, p as any]);
+                        } else {
+                          setFeatureDelivery(featureDelivery.filter(x => x !== p));
+                        }
+                      }}
+                      className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"
+                    />
+                    <span className="uppercase">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Standout Save settings button */}

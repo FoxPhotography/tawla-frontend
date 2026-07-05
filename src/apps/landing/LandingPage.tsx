@@ -32,6 +32,11 @@ interface SystemSettings {
     products?: { trial: number; basic: number; pro: number };
     categories?: { trial: number; basic: number; pro: number };
   };
+  features?: {
+    analytics?: ('trial' | 'basic' | 'pro')[];
+    audit?: ('trial' | 'basic' | 'pro')[];
+    delivery?: ('trial' | 'basic' | 'pro')[];
+  };
 }
 
 // Custom Hook for scroll reveal
@@ -272,6 +277,9 @@ export default function LandingPage() {
     `دعم حتى ${basicTablesLimit} طاولات ذكية`,
     `إضافة حتى ${basicProductsLimit} منتجات بالمنيو`,
     `تقسيم المنيو حتى ${basicCategoriesLimit} أقسام/تصنيفات`,
+    ...(settings.features?.delivery?.includes('basic') ? ["تلقي طلبات التوصيل / الدليفري الخارجية"] : []),
+    ...(settings.features?.analytics?.includes('basic') ? ["تقارير مبيعات متقدمة ومؤشرات أداء"] : []),
+    ...(settings.features?.audit?.includes('basic') ? ["سجلات العمليات لتتبع الكاشير والمشرفين"] : []),
   ];
 
   const pricingFeaturesPro = [
@@ -281,6 +289,9 @@ export default function LandingPage() {
     proCategoriesLimit >= 9999 ? "تقسيم أقسام وتصنيفات غير محدود" : `تقسيم المنيو حتى ${proCategoriesLimit} قسم/تصنيف`,
     "تصميم وضبط إيصالات الدفع ولوجو المطعم",
     "تفعيل الضرائب ورسوم الخدمة للفواتير",
+    ...(settings.features?.delivery?.includes('pro') && !settings.features?.delivery?.includes('basic') ? ["تلقي طلبات التوصيل / الدليفري الخارجية"] : []),
+    ...(settings.features?.analytics?.includes('pro') && !settings.features?.analytics?.includes('basic') ? ["تقارير مبيعات متقدمة ومؤشرات أداء"] : []),
+    ...(settings.features?.audit?.includes('pro') && !settings.features?.audit?.includes('basic') ? ["سجلات العمليات لتتبع الكاشير والمشرفين"] : []),
   ];
 
   return (

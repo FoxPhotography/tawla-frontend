@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Crown, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,6 +13,33 @@ export default function SubscriptionTab() {
   const [serialKey, setSerialKey] = useState('');
   const [menuTitle, setMenuTitle] = useState(restaurant?.settings?.menuTitle || '');
   const [menuDescription, setMenuDescription] = useState(restaurant?.settings?.menuDescription || '');
+  const [isDeliveryEnabled, setIsDeliveryEnabled] = useState(restaurant?.settings?.isDeliveryEnabled !== false);
+
+  const plan = restaurant?.subscription?.plan || 'trial';
+
+  const { data: systemSettings } = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: async () => {
+      const response = await api.get('/system-settings');
+      return response.data.data;
+    }
+  });
+
+  const isFeatureAllowed = (featureName: 'analytics' | 'audit' | 'delivery') => {
+    if (!systemSettings) {
+      return plan === 'pro';
+    }
+    const allowedPlans = systemSettings.features?.[featureName] || ['pro'];
+    return allowedPlans.includes(plan);
+  };
+
+  useEffect(() => {
+    if (restaurant) {
+      setMenuTitle(restaurant.settings?.menuTitle || '');
+      setMenuDescription(restaurant.settings?.menuDescription || '');
+      setIsDeliveryEnabled(restaurant.settings?.isDeliveryEnabled !== false);
+    }
+  }, [restaurant]);
 
   const [receiptPhone, setReceiptPhone] = useState(restaurant?.receiptSettings?.phone || '');
   const [receiptWhatsapp, setReceiptWhatsapp] = useState(restaurant?.receiptSettings?.whatsapp || '');
@@ -80,7 +107,7 @@ export default function SubscriptionTab() {
 
   const handleSaveMenuSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    saveMenuSettingsMutation.mutate({ menuTitle, menuDescription });
+    saveMenuSettingsMutation.mutate({ menuTitle, menuDescription, isDeliveryEnabled });
   };
 
   const handleSaveReceiptSettings = (e: React.FormEvent) => {
@@ -221,6 +248,29 @@ export default function SubscriptionTab() {
               className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors resize-none"
             />
             <p className="text-[10px] text-admin-text-muted">سيظهر هذا الوصف أسفل عنوان المطعم مباشرة كرسالة ترحيبية للعملاء.</p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between border-t border-admin-border/50 pt-4">
+              <div>
+                <label className="text-xs text-admin-text-secondary font-bold block mb-1">تفعيل خدمة التوصيل (Delivery)</label>
+                <p className="text-[10px] text-admin-text-muted">إذا قمت بإلغائها، فلن يتمكن العملاء من تقديم طلبات توصيل خارجية عبر المينيو العام، وسيكون المينيو للعرض فقط.</p>
+              </div>
+              
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  disabled={!isFeatureAllowed('delivery')}
+                  checked={isDeliveryEnabled && isFeatureAllowed('delivery')}
+                  onChange={(e) => setIsDeliveryEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className={`w-11 h-6 bg-zinc-200 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-admin-accent cursor-pointer ${!isFeatureAllowed('delivery') ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
+                {!isFeatureAllowed('delivery') && (
+                  <span className="mr-2 text-[8px] bg-admin-accent/10 text-admin-accent px-1.5 py-0.5 rounded font-black uppercase">PRO</span>
+                )}
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end pt-2">
