@@ -250,10 +250,10 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
                         <button
                           disabled={isStatusPending}
                           onClick={() => onUpdateStatus(order.id, 'accepted')}
-                          className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-black text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 border border-zinc-200 disabled:opacity-50 cursor-pointer"
+                          className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-black text-xs py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 border border-zinc-200 disabled:opacity-50 cursor-pointer"
                         >
-                          <Check className="w-4 h-4 text-emerald-500" />
                           <span>قبول الطلب</span>
+                          <Check className="w-4 h-4 text-emerald-500" />
                         </button>
                       )}
 
@@ -261,10 +261,10 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
                         <button
                           disabled={isStatusPending}
                           onClick={() => onUpdateStatus(order.id, 'preparing')}
-                          className="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-black text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                          className="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-black text-xs py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                         >
-                          <CookingPot className="w-4 h-4 animate-pulse" />
                           <span>بدء التحضير</span>
+                          <CookingPot className="w-4 h-4 animate-pulse" />
                         </button>
                       )}
 
@@ -272,10 +272,10 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
                         <button
                           disabled={isStatusPending}
                           onClick={() => onUpdateStatus(order.id, 'ready')}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                         >
-                          <BellRing className="w-4 h-4" />
                           <span>جاهز للتسليم</span>
+                          <BellRing className="w-4 h-4" />
                         </button>
                       )}
                       
@@ -285,7 +285,7 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
                           toast.success('تم إرسال أمر الطباعة لبون المطبخ');
                           console.log('Simulated printing split order ticket for order:', order.id);
                         }}
-                        className="p-2.5 bg-white hover:bg-zinc-50 text-zinc-500 border border-zinc-200 hover:text-zinc-800 rounded-xl transition-colors cursor-pointer"
+                        className="p-2.5 bg-white hover:bg-zinc-50 text-zinc-500 border border-zinc-200 hover:text-zinc-800 rounded-lg transition-colors cursor-pointer"
                         title="طباعة بون المطبخ"
                       >
                         <Printer className="w-4 h-4" />

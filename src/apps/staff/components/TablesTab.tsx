@@ -170,7 +170,7 @@ export default function TablesTab({
                     <motion.button
                       onClick={() => onPrintReceipt(activeOrder)}
                       whileTap={{ scale: 0.92 }}
-                      className="p-3 rounded-xl border border-staff-border bg-staff-bg-panel text-staff-text-primary hover:bg-staff-text-primary hover:text-white hover:border-staff-text-primary transition-all shadow-sm flex items-center justify-center flex-shrink-0"
+                      className="p-3 rounded-lg border border-staff-border bg-staff-bg-panel text-staff-text-primary hover:bg-staff-text-primary hover:text-white hover:border-staff-text-primary transition-all shadow-sm flex items-center justify-center flex-shrink-0"
                       title="طباعة الفاتورة"
                     >
                       <Printer className="w-4 h-4" />
@@ -180,10 +180,10 @@ export default function TablesTab({
                     <motion.button
                       onClick={() => onStartOrderForTable(table.number)}
                       whileTap={{ scale: 0.95 }}
-                      className="flex-1 bg-staff-accent-soft hover:bg-staff-accent text-staff-accent hover:text-white border border-staff-accent-glow hover:border-staff-accent text-xs font-black py-2.5 px-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 font-body"
+                      className="flex-1 bg-staff-accent-soft hover:bg-staff-accent text-staff-accent hover:text-white border border-staff-accent-glow hover:border-staff-accent text-xs font-black py-2.5 px-4 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 font-body"
                     >
-                      <PlusCircle className="w-4 h-4" />
                       <span>تسجيل طلب</span>
+                      <PlusCircle className="w-4 h-4" />
                     </motion.button>
 
                     {/* Empty table checkout button */}
@@ -191,7 +191,7 @@ export default function TablesTab({
                       onClick={() => setCheckoutTable(table)}
                       disabled={isEmptyTablePending}
                       whileTap={{ scale: 0.92 }}
-                      className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-sm flex items-center justify-center flex-shrink-0 cursor-pointer animate-pulse"
+                      className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-sm flex items-center justify-center flex-shrink-0 cursor-pointer animate-pulse"
                       title="تسوية الحساب وتفريغ الطاولة"
                     >
                       <CheckCheck className="w-4 h-4" />
@@ -201,10 +201,10 @@ export default function TablesTab({
                   <motion.button
                     onClick={() => onStartOrderForTable(table.number)}
                     whileTap={{ scale: 0.96 }}
-                    className="w-full bg-staff-accent hover:bg-staff-accent/90 text-white font-black py-3 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 cursor-pointer border border-staff-accent-glow font-body"
+                    className="w-full bg-staff-accent hover:bg-staff-accent/90 text-white font-black py-3 rounded-lg shadow-sm text-xs flex items-center justify-center gap-2 cursor-pointer border border-staff-accent-glow font-body"
                   >
-                    <PlusCircle className="w-4 h-4" />
                     <span>فتح طلب جديد</span>
+                    <PlusCircle className="w-4 h-4" />
                   </motion.button>
                 )}
               </div>
@@ -301,7 +301,7 @@ export default function TablesTab({
                 <div className="p-5 border-t border-white/5 bg-[#09090B] flex gap-3">
                   <button
                     onClick={() => setCheckoutTable(null)}
-                    className="flex-1 bg-[#161618] border border-white/10 hover:bg-white/5 text-zinc-300 hover:text-white font-black py-3 rounded-xl transition-all text-xs cursor-pointer font-body"
+                    className="flex-1 bg-[#161618] border border-white/10 hover:bg-white/5 text-zinc-300 hover:text-white font-black py-3 rounded-lg transition-all text-xs cursor-pointer font-body"
                   >
                     إلغاء
                   </button>
@@ -314,7 +314,7 @@ export default function TablesTab({
                       setCheckoutTable(null);
                     }}
                     disabled={isEmptyTablePending}
-                    className="flex-1 bg-staff-accent hover:bg-staff-accent/90 text-white font-black py-3 rounded-xl transition-all text-xs cursor-pointer font-body border border-staff-accent shadow-lg shadow-staff-accent/10"
+                    className="flex-1 bg-staff-accent hover:bg-staff-accent/90 text-white font-black py-3 rounded-lg transition-all text-xs cursor-pointer font-body border border-staff-accent shadow-lg shadow-staff-accent/10"
                   >
                     {isEmptyTablePending ? 'جاري الإنهاء...' : 'تأكيد الدفع وإتاحة الطاولة'}
                   </button>

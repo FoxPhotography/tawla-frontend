@@ -336,7 +336,7 @@ export default function OrdersTab({
                       <motion.button
                         onClick={() => onPrintReceipt(order)}
                         whileTap={{ scale: 0.92 }}
-                        className="p-3 rounded-xl border border-staff-border bg-staff-bg-panel text-staff-text-primary hover:bg-staff-text-primary hover:text-white hover:border-staff-text-primary transition-all shadow-sm cursor-pointer"
+                        className="p-3 rounded-lg border border-staff-border bg-staff-bg-panel text-staff-text-primary hover:bg-staff-text-primary hover:text-white hover:border-staff-text-primary transition-all shadow-sm cursor-pointer"
                         title="طباعة الفاتورة"
                       >
                         <Printer className="w-4 h-4" />
@@ -348,7 +348,7 @@ export default function OrdersTab({
                             onClick={() => setCancelOrderId(order.id)}
                             whileTap={{ scale: 0.92 }}
                             disabled={isStatusPending}
-                            className="p-3 rounded-xl border border-staff-border bg-staff-bg-panel text-staff-text-secondary hover:text-red-500 hover:border-red-500/20 transition-all shadow-sm cursor-pointer"
+                            className="p-3 rounded-lg border border-staff-border bg-staff-bg-panel text-staff-text-secondary hover:text-red-500 hover:border-red-500/20 transition-all shadow-sm cursor-pointer"
                             title="إلغاء الطلب"
                           >
                             <XCircle className="w-4 h-4" />
@@ -363,10 +363,10 @@ export default function OrdersTab({
                               }}
                               whileTap={{ scale: 0.95 }}
                               disabled={isStatusPending}
-                              className={`flex items-center gap-1.5 py-2 px-4.5 rounded-xl text-xs font-black transition-all shadow-sm cursor-pointer ${action.actionClass}`}
+                              className={`flex items-center gap-1.5 py-2 px-5 rounded-lg text-xs font-black transition-all shadow-sm cursor-pointer ${action.actionClass}`}
                             >
-                              {action.icon}
                               <span>{action.label}</span>
+                              {action.icon}
                             </motion.button>
                           )}
                           {action && order.status !== 'ready' && (
@@ -379,17 +379,17 @@ export default function OrdersTab({
                               }}
                               whileTap={{ scale: 0.95 }}
                               disabled={isStatusPending}
-                              className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/40 flex items-center gap-1 py-2 px-3.5 rounded-xl text-xs font-black transition-all shadow-sm cursor-pointer"
+                              className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/40 flex items-center gap-1 py-2 px-4 rounded-lg text-xs font-black transition-all shadow-sm cursor-pointer"
                               title="إنهاء وتسليم الطلب فوراً"
                             >
-                              <CheckCheck className="w-4 h-4" />
                               <span>تم</span>
+                              <CheckCheck className="w-4 h-4" />
                             </motion.button>
                           )}
                         </>
                       ) : (
                         <div className="flex gap-2 items-center">
-                          <span className={`text-[10px] font-black px-3.5 py-2 rounded-xl border ${
+                          <span className={`text-[10px] font-black px-4 py-2.5 rounded-lg border ${
                             order.status === 'delivered' 
                               ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/15' 
                               : 'bg-red-500/10 text-red-500 border-red-500/15'
@@ -409,7 +409,7 @@ export default function OrdersTab({
                                 })));
                               }}
                               whileTap={{ scale: 0.92 }}
-                              className="px-3.5 py-2 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-all text-[10px] font-black flex items-center gap-1 cursor-pointer"
+                              className="px-4 py-2 rounded-lg border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-all text-[10px] font-black flex items-center gap-1 cursor-pointer"
                               title="تعديل المرتجع والأصناف"
                             >
                               <XCircle className="w-3.5 h-3.5" />
@@ -449,7 +449,7 @@ export default function OrdersTab({
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setCancelOrderId(null)}
-                  className="flex-1 bg-[#161618] border border-white/10 hover:bg-white/5 text-zinc-300 hover:text-white font-black py-3 rounded-xl transition-all text-xs cursor-pointer font-body"
+                  className="flex-1 bg-[#161618] border border-white/10 hover:bg-white/5 text-zinc-300 hover:text-white font-black py-3 rounded-lg transition-all text-xs cursor-pointer font-body"
                 >
                   تراجع
                 </button>
@@ -459,7 +459,7 @@ export default function OrdersTab({
                     setCancelOrderId(null);
                   }}
                   disabled={isStatusPending}
-                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-black py-3 rounded-xl transition-all text-xs cursor-pointer font-body border border-red-700 shadow-lg shadow-red-500/10"
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-black py-3 rounded-lg transition-all text-xs cursor-pointer font-body border border-red-700 shadow-lg shadow-red-500/10"
                 >
                   {isStatusPending ? 'جاري الإلغاء...' : 'تأكيد الإلغاء'}
                 </button>
@@ -550,7 +550,7 @@ export default function OrdersTab({
                       setCancelOrderId(returnOrder.id);
                       setReturnOrder(null);
                     }}
-                    className="flex-1 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-3 rounded-xl transition-all text-xs cursor-pointer border border-red-500/20"
+                    className="flex-1 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-3 rounded-lg transition-all text-xs cursor-pointer border border-red-500/20"
                   >
                     إلغاء الطلب بالكامل
                   </button>
@@ -561,7 +561,7 @@ export default function OrdersTab({
                       setReturnOrder(null);
                     }}
                     disabled={isUpdatePending}
-                    className="flex-1 bg-staff-accent hover:bg-staff-accent/90 text-white font-black py-3 rounded-xl transition-all text-xs cursor-pointer border border-staff-accent shadow-lg shadow-staff-accent/10 font-body"
+                    className="flex-1 bg-staff-accent hover:bg-staff-accent/90 text-white font-black py-3 rounded-lg transition-all text-xs cursor-pointer border border-staff-accent shadow-lg shadow-staff-accent/10 font-body"
                   >
                     {isUpdatePending ? 'جاري الحفظ...' : 'تأكيد وحفظ التغيير'}
                   </button>
