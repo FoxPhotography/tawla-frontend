@@ -48,6 +48,22 @@ export default function CustomerMenu() {
 
   const queryClient = useQueryClient();
 
+  // Fetch Menu
+  const { data: menuData, isLoading, error } = useQuery({
+    queryKey: ['menu', restaurantSlug],
+    queryFn: async () => {
+      const response = await api.get(`/menu/${restaurantSlug}`);
+      return response.data.data as { restaurant: Restaurant; categories: Category[]; products: Product[]; isStaffOnline?: boolean };
+    },
+    enabled: !!restaurantSlug,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const restaurant = menuData?.restaurant;
+  const categories = menuData?.categories || [];
+  const products = menuData?.products || [];
+  const isReadOnly = !tableNumber && restaurant?.settings?.isDeliveryEnabled === false;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -84,6 +100,9 @@ export default function CustomerMenu() {
     try {
       const res = await api.get(`/menu/${restaurantSlug}/loyalty?phone=${loyaltyPhone.trim()}`);
       setLoyaltyQueryResult(res.data.data);
+      if (restaurant?.id) {
+        socket.emit('join_customer_loyalty', restaurant.id, loyaltyPhone.trim());
+      }
       toast.success('تم جلب تقدم المكافآت بنجاح!');
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'الرقم غير مسجل أو لم يكمل أي طلبات بعد.');
@@ -91,6 +110,18 @@ export default function CustomerMenu() {
       setIsCheckingLoyalty(false);
     }
   };
+
+  // Join customer loyalty room when restaurant or loyaltyPhone changes
+  useEffect(() => {
+    if (!restaurant?.id || !loyaltyPhone || loyaltyPhone.trim().length !== 11) return;
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    console.log('Joining customer loyalty socket room for phone:', loyaltyPhone);
+    socket.emit('join_customer_loyalty', restaurant.id, loyaltyPhone.trim());
+  }, [restaurant?.id, loyaltyPhone]);
 
   // Cache restaurant details for navigation back from order tracking
   useEffect(() => {
@@ -100,21 +131,7 @@ export default function CustomerMenu() {
     }
   }, [restaurantSlug, tableNumber]);
 
-  // Fetch Menu
-  const { data: menuData, isLoading, error } = useQuery({
-    queryKey: ['menu', restaurantSlug],
-    queryFn: async () => {
-      const response = await api.get(`/menu/${restaurantSlug}`);
-      return response.data.data as { restaurant: Restaurant; categories: Category[]; products: Product[]; isStaffOnline?: boolean };
-    },
-    enabled: !!restaurantSlug,
-    staleTime: 5 * 60 * 1000,
-  });
 
-  const restaurant = menuData?.restaurant;
-  const categories = menuData?.categories || [];
-  const products = menuData?.products || [];
-  const isReadOnly = !tableNumber && restaurant?.settings?.isDeliveryEnabled === false;
 
   useEffect(() => {
     if (menuData) {
@@ -164,10 +181,16 @@ export default function CustomerMenu() {
       console.log('Staff status updated via socket:', data.isStaffOnline);
       setIsStaffOnline(data.isStaffOnline);
     });
+
+    socket.on('customer_updated', (data: { loyalty: any }) => {
+      console.log('Customer loyalty updated via socket:', data.loyalty);
+      setLoyaltyQueryResult(data.loyalty);
+    });
     
     return () => {
       socket.off('menu_updated');
       socket.off('staff_status');
+      socket.off('customer_updated');
     };
   }, [restaurant?.id, restaurantSlug, queryClient]);
 
