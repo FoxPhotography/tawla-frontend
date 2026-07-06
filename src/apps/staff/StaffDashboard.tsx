@@ -24,7 +24,7 @@ import KDSTab from './components/KDSTab';
 export default function StaffDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { token, user, restaurant, logout } = useAuthStore();
+  const { token, user, restaurant, logout, updateRestaurant } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'orders' | 'tables' | 'kds'>('orders');
   const [orderFilter, setOrderFilter] = useState<'active' | 'archived'>('active');
   const [alerts, setAlerts] = useState<LiveAlert[]>([]);
@@ -402,6 +402,18 @@ export default function StaffDashboard() {
     // Provide authentication token
     socket.auth = { token: useAuthStore.getState().token };
 
+    const handleMenuUpdated = async () => {
+      console.log('[Socket.io]: Menu settings updated, refetching restaurant profile...');
+      try {
+        const res = await api.get('/auth/profile');
+        if (res.data?.success && res.data.data?.restaurant) {
+          updateRestaurant(res.data.data.restaurant);
+        }
+      } catch (err) {
+        console.warn('Failed to refetch restaurant settings via socket:', err);
+      }
+    };
+
     socket.disconnect().connect();
 
     socket.on('new_order', handleNewOrder);
@@ -409,6 +421,7 @@ export default function StaffDashboard() {
     socket.on('table_status_changed', handleTableStatusChanged);
     socket.on('call_waiter', handleCallWaiter);
     socket.on('request_bill', handleRequestBill);
+    socket.on('menu_updated', handleMenuUpdated);
 
     return () => {
       socket.off('connect', handleConnect);
@@ -418,8 +431,9 @@ export default function StaffDashboard() {
       socket.off('table_status_changed', handleTableStatusChanged);
       socket.off('call_waiter', handleCallWaiter);
       socket.off('request_bill', handleRequestBill);
+      socket.off('menu_updated', handleMenuUpdated);
     };
-  }, [user, restaurant, queryClient, token]);
+  }, [user, restaurant, queryClient, token, updateRestaurant]);
 
   useEffect(() => {
     if (!user) {

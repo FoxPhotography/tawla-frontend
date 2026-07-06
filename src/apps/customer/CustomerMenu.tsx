@@ -174,7 +174,7 @@ export default function CustomerMenu() {
     
     socket.on('menu_updated', () => {
       console.log('Menu updated via socket, invalidating queries...');
-      queryClient.invalidateQueries({ queryKey: ['customer-menu', restaurantSlug] });
+      queryClient.invalidateQueries({ queryKey: ['menu', restaurantSlug] });
     });
 
     socket.on('staff_status', (data: { isStaffOnline: boolean }) => {

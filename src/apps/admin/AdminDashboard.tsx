@@ -23,7 +23,7 @@ import CustomersTab from './components/CustomersTab.js';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, restaurant, logout } = useAuthStore();
+  const { user, restaurant, logout, updateRestaurant } = useAuthStore();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers'>('categories');
@@ -52,21 +52,45 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
+    if (!restaurant) return;
+
     if (!socket.connected) {
       socket.connect();
     }
+
+    socket.emit('join_restaurant', restaurant.id, (res: any) => {
+      if (res && !res.success) {
+        console.error('[Socket.io]: Failed to join restaurant room:', res.error);
+      } else {
+        console.log('[Socket.io]: Admin successfully joined restaurant room:', restaurant.id);
+      }
+    });
 
     const handleSettingsUpdate = () => {
       console.log('System settings updated via socket, invalidating queries in AdminDashboard...');
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
     };
 
+    const handleMenuUpdated = async () => {
+      console.log('[Socket.io]: Menu settings updated, refetching restaurant profile...');
+      try {
+        const res = await api.get('/auth/profile');
+        if (res.data?.success && res.data.data?.restaurant) {
+          updateRestaurant(res.data.data.restaurant);
+        }
+      } catch (err) {
+        console.warn('Failed to refetch restaurant settings via socket:', err);
+      }
+    };
+
     socket.on('system_settings_updated', handleSettingsUpdate);
+    socket.on('menu_updated', handleMenuUpdated);
 
     return () => {
       socket.off('system_settings_updated', handleSettingsUpdate);
+      socket.off('menu_updated', handleMenuUpdated);
     };
-  }, [queryClient]);
+  }, [restaurant, queryClient, updateRestaurant]);
 
   const navItems = [
     { id: 'categories', label: 'التصنيفات', icon: FolderPlus, premium: false },
