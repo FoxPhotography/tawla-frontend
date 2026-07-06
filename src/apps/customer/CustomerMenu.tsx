@@ -77,6 +77,9 @@ export default function CustomerMenu() {
   const [customizingNotes, setCustomizingNotes] = useState('');
   const [customizingQty, setCustomizingQty] = useState(1);
   
+  const latestCustomizingProduct = products.find(p => p.id === customizingProduct?.id);
+  const isCustomizingProductAvailable = latestCustomizingProduct ? latestCustomizingProduct.isAvailable : true;
+  
   // Custom states for Tawla Luxury navigation
   const [isServiceOpen, setIsServiceOpen] = useState(false);
   const [isNoOrderModalOpen, setIsNoOrderModalOpen] = useState(false);
@@ -147,8 +150,7 @@ export default function CustomerMenu() {
   }, [restaurant]);
 
   const popularProducts = useMemo(() => {
-    const available = products.filter(p => p.isAvailable);
-    return available.sort((a, b) => {
+    const sorted = [...products].sort((a, b) => {
       const catA = categories.find(c => c.id === a.categoryId);
       const catB = categories.find(c => c.id === b.categoryId);
       
@@ -159,7 +161,8 @@ export default function CustomerMenu() {
         return orderCatA - orderCatB;
       }
       return a.order - b.order;
-    }).slice(0, 5);
+    });
+    return sorted.slice(0, 5);
   }, [products, categories]);
 
   // Real-time Socket.io menu updates listener
@@ -199,7 +202,7 @@ export default function CustomerMenu() {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
         (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
-      return matchesSearch && matchesCategory && product.isAvailable;
+      return matchesSearch && matchesCategory;
     });
 
     return filtered.sort((a, b) => {
@@ -700,13 +703,16 @@ export default function CustomerMenu() {
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide direction-rtl -mx-4 px-4">
             {popularProducts.map((prod) => {
               const inCartItem = cart.find(i => i.product.id === prod.id);
+              const isAvailable = prod.isAvailable;
               
               return (
                 <div 
                   key={prod.id}
-                  onClick={() => !isReadOnly && addToCart(prod)}
+                  onClick={() => !isReadOnly && isAvailable && addToCart(prod)}
                   className={`flex-shrink-0 w-36 bg-customer-bg-elevated border rounded-2xl p-3 flex flex-col justify-between shadow-customer-card relative overflow-hidden transition-all ${
-                    isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                    isReadOnly || !isAvailable ? 'cursor-default' : 'cursor-pointer'
+                  } ${
+                    !isAvailable ? 'opacity-65' : ''
                   } ${
                     inCartItem 
                       ? 'border-customer-accent ring-1 ring-customer-accent/20' 
@@ -715,9 +721,14 @@ export default function CustomerMenu() {
                 >
                   <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-2 bg-customer-bg-base border border-customer-border flex items-center justify-center">
                     {prod.image?.url ? (
-                      <img src={prod.image.url} alt={prod.name} className="w-full h-full object-cover" />
+                      <img src={prod.image.url} alt={prod.name} className={`w-full h-full object-cover ${!isAvailable ? 'opacity-40 grayscale' : ''}`} />
                     ) : (
                       <ShoppingBag className="w-5 h-5 text-customer-text-muted" />
+                    )}
+                    {!isAvailable && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                        <span className="text-[10px] bg-red-650 text-white font-extrabold px-2 py-1 rounded-md shadow-lg border border-white/10">نفذ حالياً</span>
+                      </div>
                     )}
                   </div>
                   
@@ -729,17 +740,22 @@ export default function CustomerMenu() {
                   {!isReadOnly && (
                     <button
                       type="button"
+                      disabled={!isAvailable}
                       onClick={(e) => {
                         e.stopPropagation();
-                        addToCart(prod);
+                        if (isAvailable) addToCart(prod);
                       }}
                       className={`w-full py-1.5 rounded-xl border text-[10px] font-bold transition-all flex items-center justify-center gap-1 ${
-                        inCartItem
+                        !isAvailable
+                          ? 'bg-zinc-100 border-zinc-200 text-zinc-400 cursor-not-allowed'
+                          : inCartItem
                           ? 'bg-customer-accent text-customer-bg-base border-customer-accent'
                           : 'bg-customer-accent/10 border-customer-accent/20 text-customer-accent hover:bg-customer-accent hover:text-customer-bg-base'
                       }`}
                     >
-                      {inCartItem ? (
+                      {!isAvailable ? (
+                        <span>نفذ حالياً</span>
+                      ) : inCartItem ? (
                         <>
                           <CheckCircle2 className="w-3 h-3" />
                           <span>تمت الإضافة</span>
@@ -893,7 +909,7 @@ export default function CustomerMenu() {
                 </div>
 
                 {!isAvailable && (
-                  <div className="out-of-stock-tag">نفد</div>
+                  <div className="out-of-stock-tag">نفذ حالياً</div>
                 )}
               </motion.div>
             );
@@ -948,6 +964,7 @@ export default function CustomerMenu() {
         restaurant={restaurant}
         onSubmitOrder={() => submitOrderMutation.mutate()}
         isSubmitting={submitOrderMutation.isPending}
+        products={products}
       />
 
       {/* ===== persistent Bottom Navigation Bar ===== */}
@@ -1217,7 +1234,8 @@ export default function CustomerMenu() {
                 <div className="flex items-center gap-2 bg-customer-bg-elevated p-1 rounded-xl border border-customer-border">
                   <button
                     onClick={() => setCustomizingQty(q => Math.max(1, q - 1))}
-                    className="p-1 text-customer-text-secondary hover:text-customer-text-primary hover:bg-customer-bg-overlay rounded transition-colors"
+                    disabled={!isCustomizingProductAvailable}
+                    className="p-1 text-customer-text-secondary hover:text-customer-text-primary hover:bg-customer-bg-overlay rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Minus className="w-4 h-4" />
                   </button>

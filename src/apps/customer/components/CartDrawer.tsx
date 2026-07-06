@@ -33,6 +33,7 @@ interface CartDrawerProps {
   restaurant: any;
   onSubmitOrder: () => void;
   isSubmitting: boolean;
+  products: Product[];
 }
 
 const drawerVariants = {
@@ -80,12 +81,18 @@ export default function CartDrawer({
   isStaffOnline,
   restaurant,
   onSubmitOrder,
-  isSubmitting
+  isSubmitting,
+  products
 }: CartDrawerProps) {
   const [activeItemNotesIndex, setActiveItemNotesIndex] = useState<number | null>(null);
   const [activeItemNotesText, setActiveItemNotesText] = useState('');
 
   if (!isOpen) return null;
+
+  const isAnyItemUnavailable = cart.some(item => {
+    const latestProduct = products?.find(p => p.id === item.product.id);
+    return latestProduct ? !latestProduct.isAvailable : !item.product.isAvailable;
+  });
 
   return (
     <AnimatePresence>
@@ -138,6 +145,8 @@ export default function CartDrawer({
               <div className="space-y-3">
                 <AnimatePresence initial={false}>
                   {cart.map((item, index) => {
+                    const latestProduct = products?.find(p => p.id === item.product.id);
+                    const isAvailable = latestProduct ? latestProduct.isAvailable : item.product.isAvailable;
                     const optionsPrice = item.selectedOptions?.reduce((sum, opt) => sum + opt.priceAdjustment, 0) || 0;
                     const modifiersPrice = item.selectedModifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
                     const itemUnitPrice = item.product.price + optionsPrice + modifiersPrice;
@@ -147,19 +156,26 @@ export default function CartDrawer({
                         key={index}
                         variants={itemVariants}
                         layout
-                        className="bg-white border border-zinc-200/60 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-sm"
+                        className={`bg-white border rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-sm transition-all ${
+                          !isAvailable ? 'border-red-200 bg-red-50/10' : 'border-zinc-200/60'
+                        }`}
                       >
                         <div className="flex justify-between items-start gap-3">
                           <div className="flex items-center gap-3">
                             {item.product.image?.url ? (
-                              <img src={item.product.image.url} alt="" className="w-12 h-12 rounded-xl object-cover border border-zinc-100" />
+                              <img src={item.product.image.url} alt="" className={`w-12 h-12 rounded-xl object-cover border border-zinc-100 ${!isAvailable ? 'opacity-40 grayscale' : ''}`} />
                             ) : (
                               <div className="w-12 h-12 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400">
                                 <ShoppingBag className="w-5 h-5" />
                               </div>
                             )}
                             <div>
-                              <h4 className="font-extrabold text-sm text-zinc-950">{item.product.name}</h4>
+                              <h4 className="font-extrabold text-sm text-zinc-955 flex items-center gap-2">
+                                <span>{item.product.name}</span>
+                                {!isAvailable && (
+                                  <span className="text-[9px] bg-red-500 text-white font-extrabold px-1.5 py-0.5 rounded shadow">نفذ حالياً</span>
+                                )}
+                              </h4>
                               <span className="text-xs text-orange-600 font-extrabold font-mono mt-1 block">{itemUnitPrice} ج.م</span>
                               
                               {/* Display Custom Options & Modifiers in Cart */}
@@ -177,6 +193,10 @@ export default function CartDrawer({
                                     </span>
                                   ))}
                                 </div>
+                              )}
+
+                              {!isAvailable && (
+                                <p className="text-[10px] text-red-500 font-extrabold mt-1">⚠️ هذا الصنف غير متوفر حالياً. يرجى حذفه لإتمام الطلب.</p>
                               )}
                             </div>
                           </div>
@@ -201,7 +221,8 @@ export default function CartDrawer({
                             <span className="text-xs font-black font-mono text-zinc-900 min-w-[20px] text-center">{item.quantity}</span>
                             <button
                               onClick={() => updateQuantity(index, 1)}
-                              className="w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer"
+                              disabled={!isAvailable}
+                              className="w-7 h-7 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -327,6 +348,17 @@ export default function CartDrawer({
               </div>
               
               {(() => {
+                if (isAnyItemUnavailable) {
+                  return (
+                    <div className="w-full p-4 text-center rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex flex-col items-center justify-center gap-1.5 shadow-sm">
+                      <span className="font-extrabold text-sm flex items-center gap-1.5">
+                        ⚠️ تحتوي السلة على أصناف غير متوفرة
+                      </span>
+                      <span className="text-[10px] text-red-600/90 font-medium">يرجى حذف الأصناف المعلمة بـ (نفذ حالياً) لتتمكن من إتمام طلبك.</span>
+                    </div>
+                  );
+                }
+
                 if (!isStaffOnline) {
                   if (tableNumber) {
                     return (

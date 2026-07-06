@@ -754,13 +754,20 @@ export default function ProductsTab() {
                                   {/* Availability */}
                                   <button
                                     onClick={() => toggleProdMutation.mutate(prod.id)}
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                                    disabled={toggleProdMutation.isPending}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-colors cursor-pointer flex items-center justify-center gap-1 min-w-[55px] ${
                                       prod.isAvailable
                                         ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20'
                                         : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20'
-                                    }`}
+                                    } ${toggleProdMutation.isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
                                   >
-                                    {prod.isAvailable ? 'متاح' : 'نفد'}
+                                    {toggleProdMutation.isPending && toggleProdMutation.variables === prod.id ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : prod.isAvailable ? (
+                                      'متاح'
+                                    ) : (
+                                      'نفذ حالياً'
+                                    )}
                                   </button>
 
                                   {/* Actions */}
