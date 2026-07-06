@@ -86,6 +86,7 @@ export default function CustomersTab() {
 
   const loyaltySettings = restaurant?.loyaltySettings;
   const loyaltyTarget = loyaltySettings?.targetOrderCount || 10;
+  const isLoyaltyEnabled = loyaltySettings?.mode === 'loyalty_enabled' || loyaltySettings?.enabled === true;
 
   return (
     <div className="space-y-6 text-right" dir="rtl">
@@ -147,14 +148,14 @@ export default function CustomersTab() {
                   <th className="p-4">العنوان الرئيسي</th>
                   <th className="p-4 text-center">عدد الطلبات</th>
                   <th className="p-4 text-center">إجمالي الإنفاق</th>
-                  {loyaltySettings?.enabled && <th className="p-4 text-center">نقاط نظام الهدايا</th>}
+                  {isLoyaltyEnabled && <th className="p-4 text-center">نقاط نظام الهدايا</th>}
                   <th className="p-4 text-center">الخيارات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-admin-border/50 text-admin-text-primary font-bold">
                 {filteredCustomers.map((customer) => {
                   const points = customer.loyaltyPoints !== undefined ? customer.loyaltyPoints : (customer.orderCount % loyaltyTarget);
-                  const isEligible = loyaltySettings?.enabled && points >= loyaltyTarget;
+                  const isEligible = isLoyaltyEnabled && points >= loyaltyTarget;
                   const isVIP = customer.orderCount >= 10;
 
                   return (
@@ -185,7 +186,7 @@ export default function CustomersTab() {
                       <td className="p-4 text-center font-mono text-admin-accent text-sm font-black">
                         {customer.totalSpent.toLocaleString()} ج.م
                       </td>
-                      {loyaltySettings?.enabled && (
+                      {isLoyaltyEnabled && (
                         <td className="p-4">
                           <div className="flex flex-col items-center gap-1.5">
                             {isEligible ? (

@@ -93,6 +93,17 @@ export default function CreateOrderModal({
   const isDeliveryAllowedByPlan = allowedPlans.includes(plan);
   const isDeliveryEnabled = isDeliveryAllowedByPlan && restaurant?.settings?.isDeliveryEnabled !== false;
 
+  const isLoyaltyFeatureAllowed = () => {
+    if (!systemSettings) return false;
+    const allowedPlansForLoyalty = systemSettings.features?.loyalty || ['pro'];
+    return allowedPlansForLoyalty.includes(plan);
+  };
+
+  const isDatabaseEnabled = isLoyaltyFeatureAllowed() && 
+    (restaurant?.loyaltySettings?.mode === 'database_only' || 
+     restaurant?.loyaltySettings?.mode === 'loyalty_enabled' || 
+     restaurant?.loyaltySettings?.enabled === true);
+
   // Helper to find initial invoice subtotal for discount calculation
   const getInitialInvoiceSubtotal = () => {
     if (orderType === 'dine_in' && activeOrderForTable) {
@@ -676,15 +687,181 @@ export default function CreateOrderModal({
               )}
 
               {/* Customer Phone Search & Name details (For dine_in, takeaway & delivery) */}
-              <div className="space-y-3 bg-white/[0.02] border border-white/5 p-3 rounded-2xl">
-                {/* Phone input with search */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
-                    <Phone className="w-3.5 h-3.5 text-staff-accent" />
-                    <span>رقم الهاتف (للبحث أو التسجيل):</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
+              {isDatabaseEnabled ? (
+                <div className="space-y-3 bg-white/[0.02] border border-white/5 p-3 rounded-2xl">
+                  {/* Phone input with search */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                      <Phone className="w-3.5 h-3.5 text-staff-accent" />
+                      <span>رقم الهاتف (للبحث أو التسجيل):</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="tel"
+                          placeholder="مثال: 01012345678"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                          className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl pr-3.5 pl-4 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all font-mono text-left font-bold"
+                          dir="ltr"
+                        />
+                        {isSearchingCustomer && (
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-staff-accent border-t-transparent rounded-full animate-spin" />
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSearchCustomer(customerPhone)}
+                        disabled={!customerPhone.trim()}
+                        className="px-3 bg-staff-accent text-white rounded-xl text-xs font-bold hover:bg-staff-accent/90 active:scale-95 transition-all cursor-pointer flex items-center justify-center font-body"
+                      >
+                        بحث
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Customer Name */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                      <User className="w-3.5 h-3.5 text-staff-accent" />
+                      <span>اسم العميل:</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="اسم العميل الكامل..."
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-650 font-body font-bold"
+                    />
+                  </div>
+
+                  {/* Delivery Address */}
+                  {(orderType === 'delivery' || customerPhone) && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                        <MapPin className="w-3.5 h-3.5 text-staff-accent" />
+                        <span>عنوان التوصيل بالتفصيل:</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="المنطقة، الشارع، البناية، رقم الشقة..."
+                        value={customerAddress}
+                        onChange={(e) => setCustomerAddress(e.target.value)}
+                        className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-650 font-body font-bold"
+                      />
+                    </div>
+                  )}
+
+                  {/* Loyalty Progress Card */}
+                  {loyaltyStatus && loyaltyStatus.enabled && (
+                    <div className="bg-[#09090B] border border-white/10 rounded-xl p-3 space-y-2 text-right font-body">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
+                          <Gift className="w-3.5 h-3.5 text-amber-500" />
+                          <span>نظام الهدايا والمكافآت</span>
+                        </span>
+                        <span className="text-[9px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded font-black">
+                          {loyaltyStatus.progress} / {loyaltyStatus.target} طلبات
+                        </span>
+                      </div>
+
+                      {loyaltyStatus.isEligible ? (
+                        <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-3 space-y-2">
+                          <p className="text-[10px] text-emerald-400 font-black leading-relaxed flex items-center gap-1.5">
+                            <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                            <span>مؤهل للحصول على مكافأة: {loyaltyStatus.rewardType === 'discount' ? `خصم ${loyaltyStatus.rewardValue}%` : loyaltyStatus.rewardValue}!</span>
+                          </p>
+                          {loyaltyStatus.rewardType === 'discount' ? (
+                            redeemLoyalty ? (
+                              <div className="flex flex-col gap-2">
+                                <div className="text-[9px] text-emerald-400 font-bold bg-[#18181B] border border-emerald-500/20 px-3 py-2 rounded-xl text-center leading-relaxed">
+                                  تم تطبيق خصم الهدايا بنجاح وسوف يتم استهلاك المكافأة عند إتمام الطلب.
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDiscountAmount(0);
+                                    setRedeemLoyalty(false);
+                                    toast.success('تم إلغاء تطبيق مكافأة الهدايا');
+                                  }}
+                                  className="w-full py-2 bg-[#18181B] hover:bg-red-500/10 text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-xl text-[9px] font-bold transition-all cursor-pointer active:scale-[0.98]"
+                                >
+                                  إلغاء المكافأة
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const subTotal = getInitialInvoiceSubtotal();
+                                  const disc = Math.round(subTotal * (Number(loyaltyStatus.rewardValue) / 100));
+                                  setDiscountAmount(disc);
+                                  setRedeemLoyalty(true);
+                                  toast.success(`تم تطبيق خصم الهدايا: ${disc} ج.م`);
+                                }}
+                                className="w-full py-2 bg-[#18181B] hover:bg-[#27272A] text-staff-accent border border-staff-accent/25 hover:border-staff-accent/50 rounded-xl text-[10px] font-black transition-all cursor-pointer select-none active:scale-[0.98]"
+                              >
+                                تطبيق الخصم المستحق
+                              </button>
+                            )
+                          ) : (
+                            redeemLoyalty ? (
+                              <div className="flex flex-col gap-2">
+                                <div className="text-[9px] text-emerald-400 font-bold bg-[#18181B] border border-emerald-500/20 px-3 py-2 rounded-xl text-center leading-relaxed">
+                                  تم تحديد تسليم الهدية ({loyaltyStatus.rewardValue}) وسيتم تصفير النقاط عند إتمام الطلب.
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDiscountAmount(0);
+                                    setRedeemLoyalty(false);
+                                    toast.success('تم إلغاء استهلاك المكافأة');
+                                  }}
+                                  className="w-full py-2 bg-[#18181B] hover:bg-red-500/10 text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-xl text-[9px] font-bold transition-all cursor-pointer active:scale-[0.98]"
+                                >
+                                  إلغاء المكافأة
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const freeItemPrice = findFreeProductPrice();
+                                  setDiscountAmount(freeItemPrice);
+                                  setRedeemLoyalty(true);
+                                  toast.success(`تم تطبيق الهدية المجانية (${loyaltyStatus.rewardValue}) بقيمة: ${freeItemPrice} ج.م`);
+                                }}
+                                className="w-full py-2 bg-[#18181B] hover:bg-[#27272A] text-staff-accent border border-staff-accent/25 hover:border-staff-accent/50 rounded-xl text-[10px] font-black transition-all cursor-pointer select-none active:scale-[0.98]"
+                              >
+                                تأكيد تسليم الهدية المجانية للعميل
+                              </button>
+                            )
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="w-full bg-[#18181B] h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className="bg-amber-500 h-full rounded-full transition-all duration-300"
+                              style={{ width: `${(loyaltyStatus.progress / loyaltyStatus.target) * 100}%` }}
+                            />
+                          </div>
+                          <p className="text-[9px] text-zinc-500 font-bold">
+                            متبقي له {loyaltyStatus.target - loyaltyStatus.progress} طلبات للحصول على مكافأة {loyaltyStatus.rewardType === 'discount' ? `خصم ${loyaltyStatus.rewardValue}%` : loyaltyStatus.rewardValue}.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                orderType === 'delivery' && (
+                  <div className="space-y-3 bg-white/[0.02] border border-white/5 p-3 rounded-2xl">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                        <Phone className="w-3.5 h-3.5 text-staff-accent" />
+                        <span>رقم هاتف العميل:</span>
+                      </label>
                       <input
                         type="tel"
                         placeholder="مثال: 01012345678"
@@ -693,155 +870,38 @@ export default function CreateOrderModal({
                         className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl pr-3.5 pl-4 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all font-mono text-left font-bold"
                         dir="ltr"
                       />
-                      {isSearchingCustomer && (
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-staff-accent border-t-transparent rounded-full animate-spin" />
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleSearchCustomer(customerPhone)}
-                      disabled={!customerPhone.trim()}
-                      className="px-3 bg-staff-accent text-white rounded-xl text-xs font-bold hover:bg-staff-accent/90 active:scale-95 transition-all cursor-pointer flex items-center justify-center font-body"
-                    >
-                      بحث
-                    </button>
-                  </div>
-                </div>
-
-                {/* Name field */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
-                    <User className="w-3.5 h-3.5 text-staff-accent" />
-                    <span>اسم العميل:</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="اسم العميل الكامل..."
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-650 font-body font-bold"
-                  />
-                </div>
-
-                {/* Address field (Delivery only) */}
-                {orderType === 'delivery' && (
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
-                      <MapPin className="w-3.5 h-3.5 text-staff-accent" />
-                      <span>عنوان التوصيل بالتفصيل:</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="المنطقة، الشارع، البناية، رقم الشقة..."
-                      value={customerAddress}
-                      onChange={(e) => setCustomerAddress(e.target.value)}
-                      className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-650 font-body font-bold"
-                    />
-                  </div>
-                )}
-
-                {/* Loyalty Progress Card */}
-                {loyaltyStatus && loyaltyStatus.enabled && (
-                  <div className="bg-[#09090B] border border-white/10 rounded-xl p-3 space-y-2 text-right font-body">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
-                        <Gift className="w-3.5 h-3.5 text-amber-500" />
-                        <span>نظام الهدايا والمكافآت</span>
-                      </span>
-                      <span className="text-[9px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded font-black">
-                        {loyaltyStatus.progress} / {loyaltyStatus.target} طلبات
-                      </span>
                     </div>
 
-                    {loyaltyStatus.isEligible ? (
-                      <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-3 space-y-2">
-                        <p className="text-[10px] text-emerald-400 font-black leading-relaxed flex items-center gap-1.5">
-                          <Trophy className="w-3.5 h-3.5 text-amber-500" />
-                          <span>مؤهل للحصول على مكافأة: {loyaltyStatus.rewardType === 'discount' ? `خصم ${loyaltyStatus.rewardValue}%` : loyaltyStatus.rewardValue}!</span>
-                        </p>
-                        {loyaltyStatus.rewardType === 'discount' ? (
-                          redeemLoyalty ? (
-                            <div className="flex flex-col gap-2">
-                              <div className="text-[9px] text-emerald-400 font-bold bg-[#18181B] border border-emerald-500/20 px-3 py-2 rounded-xl text-center leading-relaxed">
-                                تم تطبيق خصم الهدايا بنجاح وسوف يتم استهلاك المكافأة عند إتمام الطلب.
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDiscountAmount(0);
-                                  setRedeemLoyalty(false);
-                                  toast.success('تم إلغاء تطبيق مكافأة الهدايا');
-                                }}
-                                className="w-full py-2 bg-[#18181B] hover:bg-red-500/10 text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-xl text-[9px] font-bold transition-all cursor-pointer active:scale-[0.98]"
-                              >
-                                إلغاء المكافأة
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const subTotal = getInitialInvoiceSubtotal();
-                                const disc = Math.round(subTotal * (Number(loyaltyStatus.rewardValue) / 100));
-                                setDiscountAmount(disc);
-                                setRedeemLoyalty(true);
-                                toast.success(`تم تطبيق خصم الهدايا: ${disc} ج.م`);
-                              }}
-                              className="w-full py-2 bg-[#18181B] hover:bg-[#27272A] text-staff-accent border border-staff-accent/25 hover:border-staff-accent/50 rounded-xl text-[10px] font-black transition-all cursor-pointer select-none active:scale-[0.98]"
-                            >
-                              تطبيق الخصم المستحق
-                            </button>
-                          )
-                        ) : (
-                          redeemLoyalty ? (
-                            <div className="flex flex-col gap-2">
-                              <div className="text-[9px] text-emerald-400 font-bold bg-[#18181B] border border-emerald-500/20 px-3 py-2 rounded-xl text-center leading-relaxed">
-                                تم تحديد تسليم الهدية ({loyaltyStatus.rewardValue}) وسيتم تصفير النقاط عند إتمام الطلب.
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDiscountAmount(0);
-                                  setRedeemLoyalty(false);
-                                  toast.success('تم إلغاء استهلاك المكافأة');
-                                }}
-                                className="w-full py-2 bg-[#18181B] hover:bg-red-500/10 text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-xl text-[9px] font-bold transition-all cursor-pointer active:scale-[0.98]"
-                              >
-                                إلغاء المكافأة
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const freeItemPrice = findFreeProductPrice();
-                                setDiscountAmount(freeItemPrice);
-                                setRedeemLoyalty(true);
-                                toast.success(`تم تطبيق الهدية المجانية (${loyaltyStatus.rewardValue}) بقيمة: ${freeItemPrice} ج.م`);
-                              }}
-                              className="w-full py-2 bg-[#18181B] hover:bg-[#27272A] text-staff-accent border border-staff-accent/25 hover:border-staff-accent/50 rounded-xl text-[10px] font-black transition-all cursor-pointer select-none active:scale-[0.98]"
-                            >
-                              تأكيد تسليم الهدية المجانية للعميل
-                            </button>
-                          )
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        <div className="w-full bg-[#18181B] h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className="bg-amber-500 h-full rounded-full transition-all duration-300"
-                            style={{ width: `${(loyaltyStatus.progress / loyaltyStatus.target) * 100}%` }}
-                          />
-                        </div>
-                        <p className="text-[9px] text-zinc-500 font-bold">
-                          متبقي له {loyaltyStatus.target - loyaltyStatus.progress} طلبات للحصول على مكافأة {loyaltyStatus.rewardType === 'discount' ? `خصم ${loyaltyStatus.rewardValue}%` : loyaltyStatus.rewardValue}.
-                        </p>
-                      </div>
-                    )}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                        <User className="w-3.5 h-3.5 text-staff-accent" />
+                        <span>اسم العميل:</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="اسم العميل الكامل..."
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-650 font-body font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                        <MapPin className="w-3.5 h-3.5 text-staff-accent" />
+                        <span>عنوان التوصيل بالتفصيل:</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="المنطقة، الشارع، البناية، رقم الشقة..."
+                        value={customerAddress}
+                        onChange={(e) => setCustomerAddress(e.target.value)}
+                        className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-650 font-body font-bold"
+                      />
+                    </div>
                   </div>
-                )}
-              </div>
+                )
+              )}
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-zinc-400 font-body">ملاحظات عامة للطلب:</label>
