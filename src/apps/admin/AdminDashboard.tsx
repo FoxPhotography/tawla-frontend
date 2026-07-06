@@ -73,7 +73,7 @@ export default function AdminDashboard() {
     { id: 'products', label: 'المنتجات', icon: ShoppingBag, premium: false },
     { id: 'tables', label: 'الطاولات & QR', icon: MapPin, premium: false },
     { id: 'orders', label: 'أرشيف الطلبات', icon: ClipboardList, premium: false },
-    { id: 'customers', label: 'العملاء & الولاء', icon: Users, premium: false },
+    { id: 'customers', label: 'العملاء والهدايا', icon: Users, premium: false },
     { id: 'analytics', label: 'التقارير والتحليلات', icon: BarChart3, premium: !isFeatureAllowed('analytics') },
     { id: 'audit', label: 'سجلات العمليات', icon: ClipboardList, premium: !isFeatureAllowed('audit') },
     { id: 'subscription', label: 'الاشتراك والنظام', icon: Crown, premium: false },

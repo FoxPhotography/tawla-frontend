@@ -13,6 +13,7 @@ interface Customer {
   address?: string;
   orderCount: number;
   totalSpent: number;
+  loyaltyPoints?: number;
 }
 
 export default function CustomersTab() {
@@ -91,7 +92,7 @@ export default function CustomersTab() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-extrabold text-admin-text-primary">قاعدة بيانات العملاء</h2>
-          <p className="text-xs text-admin-text-secondary mt-1">عرض وتعديل بيانات العملاء الذين سجلوا طلبات وتتبع نقاط الولاء والجوائز الخاصة بهم.</p>
+          <p className="text-xs text-admin-text-secondary mt-1">عرض وتعديل بيانات العملاء وتتبع نقاط الهدايا والجوائز الخاصة بهم.</p>
         </div>
 
         {/* Stats Summary */}
@@ -146,14 +147,14 @@ export default function CustomersTab() {
                   <th className="p-4">العنوان الرئيسي</th>
                   <th className="p-4 text-center">عدد الطلبات</th>
                   <th className="p-4 text-center">إجمالي الإنفاق</th>
-                  {loyaltySettings?.enabled && <th className="p-4 text-center">تقدم الولاء (مكافأة)</th>}
+                  {loyaltySettings?.enabled && <th className="p-4 text-center">نقاط نظام الهدايا</th>}
                   <th className="p-4 text-center">الخيارات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-admin-border/50 text-admin-text-primary font-bold">
                 {filteredCustomers.map((customer) => {
-                  const progress = customer.orderCount % loyaltyTarget;
-                  const isEligible = loyaltySettings?.enabled && customer.orderCount > 0 && progress === 0;
+                  const points = customer.loyaltyPoints !== undefined ? customer.loyaltyPoints : (customer.orderCount % loyaltyTarget);
+                  const isEligible = loyaltySettings?.enabled && points >= loyaltyTarget;
                   const isVIP = customer.orderCount >= 10;
 
                   return (
@@ -196,12 +197,12 @@ export default function CustomersTab() {
                               <div className="w-24 bg-admin-bg-base border border-admin-border/50 h-2 rounded-full overflow-hidden relative">
                                 <div 
                                   className="bg-amber-500 h-full rounded-full transition-all duration-300"
-                                  style={{ width: `${(progress / loyaltyTarget) * 100}%` }}
+                                  style={{ width: `${Math.min(100, (points / loyaltyTarget) * 100)}%` }}
                                 />
                               </div>
                             )}
                             <span className="text-[10px] text-admin-text-secondary font-bold">
-                              {progress} / {loyaltyTarget} طلب
+                              {points} / {loyaltyTarget} طلب
                             </span>
                           </div>
                         </td>

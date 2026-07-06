@@ -53,6 +53,7 @@ export default function CreateOrderModal({
   const [customerAddress, setCustomerAddress] = useState('');
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [loyaltyStatus, setLoyaltyStatus] = useState<any>(null);
+  const [redeemLoyalty, setRedeemLoyalty] = useState(false);
   const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
 
   const { restaurant } = useAuthStore();
@@ -346,7 +347,8 @@ export default function CreateOrderModal({
           customerName: customerName || undefined,
           customerPhone: customerPhone || undefined,
           customerAddress: customerAddress || undefined,
-          discountAmount: discountAmount || undefined
+          discountAmount: discountAmount || undefined,
+          redeemLoyalty: redeemLoyalty || undefined
         };
         const response = await api.post('/orders', payload, {
           headers: { 'x-restaurant-id': restaurantId }
@@ -368,6 +370,7 @@ export default function CreateOrderModal({
           setCustomerAddress('');
           setDiscountAmount(0);
           setLoyaltyStatus(null);
+          setRedeemLoyalty(false);
           setSelectedTableNumber('');
           setOrderType('dine_in');
           setPaymentMethod('cash');
@@ -409,6 +412,7 @@ export default function CreateOrderModal({
         setCustomerAddress('');
         setDiscountAmount(0);
         setLoyaltyStatus(null);
+        setRedeemLoyalty(false);
         setSelectedTableNumber('');
         onClose();
       } catch (e) {
@@ -448,6 +452,8 @@ export default function CreateOrderModal({
               setCustomerName('');
               setOrderType('dine_in');
               setPaymentMethod('cash');
+              setLoyaltyStatus(null);
+              setRedeemLoyalty(false);
               onClose();
             }} 
             className="w-8 h-8 rounded-full hover:bg-red-500/10 text-staff-text-muted hover:text-red-500 flex items-center justify-center transition-all cursor-pointer"
@@ -699,7 +705,7 @@ export default function CreateOrderModal({
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
                         <Gift className="w-3.5 h-3.5 text-amber-500" />
-                        <span>برنامج مكافآت الولاء</span>
+                        <span>نظام الهدايا والمكافآت</span>
                       </span>
                       <span className="text-[9px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded font-black">
                         {loyaltyStatus.progress} / {loyaltyStatus.target} طلبات
@@ -712,19 +718,68 @@ export default function CreateOrderModal({
                           <Trophy className="w-3.5 h-3.5 text-amber-500" />
                           <span>مؤهل للحصول على مكافأة: {loyaltyStatus.rewardType === 'discount' ? `خصم ${loyaltyStatus.rewardValue}%` : loyaltyStatus.rewardValue}!</span>
                         </p>
-                        {loyaltyStatus.rewardType === 'discount' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const subTotal = newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0);
-                              const disc = Math.round(subTotal * (Number(loyaltyStatus.rewardValue) / 100));
-                              setDiscountAmount(disc);
-                              toast.success(`تم تطبيق خصم الولاء: ${disc} ج.م`);
-                            }}
-                            className="w-full py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-black hover:bg-emerald-600 transition-colors cursor-pointer border border-emerald-600"
-                          >
-                            تطبيق الخصم المستحق
-                          </button>
+                        {loyaltyStatus.rewardType === 'discount' ? (
+                          redeemLoyalty ? (
+                            <div className="flex flex-col gap-1.5">
+                              <div className="text-[9px] text-emerald-400 font-bold bg-emerald-500/20 px-2 py-1 rounded border border-emerald-500/30 text-center">
+                                تم تطبيق خصم الهدايا بنجاح وسوف يتم استهلاك المكافأة عند إتمام الطلب.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDiscountAmount(0);
+                                  setRedeemLoyalty(false);
+                                  toast.success('تم إلغاء تطبيق مكافأة الهدايا');
+                                }}
+                                className="w-full py-1 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:bg-red-600 transition-colors cursor-pointer border border-red-650"
+                              >
+                                إلغاء المكافأة
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const subTotal = newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0);
+                                const disc = Math.round(subTotal * (Number(loyaltyStatus.rewardValue) / 100));
+                                setDiscountAmount(disc);
+                                setRedeemLoyalty(true);
+                                toast.success(`تم تطبيق خصم الهدايا: ${disc} ج.م`);
+                              }}
+                              className="w-full py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-black hover:bg-emerald-600 transition-colors cursor-pointer border border-emerald-600"
+                            >
+                              تطبيق الخصم المستحق
+                            </button>
+                          )
+                        ) : (
+                          redeemLoyalty ? (
+                            <div className="flex flex-col gap-1.5">
+                              <div className="text-[9px] text-emerald-400 font-bold bg-emerald-500/20 px-2 py-1 rounded border border-emerald-500/30 text-center">
+                                تم تحديد تسليم الهدية ({loyaltyStatus.rewardValue}) وسيتم تصفير النقاط عند إتمام الطلب.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRedeemLoyalty(false);
+                                  toast.success('تم إلغاء استهلاك المكافأة');
+                                }}
+                                className="w-full py-1 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:bg-red-600 transition-colors cursor-pointer border border-red-650"
+                              >
+                                إلغاء المكافأة
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRedeemLoyalty(true);
+                                toast.success(`تم تطبيق الهدية المجانية: ${loyaltyStatus.rewardValue}`);
+                              }}
+                              className="w-full py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-black hover:bg-emerald-600 transition-colors cursor-pointer border border-emerald-600"
+                            >
+                              تأكيد تسليم الهدية المجانية للعميل
+                            </button>
+                          )
                         )}
                       </div>
                     ) : (

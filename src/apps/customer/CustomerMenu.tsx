@@ -479,7 +479,7 @@ export default function CustomerMenu() {
           <div className="flex justify-between items-center">
             <h3 className="font-extrabold text-customer-text-primary text-xs flex items-center gap-1.5">
               <Gift className="w-4 h-4 text-customer-accent" />
-              <span>🎁 برنامج مكافآت الزبائن</span>
+              <span>برنامج مكافآت الزبائن</span>
             </h3>
             <span className="text-[9px] bg-customer-accent/10 text-customer-accent px-2 py-0.5 rounded font-black">
               أكمل {restaurant.loyaltySettings.targetOrderCount} طلبات واحصل على هدية!

@@ -34,6 +34,7 @@ export interface Restaurant {
   };
   loyaltySettings?: {
     enabled: boolean;
+    mode?: 'disabled' | 'database_only' | 'loyalty_enabled';
     targetOrderCount: number;
     rewardType: 'free_product' | 'discount';
     rewardProductName?: string;
@@ -134,6 +135,7 @@ export interface Order {
   items: OrderItem[];
   totalAmount: number;
   discountAmount?: number;
+  redeemLoyalty?: boolean;
   status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   specialNotes?: string;
   customerName?: string;
@@ -190,5 +192,6 @@ export interface SystemSettings {
     analytics?: ('trial' | 'basic' | 'pro')[];
     audit?: ('trial' | 'basic' | 'pro')[];
     delivery?: ('trial' | 'basic' | 'pro')[];
+    loyalty?: ('trial' | 'basic' | 'pro')[];
   };
 }

@@ -41,6 +41,7 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   const [featureAnalytics, setFeatureAnalytics] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
   const [featureAudit, setFeatureAudit] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
   const [featureDelivery, setFeatureDelivery] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
+  const [featureLoyalty, setFeatureLoyalty] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
 
   // Sync settings
   useEffect(() => {
@@ -85,10 +86,12 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
         setFeatureAnalytics(systemSettings.features.analytics || ['pro']);
         setFeatureAudit(systemSettings.features.audit || ['pro']);
         setFeatureDelivery(systemSettings.features.delivery || ['pro']);
+        setFeatureLoyalty(systemSettings.features.loyalty || ['pro']);
       } else {
         setFeatureAnalytics(['pro']);
         setFeatureAudit(['pro']);
         setFeatureDelivery(['pro']);
+        setFeatureLoyalty(['pro']);
       }
     }
   }, [systemSettings]);
@@ -133,6 +136,7 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
           analytics: featureAnalytics,
           audit: featureAudit,
           delivery: featureDelivery,
+          loyalty: featureLoyalty,
         },
       };
       return api.put('/super-admin/system-settings', payload);
@@ -480,7 +484,7 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
             </div>
 
             {/* Feature: Delivery */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-admin-border/50">
               <div>
                 <span className="text-xs font-black text-admin-text-primary block">تلقي طلبات التوصيل / الدليفري الخارجية (Delivery Mode)</span>
                 <span className="text-[10px] text-admin-text-secondary font-medium">تتيح للمطعم استقبال طلبات دليفري من المينيو العام وتعديل خيارات التوصيل من الإعدادات.</span>
@@ -496,6 +500,33 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
                           setFeatureDelivery([...featureDelivery, p as any]);
                         } else {
                           setFeatureDelivery(featureDelivery.filter(x => x !== p));
+                        }
+                      }}
+                      className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"
+                    />
+                    <span className="uppercase">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Feature: Loyalty */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4">
+              <div>
+                <span className="text-xs font-black text-admin-text-primary block">قاعدة بيانات العملاء ونظام الهدايا (Customer loyalty & database)</span>
+                <span className="text-[10px] text-admin-text-secondary font-medium">تتيح للمطعم تتبع وإدارة قاعدة بيانات العملاء، واستخدام نظام الهدايا بعدد طلبات مخصص.</span>
+              </div>
+              <div className="flex items-center gap-4">
+                {['trial', 'basic', 'pro'].map((p) => (
+                  <label key={p} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-admin-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={featureLoyalty.includes(p as any)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFeatureLoyalty([...featureLoyalty, p as any]);
+                        } else {
+                          setFeatureLoyalty(featureLoyalty.filter(x => x !== p));
                         }
                       }}
                       className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"
