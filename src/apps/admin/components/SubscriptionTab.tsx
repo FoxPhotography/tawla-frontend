@@ -14,9 +14,11 @@ export default function SubscriptionTab() {
   const [menuTitle, setMenuTitle] = useState(restaurant?.settings?.menuTitle || '');
   const [menuDescription, setMenuDescription] = useState(restaurant?.settings?.menuDescription || '');
   const [isDeliveryEnabled, setIsDeliveryEnabled] = useState(restaurant?.settings?.isDeliveryEnabled !== false);
-  const [loyaltyMode, setLoyaltyMode] = useState<'disabled' | 'database_only' | 'loyalty_enabled'>(
-    restaurant?.loyaltySettings?.mode || (restaurant?.loyaltySettings?.enabled ? 'loyalty_enabled' : 'disabled')
+  const initialMode = restaurant?.loyaltySettings?.mode || (restaurant?.loyaltySettings?.enabled ? 'loyalty_enabled' : 'disabled');
+  const [isCustomerDbEnabled, setIsCustomerDbEnabled] = useState(
+    initialMode === 'database_only' || initialMode === 'loyalty_enabled'
   );
+  const [isGiftsEnabled, setIsGiftsEnabled] = useState(initialMode === 'loyalty_enabled');
   const [loyaltyTarget, setLoyaltyTarget] = useState(restaurant?.loyaltySettings?.targetOrderCount || 10);
   const [loyaltyRewardType, setLoyaltyRewardType] = useState(restaurant?.loyaltySettings?.rewardType || 'free_product');
   const [loyaltyRewardProductName, setLoyaltyRewardProductName] = useState(restaurant?.loyaltySettings?.rewardProductName || 'مشروب مجاني');
@@ -45,7 +47,9 @@ export default function SubscriptionTab() {
       setMenuTitle(restaurant.settings?.menuTitle || '');
       setMenuDescription(restaurant.settings?.menuDescription || '');
       setIsDeliveryEnabled(restaurant.settings?.isDeliveryEnabled !== false);
-      setLoyaltyMode(restaurant.loyaltySettings?.mode || (restaurant.loyaltySettings?.enabled ? 'loyalty_enabled' : 'disabled'));
+      const mode = restaurant.loyaltySettings?.mode || (restaurant.loyaltySettings?.enabled ? 'loyalty_enabled' : 'disabled');
+      setIsCustomerDbEnabled(mode === 'database_only' || mode === 'loyalty_enabled');
+      setIsGiftsEnabled(mode === 'loyalty_enabled');
       setLoyaltyTarget(restaurant.loyaltySettings?.targetOrderCount || 10);
       setLoyaltyRewardType(restaurant.loyaltySettings?.rewardType || 'free_product');
       setLoyaltyRewardProductName(restaurant.loyaltySettings?.rewardProductName || 'مشروب مجاني');
@@ -122,12 +126,30 @@ export default function SubscriptionTab() {
     saveMenuSettingsMutation.mutate({ menuTitle, menuDescription, isDeliveryEnabled });
   };
 
+  const handleCustomerDbToggle = (checked: boolean) => {
+    setIsCustomerDbEnabled(checked);
+    if (!checked) {
+      setIsGiftsEnabled(false);
+    }
+  };
+
+  const handleGiftsToggle = (checked: boolean) => {
+    setIsGiftsEnabled(checked);
+    if (checked) {
+      setIsCustomerDbEnabled(true);
+    }
+  };
+
   const handleSaveLoyaltySettings = (e: React.FormEvent) => {
     e.preventDefault();
+    const computedMode = !isCustomerDbEnabled 
+      ? 'disabled' 
+      : (!isGiftsEnabled ? 'database_only' : 'loyalty_enabled');
+
     saveMenuSettingsMutation.mutate({
       loyaltySettings: {
-        enabled: loyaltyMode === 'loyalty_enabled',
-        mode: loyaltyMode,
+        enabled: computedMode === 'loyalty_enabled',
+        mode: computedMode,
         targetOrderCount: Number(loyaltyTarget),
         rewardType: loyaltyRewardType,
         rewardProductName: loyaltyRewardProductName,
@@ -324,30 +346,46 @@ export default function SubscriptionTab() {
         </div>
 
         <form onSubmit={handleSaveLoyaltySettings} className="space-y-4">
-          <div className="flex flex-col gap-2 border-b border-admin-border/50 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-xs text-admin-text-secondary font-bold block mb-1">وضع تشغيل النظام</label>
-                <p className="text-[10px] text-admin-text-muted font-bold">اختر درجة تشغيل إدارة العملاء والهدايا في مطعمك.</p>
-              </div>
-              {!isFeatureAllowed('loyalty') && (
-                <span className="text-[8px] bg-admin-accent/10 text-admin-accent px-1.5 py-0.5 rounded font-black uppercase">PRO</span>
-              )}
+          <div className="flex items-center justify-between border-b border-admin-border/50 pb-4">
+            <div>
+              <label className="text-xs text-admin-text-secondary font-bold block mb-1">تفعيل قاعدة بيانات العملاء</label>
+              <p className="text-[10px] text-admin-text-muted font-bold">تتيح لك تتبع وحفظ أرقام هواتف العملاء وعناوينهم وسجل طلباتهم لتسهيل التوصيل وتسجيل الطلبات.</p>
             </div>
             
-            <select
-              value={loyaltyMode}
-              disabled={!isFeatureAllowed('loyalty')}
-              onChange={(e) => setLoyaltyMode(e.target.value as any)}
-              className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors disabled:opacity-50 font-bold"
-            >
-              <option value="disabled">إيقاف إدارة العملاء ونظام الهدايا</option>
-              <option value="database_only">قاعدة بيانات العملاء فقط (حفظ بيانات وعناوين العملاء وسجل طلباتهم)</option>
-              <option value="loyalty_enabled">قاعدة بيانات العملاء ونظام الهدايا والمكافآت (حساب النقاط وتقديم جوائز)</option>
-            </select>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                disabled={!isFeatureAllowed('loyalty')}
+                checked={isCustomerDbEnabled && isFeatureAllowed('loyalty')}
+                onChange={(e) => handleCustomerDbToggle(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className={`w-11 h-6 bg-zinc-200 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-admin-accent cursor-pointer ${!isFeatureAllowed('loyalty') ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
+              {!isFeatureAllowed('loyalty') && (
+                <span className="mr-2 text-[8px] bg-admin-accent/10 text-admin-accent px-1.5 py-0.5 rounded font-black uppercase">PRO</span>
+              )}
+            </label>
           </div>
 
-          {loyaltyMode === 'loyalty_enabled' && isFeatureAllowed('loyalty') && (
+          <div className="flex items-center justify-between border-b border-admin-border/50 pb-4">
+            <div>
+              <label className="text-xs text-admin-text-secondary font-bold block mb-1">تفعيل نظام الهدايا والمكافآت (Loyalty Points)</label>
+              <p className="text-[10px] text-admin-text-muted font-bold">حساب النقاط التراكمية للزبائن بناءً على طلباتهم وتقديم مكافآت عند بلوغ حد معين.</p>
+            </div>
+            
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                disabled={!isFeatureAllowed('loyalty')}
+                checked={isGiftsEnabled && isFeatureAllowed('loyalty')}
+                onChange={(e) => handleGiftsToggle(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className={`w-11 h-6 bg-zinc-200 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-admin-accent cursor-pointer ${!isFeatureAllowed('loyalty') ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
+            </label>
+          </div>
+
+          {isGiftsEnabled && isFeatureAllowed('loyalty') && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
