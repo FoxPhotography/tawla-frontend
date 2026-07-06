@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FolderPlus, Edit2, Trash2, GripVertical, Plus } from 'lucide-react';
+import { FolderPlus, Edit2, Trash2, GripVertical, Plus, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import type { Category } from '../../../shared/types';
@@ -24,6 +24,8 @@ export default function CategoriesTab() {
 
   // Drag and drop states
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  const [syncingIds, setSyncingIds] = useState<string[]>([]);
+  const [localCategories, setLocalCategories] = useState<Category[]>([]);
 
   // Fetch categories
   const { data: categories = [], isLoading } = useQuery({
@@ -33,6 +35,13 @@ export default function CategoriesTab() {
       return response.data.data as Category[];
     },
   });
+
+  // Sync query data with local state when not dragging/syncing
+  useEffect(() => {
+    if (syncingIds.length === 0 && draggedItemIndex === null) {
+      setLocalCategories([...categories].sort((a, b) => a.order - b.order));
+    }
+  }, [categories, syncingIds, draggedItemIndex]);
 
   const resetCatForm = () => {
     setCatName('');
@@ -77,10 +86,50 @@ export default function CategoriesTab() {
 
   // Reorder Category Mutation
   const reorderCatMutation = useMutation({
-    mutationFn: async (payload: { id: string; order: number }[]) => {
-      await api.put('/categories/reorder', { items: payload });
+    mutationFn: async (variables: { items: { id: string; order: number }[]; draggedId: string }) => {
+      await api.put('/categories/reorder', { items: variables.items });
     },
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      const draggedId = variables.draggedId;
+      setSyncingIds((prev) => [...prev, draggedId]);
+
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['admin-categories'] });
+
+      // Snapshot the previous value
+      const previousCategories = queryClient.getQueryData<Category[]>(['admin-categories']);
+
+      // Optimistically update to the new value
+      if (previousCategories) {
+        const payloadMap = new Map(variables.items.map(item => [item.id, item.order]));
+        const optimisticallyUpdated = previousCategories.map(cat => {
+          if (payloadMap.has(cat.id)) {
+            return { ...cat, order: payloadMap.get(cat.id)! };
+          }
+          return cat;
+        }).sort((a, b) => a.order - b.order);
+
+        queryClient.setQueryData(['admin-categories'], optimisticallyUpdated);
+      }
+
+      // Return context with snapshotted value and draggedId
+      return { previousCategories, draggedId };
+    },
+    onError: (err: any, _variables, context) => {
+      if (context?.previousCategories) {
+        queryClient.setQueryData(['admin-categories'], context.previousCategories);
+      }
+      if (context?.draggedId) {
+        setSyncingIds((prev) => prev.filter((id) => id !== context.draggedId));
+      }
+      toast.error(err.response?.data?.error || 'فشل إعادة ترتيب الأقسام.');
+    },
+    onSuccess: (_data, _variables, context) => {
+      if (context?.draggedId) {
+        setSyncingIds((prev) => prev.filter((id) => id !== context.draggedId));
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
     },
   });
@@ -132,23 +181,38 @@ export default function CategoriesTab() {
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
-    e.preventDefault();
-    if (draggedItemIndex === null || draggedItemIndex === targetIndex) return;
+  const handleDragEnter = (hoverIndex: number) => {
+    if (draggedItemIndex === null || draggedItemIndex === hoverIndex) return;
 
-    const list = [...categories];
+    const list = [...localCategories];
     const draggedItem = list[draggedItemIndex];
-    list.splice(draggedItemIndex, 1);
-    list.splice(targetIndex, 0, draggedItem);
     
+    // Remove the item from its current position
+    list.splice(draggedItemIndex, 1);
+    // Insert it at the new position
+    list.splice(hoverIndex, 0, draggedItem);
+
+    setLocalCategories(list);
+    setDraggedItemIndex(hoverIndex);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItemIndex(null);
+    setLocalCategories([...categories].sort((a, b) => a.order - b.order));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedItemIndex === null) return;
+
     const originalOrders = [...categories].map(c => c.order).sort((a, b) => a - b);
-    const updatedList = list.map((item, index) => ({
+    const updatedList = localCategories.map((item, index) => ({
       ...item,
       order: originalOrders[index] !== undefined ? originalOrders[index] : index
     }));
 
     const payload = updatedList.map(c => ({ id: c.id, order: c.order }));
-    reorderCatMutation.mutate(payload);
+    reorderCatMutation.mutate({ items: payload, draggedId: localCategories[draggedItemIndex].id });
     setDraggedItemIndex(null);
   };
 
@@ -264,43 +328,62 @@ export default function CategoriesTab() {
           ) : (
             <div className="space-y-2 relative">
               <AnimatePresence initial={false}>
-                {categories
-                  .sort((a, b) => a.order - b.order)
-                  .map((category, index) => (
-                    <motion.div
-                      key={category.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                      draggable={true}
-                      onDragStart={(e) => handleDragStart(e as any, index)}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e as any, index)}
-                      className="bg-admin-bg-elevated border border-admin-border rounded-xl p-4 flex justify-between items-center gap-4 hover:border-admin-accent/20 transition-all cursor-move shadow-sm"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="text-admin-text-muted cursor-grab active:cursor-grabbing">
-                          <GripVertical className="w-4 h-4" />
-                        </div>
-                        {category.image?.url ? (
-                          <img src={category.image.url} alt="" className="w-10 h-10 rounded-lg object-cover border border-admin-border" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-admin-bg-subtle flex items-center justify-center text-admin-text-muted border border-admin-border">
-                            <FolderPlus className="w-4 h-4" />
+                {localCategories
+                  .map((category, index) => {
+                    const isSyncing = syncingIds.includes(category.id);
+                    return (
+                      <motion.div
+                        key={category.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        draggable={!isSyncing}
+                        onDragStart={(e) => !isSyncing && handleDragStart(e as any, index)}
+                        onDragOver={handleDragOver}
+                        onDragEnter={() => !isSyncing && handleDragEnter(index)}
+                        onDragEnd={handleDragEnd}
+                        onDrop={handleDrop}
+                        className={`bg-admin-bg-elevated border border-admin-border rounded-xl p-4 flex justify-between items-center gap-4 hover:border-admin-accent/20 transition-all cursor-move shadow-sm ${
+                          isSyncing ? 'border-admin-accent/40 bg-admin-accent/[0.02] shadow-inner' : ''
+                        } ${
+                          draggedItemIndex === index ? 'opacity-30 border-dashed border-admin-accent/50' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isSyncing ? (
+                            <div className="text-admin-accent animate-spin">
+                              <Loader2 className="w-4 h-4" />
+                            </div>
+                          ) : (
+                            <div className="text-admin-text-muted cursor-grab active:cursor-grabbing">
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+                          )}
+                          {category.image?.url ? (
+                            <img src={category.image.url} alt="" draggable={false} className="w-10 h-10 rounded-lg object-cover border border-admin-border" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-admin-bg-subtle flex items-center justify-center text-admin-text-muted border border-admin-border">
+                              <FolderPlus className="w-4 h-4" />
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="font-extrabold text-sm text-admin-text-primary flex items-center gap-2">
+                              <span>{category.name}</span>
+                              {isSyncing && (
+                                <span className="text-[9px] bg-admin-accent/10 text-admin-accent border border-admin-accent/20 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 animate-pulse">
+                                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                  <span>جاري الحفظ...</span>
+                                </span>
+                              )}
+                              <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
+                                {category.delayLimit !== undefined ? category.delayLimit : 20} دقيقة
+                              </span>
+                            </h4>
+                            {category.description && <p className="text-[10px] text-admin-text-secondary mt-0.5">{category.description}</p>}
                           </div>
-                        )}
-                        <div>
-                          <h4 className="font-extrabold text-sm text-admin-text-primary flex items-center gap-2">
-                            <span>{category.name}</span>
-                            <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
-                              {category.delayLimit !== undefined ? category.delayLimit : 20} دقيقة
-                            </span>
-                          </h4>
-                          {category.description && <p className="text-[10px] text-admin-text-secondary mt-0.5">{category.description}</p>}
                         </div>
-                      </div>
 
                       <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
@@ -323,7 +406,8 @@ export default function CategoriesTab() {
                         </button>
                       </div>
                     </motion.div>
-                  ))}
+                    );
+                  })}
               </AnimatePresence>
             </div>
           )}

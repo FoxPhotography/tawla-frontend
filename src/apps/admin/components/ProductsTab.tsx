@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ShoppingBag, Edit2, Trash2, Check, GripVertical, Search, Plus, X, ListPlus 
+  ShoppingBag, Edit2, Trash2, Check, GripVertical, Search, Plus, X, ListPlus, Loader2 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
@@ -40,6 +40,8 @@ export default function ProductsTab() {
   // Drag and drop states
   const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
   const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null);
+  const [syncingIds, setSyncingIds] = useState<string[]>([]);
+  const [localProducts, setLocalProducts] = useState<Product[]>([]);
 
   // Queries
   const { data: categories = [] } = useQuery({
@@ -57,6 +59,13 @@ export default function ProductsTab() {
       return res.data.data as Product[];
     },
   });
+
+  // Sync products query with local state when not dragging/syncing
+  useEffect(() => {
+    if (syncingIds.length === 0 && draggedProductId === null) {
+      setLocalProducts(products);
+    }
+  }, [products, syncingIds, draggedProductId]);
 
   const resetProdForm = () => {
     setProdName('');
@@ -111,10 +120,50 @@ export default function ProductsTab() {
 
   // Reorder Products
   const reorderProdMutation = useMutation({
-    mutationFn: async (payload: { id: string; order: number }[]) => {
-      await api.put('/products/reorder', { items: payload });
+    mutationFn: async (variables: { items: { id: string; order: number }[]; draggedId: string }) => {
+      await api.put('/products/reorder', { items: variables.items });
     },
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      const draggedId = variables.draggedId;
+      setSyncingIds((prev) => [...prev, draggedId]);
+
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['admin-products'] });
+
+      // Snapshot the previous value
+      const previousProducts = queryClient.getQueryData<Product[]>(['admin-products']);
+
+      // Optimistically update to the new value
+      if (previousProducts) {
+        const payloadMap = new Map(variables.items.map(item => [item.id, item.order]));
+        const optimisticallyUpdated = previousProducts.map(prod => {
+          if (payloadMap.has(prod.id)) {
+            return { ...prod, order: payloadMap.get(prod.id)! };
+          }
+          return prod;
+        }).sort((a, b) => a.order - b.order);
+
+        queryClient.setQueryData(['admin-products'], optimisticallyUpdated);
+      }
+
+      // Return context with snapshotted value and draggedId
+      return { previousProducts, draggedId };
+    },
+    onError: (err: any, _variables, context) => {
+      if (context?.previousProducts) {
+        queryClient.setQueryData(['admin-products'], context.previousProducts);
+      }
+      if (context?.draggedId) {
+        setSyncingIds((prev) => prev.filter((id) => id !== context.draggedId));
+      }
+      toast.error(err.response?.data?.error || 'فشل إعادة ترتيب المنتجات.');
+    },
+    onSuccess: (_data, _variables, context) => {
+      if (context?.draggedId) {
+        setSyncingIds((prev) => prev.filter((id) => id !== context.draggedId));
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     },
   });
@@ -271,11 +320,10 @@ export default function ProductsTab() {
     e.preventDefault();
   };
 
-  const handleDropProduct = (e: React.DragEvent, targetProductId: string, categoryId: string) => {
-    e.preventDefault();
+  const handleDragEnterProduct = (targetProductId: string, categoryId: string) => {
     if (!draggedProductId || draggedCategoryId !== categoryId || draggedProductId === targetProductId) return;
 
-    const catProducts = products.filter(p => p.categoryId === categoryId).sort((a, b) => a.order - b.order);
+    const catProducts = localProducts.filter(p => p.categoryId === categoryId).sort((a, b) => a.order - b.order);
     const draggedIdx = catProducts.findIndex(p => p.id === draggedProductId);
     const targetIdx = catProducts.findIndex(p => p.id === targetProductId);
     if (draggedIdx === -1 || targetIdx === -1) return;
@@ -285,13 +333,36 @@ export default function ProductsTab() {
     list.splice(targetIdx, 0, draggedItem);
 
     const originalOrders = [...catProducts].map(p => p.order).sort((a, b) => a - b);
-    const updatedList = list.map((item, index) => ({
+    const updatedCatProducts = list.map((item, index) => ({
       ...item,
       order: originalOrders[index] !== undefined ? originalOrders[index] : index
     }));
 
-    const payload = updatedList.map(p => ({ id: p.id, order: p.order }));
-    reorderProdMutation.mutate(payload);
+    const updatedLocalProducts = localProducts.map(p => {
+      if (p.categoryId === categoryId) {
+        const found = updatedCatProducts.find(ucp => ucp.id === p.id);
+        return found ? found : p;
+      }
+      return p;
+    });
+
+    setLocalProducts(updatedLocalProducts);
+  };
+
+  const handleDragEndProduct = () => {
+    setDraggedProductId(null);
+    setDraggedCategoryId(null);
+    setLocalProducts(products);
+  };
+
+  const handleDropProduct = (e: React.DragEvent, _targetProductId: string, categoryId: string) => {
+    e.preventDefault();
+    if (!draggedProductId || draggedCategoryId !== categoryId) return;
+
+    const catProducts = localProducts.filter(p => p.categoryId === categoryId).sort((a, b) => a.order - b.order);
+    const payload = catProducts.map(p => ({ id: p.id, order: p.order }));
+    
+    reorderProdMutation.mutate({ items: payload, draggedId: draggedProductId });
 
     setDraggedProductId(null);
     setDraggedCategoryId(null);
@@ -557,7 +628,7 @@ export default function ProductsTab() {
           ) : (
             <div className="space-y-6">
               {categories.map((category) => {
-                const allCatProducts = products.filter(p => p.categoryId === category.id);
+                const allCatProducts = localProducts.filter(p => p.categoryId === category.id);
                 const filtered = allCatProducts
                   .filter(p => p.name.toLowerCase().includes(prodSearchQuery.toLowerCase()) || (p.description && p.description.toLowerCase().includes(prodSearchQuery.toLowerCase())))
                   .sort((a, b) => a.order - b.order);
@@ -583,6 +654,7 @@ export default function ProductsTab() {
                         <AnimatePresence initial={false}>
                           {filtered.map((prod) => {
                             const isEditingPrice = inlinePriceEdit?.id === prod.id;
+                            const isSyncing = syncingIds.includes(prod.id);
                             
                             return (
                               <motion.div
@@ -591,27 +663,45 @@ export default function ProductsTab() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                draggable
-                                onDragStart={(e: any) => handleDragStartProduct(e, prod.id, category.id)}
+                                draggable={!isSyncing}
+                                onDragStart={(e: any) => !isSyncing && handleDragStartProduct(e, prod.id, category.id)}
                                 onDragOver={handleDragOver}
+                                onDragEnter={() => !isSyncing && handleDragEnterProduct(prod.id, category.id)}
+                                onDragEnd={handleDragEndProduct}
                                 onDrop={(e: any) => handleDropProduct(e, prod.id, category.id)}
                                 className={`flex justify-between items-center gap-4 py-3 cursor-move hover:bg-admin-bg-subtle/10 px-2 rounded-lg transition-all ${
-                                  draggedProductId === prod.id ? 'bg-admin-accent/5 opacity-50' : ''
+                                  draggedProductId === prod.id ? 'opacity-30 border-dashed border border-admin-accent/30 bg-admin-accent/[0.01]' : ''
+                                } ${
+                                  isSyncing ? 'bg-admin-accent/[0.02] border-r-2 border-r-admin-accent' : ''
                                 }`}
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className="text-admin-text-muted cursor-grab">
-                                    <GripVertical className="w-3.5 h-3.5" />
-                                  </div>
+                                  {isSyncing ? (
+                                    <div className="text-admin-accent animate-spin">
+                                      <Loader2 className="w-3.5 h-3.5" />
+                                    </div>
+                                  ) : (
+                                    <div className="text-admin-text-muted cursor-grab">
+                                      <GripVertical className="w-3.5 h-3.5" />
+                                    </div>
+                                  )}
                                   {prod.image?.url ? (
-                                    <img src={prod.image.url} alt="" className="w-10 h-10 rounded-lg object-cover border border-admin-border" />
+                                    <img src={prod.image.url} alt="" draggable={false} className="w-10 h-10 rounded-lg object-cover border border-admin-border" />
                                   ) : (
                                     <div className="w-10 h-10 rounded-lg bg-admin-bg-subtle flex items-center justify-center border border-admin-border text-admin-text-muted">
                                       <ShoppingBag className="w-4 h-4" />
                                     </div>
                                   )}
                                   <div>
-                                    <h4 className="font-bold text-xs text-admin-text-primary">{prod.name}</h4>
+                                    <h4 className="font-bold text-xs text-admin-text-primary flex items-center gap-2">
+                                      <span>{prod.name}</span>
+                                      {isSyncing && (
+                                        <span className="text-[8px] bg-admin-accent/10 text-admin-accent border border-admin-accent/20 px-1.5 py-0.5 rounded flex items-center gap-1 animate-pulse">
+                                          <Loader2 className="w-2 h-2 animate-spin" />
+                                          <span>جاري الحفظ...</span>
+                                        </span>
+                                      )}
+                                    </h4>
                                     {prod.description && <p className="text-[10px] text-admin-text-secondary mt-0.5 leading-relaxed line-clamp-1">{prod.description}</p>}
                                     
                                     {/* Display modifiers count tags */}
