@@ -2,10 +2,12 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  PlusCircle, XCircle, ChevronDown, ShoppingBag, Search, LayoutGrid, UtensilsCrossed, Printer, Plus, Minus, Trash2, User
+  PlusCircle, XCircle, ChevronDown, ShoppingBag, Search, LayoutGrid, UtensilsCrossed, Printer, Plus, Minus, Trash2, User, Phone, MapPin, Gift, Trophy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../shared/services/api';
+import { useAuthStore } from '../../../shared/store/authStore';
 import type { Table } from '../../../shared/types';
 
 interface CreateOrderModalProps {
@@ -19,6 +21,7 @@ interface CreateOrderModalProps {
   updateLocalTableStatus: (tableNumber: number, status: 'empty' | 'occupied' | 'waitingBill', currentOrderId: string | null) => void;
   onOrderCreated: () => void;
   defaultTableNumber?: number | '';
+  orders?: any[];
 }
 
 export default function CreateOrderModal({
@@ -31,7 +34,8 @@ export default function CreateOrderModal({
   networkStatus,
   updateLocalTableStatus,
   onOrderCreated,
-  defaultTableNumber
+  defaultTableNumber,
+  orders
 }: CreateOrderModalProps) {
   const [selectedTableNumber, setSelectedTableNumber] = useState<number | ''>('');
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
@@ -41,9 +45,79 @@ export default function CreateOrderModal({
   const [customerName, setCustomerName] = useState('');
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
+  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway' | 'delivery'>('dine_in');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'wallet'>('cash');
   const tableDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [loyaltyStatus, setLoyaltyStatus] = useState<any>(null);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+
+  const { restaurant } = useAuthStore();
+
+  const activeOrderForTable = useMemo(() => {
+    if (!selectedTableNumber || !orders) return null;
+    return orders.find(o => 
+      Number(o.tableNumber) === Number(selectedTableNumber) && 
+      !['delivered', 'cancelled'].includes(o.status)
+    );
+  }, [selectedTableNumber, orders]);
+
+  useEffect(() => {
+    if (orderType === 'dine_in' && selectedTableNumber) {
+      if (activeOrderForTable) {
+        setCustomerPhone(activeOrderForTable.customerPhone || '');
+        setCustomerName(activeOrderForTable.customerName || '');
+        setCustomerAddress(activeOrderForTable.customerAddress || '');
+      } else {
+        setCustomerPhone('');
+        setCustomerName('');
+        setCustomerAddress('');
+      }
+    }
+  }, [selectedTableNumber, activeOrderForTable, orderType]);
+  
+  const { data: systemSettings } = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: async () => {
+      const res = await api.get('/system-settings');
+      return res.data.data;
+    }
+  });
+
+  const plan = restaurant?.subscription?.plan || 'trial';
+  const allowedPlans = systemSettings?.features?.delivery || ['pro'];
+  const isDeliveryAllowedByPlan = allowedPlans.includes(plan);
+  const isDeliveryEnabled = isDeliveryAllowedByPlan && restaurant?.settings?.isDeliveryEnabled !== false;
+
+  const handleSearchCustomer = async (phoneStr: string) => {
+    if (!phoneStr.trim()) return;
+    setIsSearchingCustomer(true);
+    try {
+      const res = await api.get(`/customers/search?phone=${phoneStr.trim()}`);
+      const data = res.data.data;
+      if (data.customer) {
+        setCustomerName(data.customer.name);
+        setCustomerAddress(data.customer.address || '');
+        toast.success(`تم العثور على العميل: ${data.customer.name}`);
+      } else {
+        toast.error('عميل جديد غير مسجل في قاعدة البيانات.');
+      }
+      setLoyaltyStatus(data.loyalty);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearchingCustomer(false);
+    }
+  };
+
+  useEffect(() => {
+    if (customerPhone.trim().length === 11) {
+      handleSearchCustomer(customerPhone);
+    }
+  }, [customerPhone]);
 
   // Customization States
   const [customizingProduct, setCustomizingProduct] = useState<any | null>(null);
@@ -211,6 +285,12 @@ export default function CreateOrderModal({
       toast.error('يرجى اختيار رقم الطاولة.');
       return;
     }
+    if (orderType === 'delivery') {
+      if (!customerPhone.trim() || !customerAddress.trim()) {
+        toast.error('يرجى إدخال رقم الهاتف وعنوان التوصيل لطلبات الدليفري.');
+        return;
+      }
+    }
     if (newOrderCart.length === 0) {
       toast.error('يرجى إضافة صنف واحد على الأقل للطلب.');
       return;
@@ -221,11 +301,12 @@ export default function CreateOrderModal({
     }
 
     setIsSubmitting(true);
-    const totalAmount = newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0);
+    const subTotal = newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0);
+    const totalAmount = Math.max(0, subTotal - discountAmount);
 
     const orderPayload = {
       restaurantId,
-      tableNumber: orderType === 'takeaway' ? 0 : Number(selectedTableNumber),
+      tableNumber: orderType === 'takeaway' || orderType === 'delivery' ? 0 : Number(selectedTableNumber),
       items: newOrderCart.map(item => ({
         productId: item.product.id,
         name: item.product.name,
@@ -237,11 +318,14 @@ export default function CreateOrderModal({
       })),
       specialNotes: newOrderSpecialNotes,
       totalAmount,
+      discountAmount,
       status: 'accepted' as const,
       type: orderType,
-      paymentMethod: orderType === 'takeaway' ? paymentMethod : 'cash',
+      paymentMethod: orderType === 'dine_in' ? 'cash' : paymentMethod,
       createdAt: new Date().toISOString(),
-      customerName: customerName || undefined
+      customerName: customerName || undefined,
+      customerPhone: customerPhone || undefined,
+      customerAddress: customerAddress || undefined,
     };
 
     if (networkStatus === 'online') {
@@ -258,8 +342,11 @@ export default function CreateOrderModal({
           specialNotes: orderPayload.specialNotes,
           status: 'accepted',
           type: orderType,
-          paymentMethod: orderType === 'takeaway' ? paymentMethod : 'cash',
-          customerName: customerName || undefined
+          paymentMethod: orderType === 'dine_in' ? 'cash' : paymentMethod,
+          customerName: customerName || undefined,
+          customerPhone: customerPhone || undefined,
+          customerAddress: customerAddress || undefined,
+          discountAmount: discountAmount || undefined
         };
         const response = await api.post('/orders', payload, {
           headers: { 'x-restaurant-id': restaurantId }
@@ -267,7 +354,7 @@ export default function CreateOrderModal({
         if (response.data?.success) {
           toast.success('تم إرسال الطلب بنجاح.');
           
-          if (orderType === 'takeaway' && response.data.data) {
+          if ((orderType === 'takeaway' || orderType === 'delivery') && response.data.data) {
             onPrintReceipt(response.data.data);
           }
 
@@ -277,6 +364,10 @@ export default function CreateOrderModal({
           setNewOrderCart([]);
           setNewOrderSpecialNotes('');
           setCustomerName('');
+          setCustomerPhone('');
+          setCustomerAddress('');
+          setDiscountAmount(0);
+          setLoyaltyStatus(null);
           setSelectedTableNumber('');
           setOrderType('dine_in');
           setPaymentMethod('cash');
@@ -314,6 +405,10 @@ export default function CreateOrderModal({
         setNewOrderCart([]);
         setNewOrderSpecialNotes('');
         setCustomerName('');
+        setCustomerPhone('');
+        setCustomerAddress('');
+        setDiscountAmount(0);
+        setLoyaltyStatus(null);
         setSelectedTableNumber('');
         onClose();
       } catch (e) {
@@ -332,7 +427,7 @@ export default function CreateOrderModal({
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 28 } }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="bg-staff-bg-elevated border border-staff-border rounded-3xl w-full max-w-6xl h-[88vh] flex flex-col overflow-hidden shadow-2xl relative"
+        className="bg-staff-bg-elevated border border-staff-border rounded-3xl w-full max-w-[94vw] 2xl:max-w-[1400px] h-[90vh] flex flex-col overflow-hidden shadow-2xl relative"
       >
         {/* Modal Header */}
         <div className="flex justify-between items-center px-6 py-5 border-b border-staff-border bg-staff-bg-elevated flex-shrink-0 z-10">
@@ -365,14 +460,14 @@ export default function CreateOrderModal({
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
           
           {/* Left Column: Cart & Table details (40%) - Dark obsidian layout */}
-          <div className="w-full md:w-[380px] border-l border-staff-border flex flex-col h-full bg-[#09090B] flex-shrink-0 text-white">
+          <div className="w-full md:w-[380px] border-l border-staff-border flex flex-col h-full bg-[#09090B] flex-shrink-0 text-white overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800">
             {/* Table & Notes selection */}
             <div className="p-5 border-b border-white/5 space-y-4">
               
               {/* Order Type Toggle */}
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-zinc-400 font-body">نوع الطلب:</label>
-                <div className="grid grid-cols-2 gap-2 bg-[#18181B] p-1 rounded-xl border border-white/5">
+                <div className={`grid ${isDeliveryEnabled ? 'grid-cols-3' : 'grid-cols-2'} gap-2 bg-[#18181B] p-1 rounded-xl border border-white/5`}>
                   <button
                     type="button"
                     onClick={() => setOrderType('dine_in')}
@@ -398,6 +493,22 @@ export default function CreateOrderModal({
                   >
                     تيك أواي سفري
                   </button>
+                  {isDeliveryEnabled && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOrderType('delivery');
+                        setSelectedTableNumber('');
+                      }}
+                      className={`py-2 text-xs font-black rounded-lg transition-all cursor-pointer font-body ${
+                        orderType === 'delivery'
+                          ? 'bg-staff-accent text-white shadow-sm'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      توصيل دليفري
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -419,10 +530,10 @@ export default function CreateOrderModal({
                                 : tables.find((t: Table) => t.number === selectedTableNumber)?.status === 'waitingBill' 
                                 ? 'تطلب الحساب' 
                                 : 'متاحة'
-                            })`
+                            })` 
                           : '-- اختر رقم الطاولة --'}
                       </span>
-                      <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform duration-200 ${isTableDropdownOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform duration-205 ${isTableDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     <AnimatePresence>
@@ -516,49 +627,151 @@ export default function CreateOrderModal({
                   </div>
                 </div>
               )}
-              
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-staff-accent" />
-                  <span>اسم الزبون (اختياري):</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="اسم الزبون للتفريق بين الطلبات..."
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-600"
-                />
+
+              {/* Customer Phone Search & Name details (For dine_in, takeaway & delivery) */}
+              <div className="space-y-3 bg-white/[0.02] border border-white/5 p-3 rounded-2xl">
+                {/* Phone input with search */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                    <Phone className="w-3.5 h-3.5 text-staff-accent" />
+                    <span>رقم الهاتف (للبحث أو التسجيل):</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="tel"
+                        placeholder="مثال: 01012345678"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl pr-3.5 pl-4 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all font-mono text-left font-bold"
+                        dir="ltr"
+                      />
+                      {isSearchingCustomer && (
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-staff-accent border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSearchCustomer(customerPhone)}
+                      disabled={!customerPhone.trim()}
+                      className="px-3 bg-staff-accent text-white rounded-xl text-xs font-bold hover:bg-staff-accent/90 active:scale-95 transition-all cursor-pointer flex items-center justify-center font-body"
+                    >
+                      بحث
+                    </button>
+                  </div>
+                </div>
+
+                {/* Name field */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                    <User className="w-3.5 h-3.5 text-staff-accent" />
+                    <span>اسم العميل:</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="اسم العميل الكامل..."
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-650 font-body font-bold"
+                  />
+                </div>
+
+                {/* Address field (Delivery only) */}
+                {orderType === 'delivery' && (
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-zinc-400 flex items-center gap-1 font-body">
+                      <MapPin className="w-3.5 h-3.5 text-staff-accent" />
+                      <span>عنوان التوصيل بالتفصيل:</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="المنطقة، الشارع، البناية، رقم الشقة..."
+                      value={customerAddress}
+                      onChange={(e) => setCustomerAddress(e.target.value)}
+                      className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl px-3.5 py-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 transition-all placeholder:text-zinc-650 font-body font-bold"
+                    />
+                  </div>
+                )}
+
+                {/* Loyalty Progress Card */}
+                {loyaltyStatus && loyaltyStatus.enabled && (
+                  <div className="bg-[#09090B] border border-white/10 rounded-xl p-3 space-y-2 text-right font-body">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-zinc-400 font-bold flex items-center gap-1">
+                        <Gift className="w-3.5 h-3.5 text-amber-500" />
+                        <span>برنامج مكافآت الولاء</span>
+                      </span>
+                      <span className="text-[9px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded font-black">
+                        {loyaltyStatus.progress} / {loyaltyStatus.target} طلبات
+                      </span>
+                    </div>
+
+                    {loyaltyStatus.isEligible ? (
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 space-y-2">
+                        <p className="text-[10px] text-emerald-400 font-black leading-relaxed flex items-center gap-1">
+                          <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                          <span>مؤهل للحصول على مكافأة: {loyaltyStatus.rewardType === 'discount' ? `خصم ${loyaltyStatus.rewardValue}%` : loyaltyStatus.rewardValue}!</span>
+                        </p>
+                        {loyaltyStatus.rewardType === 'discount' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const subTotal = newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0);
+                              const disc = Math.round(subTotal * (Number(loyaltyStatus.rewardValue) / 100));
+                              setDiscountAmount(disc);
+                              toast.success(`تم تطبيق خصم الولاء: ${disc} ج.م`);
+                            }}
+                            className="w-full py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-black hover:bg-emerald-600 transition-colors cursor-pointer border border-emerald-600"
+                          >
+                            تطبيق الخصم المستحق
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="w-full bg-[#18181B] h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-amber-500 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${(loyaltyStatus.progress / loyaltyStatus.target) * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-[9px] text-zinc-500 font-bold">
+                          متبقي له {loyaltyStatus.target - loyaltyStatus.progress} طلبات للحصول على مكافأة {loyaltyStatus.rewardType === 'discount' ? `خصم ${loyaltyStatus.rewardValue}%` : loyaltyStatus.rewardValue}.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-zinc-400">ملاحظات عامة للطلب:</label>
+                <label className="block text-[10px] font-black text-zinc-400 font-body">ملاحظات عامة للطلب:</label>
                 <textarea
                   placeholder="مثال: البهارات خفيفة، بدون بصل، فواتير الطاولة السابقة..."
                   value={newOrderSpecialNotes}
                   onChange={(e) => setNewOrderSpecialNotes(e.target.value)}
                   rows={2}
-                  className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl p-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 resize-none transition-all placeholder:text-zinc-600"
+                  className="w-full bg-[#18181B] border border-white/10 text-white text-xs rounded-xl p-3 outline-none focus:border-staff-accent focus:ring-1 focus:ring-staff-accent/50 resize-none transition-all placeholder:text-zinc-600 font-body font-bold"
                 />
               </div>
             </div>
 
             {/* Cart Items List */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-3 scrollbar-hide">
-              <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">مكونات الطلب</h4>
+            <div className="p-5 space-y-3 bg-black/5">
+              <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 font-body">مكونات الطلب</h4>
               {newOrderCart.length === 0 ? (
                 <div className="h-full border border-dashed border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-white/[0.01] min-h-[220px]">
                   <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
                     <ShoppingBag className="w-5 h-5 text-zinc-600" />
                   </div>
-                  <h5 className="text-xs font-bold text-zinc-300 mb-1">السلة فارغة</h5>
-                  <p className="text-[10px] text-zinc-500 max-w-[200px] leading-relaxed">
+                  <h5 className="text-xs font-bold text-zinc-300 mb-1 font-body">السلة فارغة</h5>
+                  <p className="text-[10px] text-zinc-500 max-w-[200px] leading-relaxed font-body">
                     لم يتم إضافة أصناف بعد. اختر من القائمة الجانبية للبدء.
                   </p>
                 </div>
               ) : (
                 newOrderCart.map((item, idx) => (
-                  <div key={idx} className="bg-[#18181B] border border-white/5 rounded-xl p-3 space-y-2.5 shadow-sm text-right">
+                  <div key={idx} className="bg-[#18181B] border border-white/5 rounded-xl p-3 space-y-2.5 shadow-sm text-right font-body">
                     <div className="flex justify-between items-start gap-2">
                       <div>
                         <h5 className="text-xs font-black text-white leading-snug">{item.product.name}</h5>
@@ -595,7 +808,7 @@ export default function CreateOrderModal({
                                 : i
                             ));
                           }}
-                          className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center active:scale-95 transition-all text-zinc-300"
+                          className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center active:scale-95 transition-all text-zinc-300 cursor-pointer"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
@@ -608,7 +821,7 @@ export default function CreateOrderModal({
                                 : i
                             ));
                           }}
-                          className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center active:scale-95 transition-all text-zinc-300"
+                          className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center active:scale-95 transition-all text-zinc-300 cursor-pointer"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
@@ -625,7 +838,7 @@ export default function CreateOrderModal({
                               : i
                           ));
                         }}
-                        className="flex-1 bg-[#09090B] border border-white/10 text-[9.5px] rounded-lg px-2.5 py-1.5 outline-none text-white placeholder:text-zinc-600 focus:border-staff-accent/50 transition-colors"
+                        className="flex-1 bg-[#09090B] border border-white/10 text-[9.5px] rounded-lg px-2.5 py-1.5 outline-none text-white placeholder:text-zinc-650 focus:border-staff-accent/50 transition-colors font-bold"
                       />
                     </div>
                   </div>
@@ -634,12 +847,57 @@ export default function CreateOrderModal({
             </div>
 
             {/* Submit Panel */}
-            <div className="p-5 border-t border-white/5 bg-white/[0.01] space-y-4">
-              <div className="flex justify-between items-center bg-[#09090B] border border-white/10 px-4 py-3 rounded-xl">
-                <span className="text-[10px] font-black text-zinc-400">إجمالي الحساب:</span>
-                <span className="font-mono text-base font-black text-staff-accent">
-                  {newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0)} ج.م
-                </span>
+            <div className="p-5 border-t border-white/5 bg-white/[0.01] space-y-3 flex-shrink-0">
+              <div className="space-y-2">
+                {/* Custom Discount Input */}
+                <div className="flex justify-between items-center bg-[#09090B]/50 border border-white/10 px-4 py-2 rounded-xl text-zinc-400 text-[10px] font-body font-bold">
+                  <span>تطبيق خصم مخصص:</span>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setDiscountAmount(prev => Math.max(0, prev - 1))}
+                      className="w-4 h-4 bg-[#18181B] hover:bg-[#27272A] border border-white/5 text-zinc-400 hover:text-white flex items-center justify-center rounded transition-colors cursor-pointer select-none active:scale-95"
+                    >
+                      <Minus className="w-2.5 h-2.5" />
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={discountAmount || ''}
+                      onChange={(e) => setDiscountAmount(Number(e.target.value))}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      placeholder="0"
+                      className="w-10 bg-transparent border-none text-center font-mono text-[10px] font-bold text-white focus:outline-none focus:ring-0 placeholder:text-zinc-700 p-0 h-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setDiscountAmount(prev => prev + 1)}
+                      className="w-4 h-4 bg-[#18181B] hover:bg-[#27272A] border border-white/5 text-zinc-400 hover:text-white flex items-center justify-center rounded transition-colors cursor-pointer select-none active:scale-95"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                    </button>
+                    <span className="font-mono text-zinc-400 text-[10px] mr-0.5">ج.م</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center bg-[#09090B]/50 border border-white/10 px-4 py-2 rounded-xl text-zinc-400 text-[10px] font-body font-bold">
+                  <span>قيمة الطلبات:</span>
+                  <span className="font-mono">{newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0)} ج.م</span>
+                </div>
+
+                {discountAmount > 0 && (
+                  <div className="flex justify-between items-center bg-red-500/5 border border-red-500/25 px-4 py-2 rounded-xl text-red-400 text-[10px] font-body font-bold">
+                    <span>الخصم المطبق:</span>
+                    <span className="font-mono">-{discountAmount} ج.م</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center bg-[#09090B] border border-white/10 px-4 py-3 rounded-xl font-body font-bold">
+                  <span className="text-[10px] font-black text-zinc-400">المبلغ النهائي للدفع:</span>
+                  <span className="font-mono text-base font-black text-staff-accent">
+                    {Math.max(0, newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0) - discountAmount)} ج.م
+                  </span>
+                </div>
               </div>
 
               <button
@@ -647,7 +905,7 @@ export default function CreateOrderModal({
                 disabled={isSubmitting}
                 className="w-full bg-staff-accent hover:bg-staff-accent/90 text-white font-black py-3.5 rounded-xl transition-all shadow-lg active:scale-[0.98] text-xs flex items-center justify-center gap-2 cursor-pointer border border-staff-accent-glow"
               >
-                {orderType === 'takeaway' ? (
+                {orderType === 'takeaway' || orderType === 'delivery' ? (
                   <>
                     <Printer className="w-4 h-4" />
                     <span>{isSubmitting ? 'جاري التأكيد والطباعة...' : 'تأكيد وطباعة الطلب'}</span>
@@ -707,7 +965,7 @@ export default function CreateOrderModal({
             </div>
 
             {/* Product Grid Area */}
-            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 items-stretch content-start scrollbar-hide">
+            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch content-start scrollbar-hide">
               <AnimatePresence>
                 {modalFilteredProducts.length === 0 ? (
                   <div className="col-span-full flex flex-col items-center justify-center text-center py-20 text-staff-text-muted">

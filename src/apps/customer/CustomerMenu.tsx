@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Bell, Receipt, Plus, Minus, 
-  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X
+  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X, Gift, Trophy
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -71,6 +71,26 @@ export default function CustomerMenu() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [isStaffOnline, setIsStaffOnline] = useState(true);
+  const [loyaltyPhone, setLoyaltyPhone] = useState('');
+  const [isCheckingLoyalty, setIsCheckingLoyalty] = useState(false);
+  const [loyaltyQueryResult, setLoyaltyQueryResult] = useState<any>(null);
+
+  const handleCheckLoyalty = async () => {
+    if (loyaltyPhone.trim().length !== 11) {
+      toast.error('يرجى كتابة رقم موبايل صحيح مكون من 11 رقم.');
+      return;
+    }
+    setIsCheckingLoyalty(true);
+    try {
+      const res = await api.get(`/menu/${restaurantSlug}/loyalty?phone=${loyaltyPhone.trim()}`);
+      setLoyaltyQueryResult(res.data.data);
+      toast.success('تم جلب تقدم المكافآت بنجاح!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'الرقم غير مسجل أو لم يكمل أي طلبات بعد.');
+    } finally {
+      setIsCheckingLoyalty(false);
+    }
+  };
 
   // Cache restaurant details for navigation back from order tracking
   useEffect(() => {
@@ -452,6 +472,110 @@ export default function CustomerMenu() {
         <h1 className="restaurant-name">{restaurant.settings?.menuTitle || restaurant.name}</h1>
         <div className="restaurant-sub">{restaurant.settings?.menuDescription || 'أهلاً بك في تجربة طعام فاخرة ومميزة'}</div>
       </div>
+
+      {/* ===== Loyalty Checking Card ===== */}
+      {restaurant.loyaltySettings?.enabled && (
+        <div className="mx-4 mt-5 relative z-10 max-w-[428px] md:mx-auto bg-customer-bg-elevated border border-customer-border rounded-2xl p-4 shadow-customer-card space-y-3.5 text-right" dir="rtl">
+          <div className="flex justify-between items-center">
+            <h3 className="font-extrabold text-customer-text-primary text-xs flex items-center gap-1.5">
+              <Gift className="w-4 h-4 text-customer-accent" />
+              <span>🎁 برنامج مكافآت الزبائن</span>
+            </h3>
+            <span className="text-[9px] bg-customer-accent/10 text-customer-accent px-2 py-0.5 rounded font-black">
+              أكمل {restaurant.loyaltySettings.targetOrderCount} طلبات واحصل على هدية!
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {!loyaltyQueryResult ? (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-customer-text-secondary leading-relaxed">
+                  أدخل رقم موبايلك المسجل لدينا لتتبع عدد طلباتك والتقدم نحو هديتك المجانية القادمة:
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    placeholder="مثال: 01012345678"
+                    value={loyaltyPhone}
+                    onChange={(e) => setLoyaltyPhone(e.target.value)}
+                    className="flex-1 bg-customer-bg-base border border-customer-border text-customer-text-primary text-xs rounded-xl px-3 py-2.5 outline-none focus:border-customer-accent focus:ring-1 focus:ring-customer-accent/30 font-mono text-left"
+                    dir="ltr"
+                  />
+                  <button
+                    onClick={handleCheckLoyalty}
+                    disabled={isCheckingLoyalty || loyaltyPhone.trim().length !== 11}
+                    className="px-4 py-2 bg-customer-accent text-customer-bg-base text-xs font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {isCheckingLoyalty ? (
+                      <div className="w-3.5 h-3.5 border-2 border-customer-bg-base border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <span>تتبع</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3.5"
+              >
+                <div className="flex justify-between items-center border-b border-customer-border pb-2.5">
+                  <span className="text-[10px] text-customer-text-secondary font-black">أهلاً بك، {loyaltyQueryResult.customerName || 'عميلنا العزيز'}</span>
+                  <button 
+                    onClick={() => {
+                      setLoyaltyQueryResult(null);
+                      setLoyaltyPhone('');
+                    }}
+                    className="text-[9px] text-customer-text-muted hover:text-customer-text-secondary"
+                  >
+                    تغيير الرقم
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center text-[10px] text-customer-text-secondary font-bold">
+                    <span>تقدم المكافأة الحالية:</span>
+                    <span className="font-mono text-customer-accent font-black">
+                      {loyaltyQueryResult.progress} / {loyaltyQueryResult.target} طلبات
+                    </span>
+                  </div>
+
+                  {loyaltyQueryResult.isEligible ? (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-xl p-3 text-center space-y-1">
+                      <p className="text-xs font-black flex items-center justify-center gap-1.5 text-emerald-500">
+                        <Trophy className="w-4.5 h-4.5 text-amber-500 animate-bounce" />
+                        <span>تهانينا! هديتك المجانية جاهزة!</span>
+                      </p>
+                      <p className="text-[9.5px] text-emerald-450 font-bold leading-relaxed">
+                        {loyaltyQueryResult.rewardType === 'discount' 
+                          ? `ستحصل على خصم بقيمة ${loyaltyQueryResult.rewardValue}% على طلبك القادم!` 
+                          : `المكافأة المستحقة: ${loyaltyQueryResult.rewardValue}. أبلغ الكاشير عند إتمام طلبك للحصول عليها.`}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="w-full bg-customer-bg-base border border-customer-border h-2 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-amber-500 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${(loyaltyQueryResult.progress / loyaltyQueryResult.target) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-[9px] text-customer-text-muted font-bold">
+                        متبقي لك {loyaltyQueryResult.target - loyaltyQueryResult.progress} طلبات لتسجيل المكافأة القادمة: {loyaltyQueryResult.rewardType === 'discount' ? `خصم ${loyaltyQueryResult.rewardValue}%` : loyaltyQueryResult.rewardValue}.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="bg-customer-bg-base border border-customer-border p-2.5 rounded-xl text-center text-[10.5px] font-bold text-customer-text-secondary">
+                    إجمالي طلباتك الناجحة: <span className="text-customer-accent font-black">{loyaltyQueryResult.orderCount}</span> طلب
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ===== Offline Notice ===== */}
       {!isStaffOnline && !isReadOnly && (

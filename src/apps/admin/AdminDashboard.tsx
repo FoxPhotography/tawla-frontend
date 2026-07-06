@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
-  FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList
+  FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList, UserCheck
 } from 'lucide-react';
 
 import { useAuthStore } from '../../shared/store/authStore';
@@ -19,13 +19,14 @@ import AnalyticsTab from './components/AnalyticsTab.js';
 import SubscriptionTab from './components/SubscriptionTab.js';
 import StaffTab from './components/StaffTab.js';
 import AuditLogsTab from './components/AuditLogsTab.js';
+import CustomersTab from './components/CustomersTab.js';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, restaurant, logout } = useAuthStore();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers'>('categories');
 
   const handleLogout = () => {
     logout();
@@ -72,10 +73,11 @@ export default function AdminDashboard() {
     { id: 'products', label: 'المنتجات', icon: ShoppingBag, premium: false },
     { id: 'tables', label: 'الطاولات & QR', icon: MapPin, premium: false },
     { id: 'orders', label: 'أرشيف الطلبات', icon: ClipboardList, premium: false },
+    { id: 'customers', label: 'العملاء & الولاء', icon: Users, premium: false },
     { id: 'analytics', label: 'التقارير والتحليلات', icon: BarChart3, premium: !isFeatureAllowed('analytics') },
     { id: 'audit', label: 'سجلات العمليات', icon: ClipboardList, premium: !isFeatureAllowed('audit') },
     { id: 'subscription', label: 'الاشتراك والنظام', icon: Crown, premium: false },
-    { id: 'staff', label: 'حسابات الموظفين', icon: Users, premium: false },
+    { id: 'staff', label: 'حسابات الموظفين', icon: UserCheck, premium: false },
   ];
 
   return (
@@ -153,6 +155,7 @@ export default function AdminDashboard() {
             {activeTab === 'products' && <ProductsTab />}
             {activeTab === 'tables' && <TablesTab />}
             {activeTab === 'orders' && <OrdersTab />}
+            {activeTab === 'customers' && <CustomersTab />}
             {activeTab === 'analytics' && <AnalyticsTab />}
             {activeTab === 'audit' && <AuditLogsTab />}
             {activeTab === 'subscription' && <SubscriptionTab />}

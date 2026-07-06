@@ -14,6 +14,11 @@ export default function SubscriptionTab() {
   const [menuTitle, setMenuTitle] = useState(restaurant?.settings?.menuTitle || '');
   const [menuDescription, setMenuDescription] = useState(restaurant?.settings?.menuDescription || '');
   const [isDeliveryEnabled, setIsDeliveryEnabled] = useState(restaurant?.settings?.isDeliveryEnabled !== false);
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(restaurant?.loyaltySettings?.enabled || false);
+  const [loyaltyTarget, setLoyaltyTarget] = useState(restaurant?.loyaltySettings?.targetOrderCount || 10);
+  const [loyaltyRewardType, setLoyaltyRewardType] = useState(restaurant?.loyaltySettings?.rewardType || 'free_product');
+  const [loyaltyRewardProductName, setLoyaltyRewardProductName] = useState(restaurant?.loyaltySettings?.rewardProductName || 'مشروب مجاني');
+  const [loyaltyRewardDiscountPercent, setLoyaltyRewardDiscountPercent] = useState(restaurant?.loyaltySettings?.rewardDiscountPercent || 50);
 
   const plan = restaurant?.subscription?.plan || 'trial';
 
@@ -38,6 +43,11 @@ export default function SubscriptionTab() {
       setMenuTitle(restaurant.settings?.menuTitle || '');
       setMenuDescription(restaurant.settings?.menuDescription || '');
       setIsDeliveryEnabled(restaurant.settings?.isDeliveryEnabled !== false);
+      setLoyaltyEnabled(restaurant.loyaltySettings?.enabled || false);
+      setLoyaltyTarget(restaurant.loyaltySettings?.targetOrderCount || 10);
+      setLoyaltyRewardType(restaurant.loyaltySettings?.rewardType || 'free_product');
+      setLoyaltyRewardProductName(restaurant.loyaltySettings?.rewardProductName || 'مشروب مجاني');
+      setLoyaltyRewardDiscountPercent(restaurant.loyaltySettings?.rewardDiscountPercent || 50);
     }
   }, [restaurant]);
 
@@ -108,6 +118,19 @@ export default function SubscriptionTab() {
   const handleSaveMenuSettings = (e: React.FormEvent) => {
     e.preventDefault();
     saveMenuSettingsMutation.mutate({ menuTitle, menuDescription, isDeliveryEnabled });
+  };
+
+  const handleSaveLoyaltySettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveMenuSettingsMutation.mutate({
+      loyaltySettings: {
+        enabled: loyaltyEnabled,
+        targetOrderCount: Number(loyaltyTarget),
+        rewardType: loyaltyRewardType,
+        rewardProductName: loyaltyRewardProductName,
+        rewardDiscountPercent: Number(loyaltyRewardDiscountPercent),
+      }
+    });
   };
 
   const handleSaveReceiptSettings = (e: React.FormEvent) => {
@@ -284,6 +307,110 @@ export default function SubscriptionTab() {
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <span>حفظ إعدادات المينيو</span>
+              )}
+            </motion.button>
+          </div>
+        </form>
+      </div>
+
+      {/* Loyalty Settings Section */}
+      <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card space-y-6">
+        <div>
+          <h3 className="font-extrabold text-admin-text-primary text-base">🎁 برنامج الولاء والمكافآت (Loyalty Program)</h3>
+          <p className="text-xs text-admin-text-secondary mt-1">قم بتفعيل برنامج ولاء للعملاء لتشجيعهم على تكرار الطلب من مطعمك للحصول على مكافآت مجانية.</p>
+        </div>
+
+        <form onSubmit={handleSaveLoyaltySettings} className="space-y-4">
+          <div className="flex items-center justify-between border-b border-admin-border/50 pb-4">
+            <div>
+              <label className="text-xs text-admin-text-secondary font-bold block mb-1">تفعيل برنامج الولاء</label>
+              <p className="text-[10px] text-admin-text-muted">عند تفعيله، سيتم تتبع عدد طلبات كل عميل وإهدائه مكافأة بعد تحقيق عدد معين من الطلبات.</p>
+            </div>
+            
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={loyaltyEnabled}
+                onChange={(e) => setLoyaltyEnabled(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-zinc-200 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-admin-accent cursor-pointer"></div>
+            </label>
+          </div>
+
+          {loyaltyEnabled && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4 pt-2"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">عدد الطلبات المطلوبة للحصول على الهدية (الهدف X)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={loyaltyTarget}
+                    onChange={(e) => setLoyaltyTarget(Number(e.target.value))}
+                    className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                  />
+                  <p className="text-[10px] text-admin-text-muted">مثال: بعد إتمام 10 طلبات، يحصل العميل على هديته في الطلب التالي.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">نوع المكافأة</label>
+                  <select
+                    value={loyaltyRewardType}
+                    onChange={(e) => setLoyaltyRewardType(e.target.value as 'free_product' | 'discount')}
+                    className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                  >
+                    <option value="free_product">منتج أو مشروب مجاني</option>
+                    <option value="discount">نسبة خصم على الطلب</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {loyaltyRewardType === 'free_product' ? (
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">اسم المنتج / المشروب المجاني</label>
+                    <input
+                      type="text"
+                      value={loyaltyRewardProductName}
+                      onChange={(e) => setLoyaltyRewardProductName(e.target.value)}
+                      placeholder="مثال: فنجان قهوة مجاني، أو حلوى مجانية"
+                      className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-bold"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">نسبة الخصم المئوية (%)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={loyaltyRewardDiscountPercent}
+                      onChange={(e) => setLoyaltyRewardDiscountPercent(Number(e.target.value))}
+                      placeholder="مثال: 50"
+                      className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-bold"
+                    />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <motion.button
+              type="submit"
+              disabled={saveMenuSettingsMutation.isPending}
+              whileTap={{ scale: 0.97 }}
+              className="py-2.5 px-6 bg-admin-accent text-white font-bold text-xs rounded-lg hover:opacity-95 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-admin-accent"
+            >
+              {saveMenuSettingsMutation.isPending ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span>حفظ إعدادات برنامج الولاء</span>
               )}
             </motion.button>
           </div>

@@ -32,6 +32,13 @@ export interface Restaurant {
     headerText?: string;
     footerText?: string;
   };
+  loyaltySettings?: {
+    enabled: boolean;
+    targetOrderCount: number;
+    rewardType: 'free_product' | 'discount';
+    rewardProductName?: string;
+    rewardDiscountPercent?: number;
+  };
 }
 
 export interface Category {
@@ -126,6 +133,7 @@ export interface Order {
   paymentMethod?: 'cash' | 'card' | 'wallet';
   items: OrderItem[];
   totalAmount: number;
+  discountAmount?: number;
   status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   specialNotes?: string;
   customerName?: string;

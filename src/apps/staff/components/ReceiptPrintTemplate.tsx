@@ -167,24 +167,35 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
           const serviceRatePercent = isTakeaway ? 0 : (restaurant?.receiptSettings?.serviceRate ?? 0);
           const taxRatePercent = restaurant?.receiptSettings?.taxRate ?? 0;
           
-          const subtotal = printingOrder.totalAmount;
-          const taxAmount = subtotal * (taxRatePercent / 100);
-          const serviceAmount = subtotal * (serviceRatePercent / 100);
-          const grandTotal = subtotal + taxAmount + serviceAmount;
+          const itemsSubtotal = printingOrder.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
+          const discount = printingOrder.discountAmount || 0;
+          const afterDiscount = Math.max(0, itemsSubtotal - discount);
+
+          const taxAmount = afterDiscount * (taxRatePercent / 100);
+          const serviceAmount = afterDiscount * (serviceRatePercent / 100);
+          const grandTotal = afterDiscount + taxAmount + serviceAmount;
 
           return (
             <div className="space-y-1 py-1 border-t border-black">
-              {/* Sub Total */}
+              {/* Items Subtotal */}
               <div className="flex justify-between font-bold text-[11px]">
-                <span>الإجمالي الفرعي:</span>
-                <span className="font-mono">{formatCurrency(subtotal)}</span>
+                <span>إجمالي الطلبات:</span>
+                <span className="font-mono">{formatCurrency(itemsSubtotal)}</span>
               </div>
+
+              {/* Discount if applied */}
+              {discount > 0 && (
+                <div className="flex justify-between font-bold text-[11px] text-zinc-900">
+                  <span>الخصم المطبق ({itemsSubtotal > 0 ? Math.round((discount / itemsSubtotal) * 100) : 0}%):</span>
+                  <span className="font-mono">-{formatCurrency(discount)}</span>
+                </div>
+              )}
               
               {/* VAT Tax */}
               {taxRatePercent > 0 && (
                 <div className="flex justify-between font-bold text-[11px]">
                   <span>الضريبة ({taxRatePercent}%):</span>
-                  <span className="font-mono">{taxAmount.toFixed(2)}</span>
+                  <span className="font-mono">{formatCurrency(taxAmount)}</span>
                 </div>
               )}
 
@@ -192,13 +203,13 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
               {serviceRatePercent > 0 && (
                 <div className="flex justify-between font-bold text-[11px]">
                   <span>الخدمة ({serviceRatePercent}%):</span>
-                  <span className="font-mono">{serviceAmount.toFixed(2)}</span>
+                  <span className="font-mono">{formatCurrency(serviceAmount)}</span>
                 </div>
               )}
 
               {/* Grand Total - Large & Bold */}
               <div className="flex justify-between text-sm font-black pt-1.5 border-t border-black">
-                <span>الإجمالي الكلي:</span>
+                <span>المبلغ المستحق:</span>
                 <span className="font-mono">{formatCurrency(grandTotal)}</span>
               </div>
             </div>

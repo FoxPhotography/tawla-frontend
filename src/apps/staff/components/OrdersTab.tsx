@@ -356,9 +356,6 @@ export default function OrdersTab({
                           {action && (
                             <motion.button
                               onClick={() => {
-                                if (order.type === 'delivery' && action.next === 'delivered') {
-                                  onPrintReceipt(order);
-                                }
                                 onUpdateStatus(order.id, action.next);
                               }}
                               whileTap={{ scale: 0.95 }}
@@ -372,9 +369,6 @@ export default function OrdersTab({
                           {action && order.status !== 'ready' && (
                             <motion.button
                               onClick={() => {
-                                if (order.type === 'delivery') {
-                                  onPrintReceipt(order);
-                                }
                                 onUpdateStatus(order.id, 'delivered');
                               }}
                               whileTap={{ scale: 0.95 }}

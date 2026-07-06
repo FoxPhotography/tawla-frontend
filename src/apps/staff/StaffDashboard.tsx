@@ -795,6 +795,7 @@ export default function StaffDashboard() {
             updateLocalTableStatus={updateLocalTableStatus}
             onOrderCreated={handleOrderCreated}
             defaultTableNumber={preselectedTableNumber}
+            orders={combinedOrders}
           />
         )}
       </AnimatePresence>
