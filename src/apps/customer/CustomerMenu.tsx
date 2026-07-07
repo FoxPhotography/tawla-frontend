@@ -62,7 +62,20 @@ export default function CustomerMenu() {
   const restaurant = menuData?.restaurant;
   const categories = menuData?.categories || [];
   const products = menuData?.products || [];
-  const isReadOnly = !tableNumber && restaurant?.settings?.isDeliveryEnabled === false;
+
+  // Fetch public table status
+  const { data: tableStatusData } = useQuery({
+    queryKey: ['tableStatus', restaurantSlug, tableNumber],
+    queryFn: async () => {
+      const response = await api.get(`/tables/public/${restaurantSlug}/${tableNumber}`);
+      return response.data.data as { status: string; isSessionOwner: boolean; hasActiveOrder: boolean; activeOrderId: string | null };
+    },
+    enabled: !!restaurantSlug && !!tableNumber,
+    refetchInterval: 15 * 1000, // Poll every 15 seconds as a fallback
+  });
+
+  const isTableOccupiedByOthers = tableStatusData ? (tableStatusData.isSessionOwner === false) : false;
+  const isReadOnly = (!tableNumber && restaurant?.settings?.isDeliveryEnabled === false) || isTableOccupiedByOthers;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -134,6 +147,17 @@ export default function CustomerMenu() {
     }
   }, [restaurantSlug, tableNumber]);
 
+  // Restore activeOrderId from table status if the user is the owner but lost localStorage (e.g. refreshed page)
+  useEffect(() => {
+    if (tableStatusData?.isSessionOwner && tableStatusData.activeOrderId) {
+      const localActiveOrderId = localStorage.getItem('tawla_active_order_id');
+      if (localActiveOrderId !== tableStatusData.activeOrderId) {
+        console.log('Restoring active order ID from table session:', tableStatusData.activeOrderId);
+        localStorage.setItem('tawla_active_order_id', tableStatusData.activeOrderId);
+      }
+    }
+  }, [tableStatusData]);
+
 
 
   useEffect(() => {
@@ -189,11 +213,19 @@ export default function CustomerMenu() {
       console.log('Customer loyalty updated via socket:', data.loyalty);
       setLoyaltyQueryResult(data.loyalty);
     });
+
+    socket.on('table_status_changed', (data: { tableNumber: number, status: string, currentOrderId: string | null }) => {
+      if (Number(data.tableNumber) === Number(tableNumber)) {
+        console.log('Table status updated via socket, invalidating tableStatus query...');
+        queryClient.invalidateQueries({ queryKey: ['tableStatus', restaurantSlug, tableNumber] });
+      }
+    });
     
     return () => {
       socket.off('menu_updated');
       socket.off('staff_status');
       socket.off('customer_updated');
+      socket.off('table_status_changed');
     };
   }, [restaurant?.id, restaurantSlug, queryClient]);
 
@@ -499,6 +531,15 @@ export default function CustomerMenu() {
         <div className="restaurant-sub">{restaurant.settings?.menuDescription || 'أهلاً بك في تجربة طعام فاخرة ومميزة'}</div>
       </div>
 
+      {/* ===== Table Occupied Banner ===== */}
+      {isTableOccupiedByOthers && (
+        <div className="mx-4 mt-4 relative z-10 max-w-[428px] md:mx-auto bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-2xl p-4 text-center font-body" dir="rtl">
+          <p className="text-xs font-bold leading-relaxed">
+            ⚠️ هذه الطاولة مشغولة حالياً لعميل آخر. يمكنك تصفح المنيو فقط، ولا يمكنك إرسال طلبات أو طلب خدمات حالياً.
+          </p>
+        </div>
+      )}
+
       {/* ===== Loyalty Checking Card ===== */}
       {restaurant.loyaltySettings?.enabled && (
         <div className="mx-4 mt-5 relative z-10 max-w-[428px] md:mx-auto bg-customer-bg-elevated border border-customer-border rounded-2xl p-4 shadow-customer-card space-y-3.5 text-right" dir="rtl">
@@ -659,17 +700,19 @@ export default function CustomerMenu() {
       {tableNumber && (
         <div className="action-row relative z-10">
           <motion.button 
-            whileTap={{ scale: 0.97 }}
-            onClick={() => callWaiterMutation.mutate()}
-            className="action-btn"
+            whileTap={isReadOnly ? {} : { scale: 0.97 }}
+            onClick={() => !isReadOnly && callWaiterMutation.mutate()}
+            className={`action-btn ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}`}
+            disabled={isReadOnly}
           >
             <Bell className="w-4 h-4" />
             <span>استدعاء ويتر</span>
           </motion.button>
           <motion.button 
-            whileTap={{ scale: 0.97 }}
-            onClick={() => requestBillMutation.mutate()}
-            className="action-btn"
+            whileTap={isReadOnly ? {} : { scale: 0.97 }}
+            onClick={() => !isReadOnly && requestBillMutation.mutate()}
+            className={`action-btn ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}`}
+            disabled={isReadOnly}
           >
             <Receipt className="w-4 h-4" />
             <span>طلب الحساب</span>

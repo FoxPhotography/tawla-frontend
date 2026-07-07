@@ -18,7 +18,7 @@ api.interceptors.request.use(
   }
 );
 
-// Request Interceptor: Attach access token and tenant header
+// Request Interceptor: Attach access token, tenant header, and device token
 api.interceptors.request.use(
   (config) => {
     const { token, user } = useAuthStore.getState();
@@ -28,6 +28,15 @@ api.interceptors.request.use(
     if (user?.restaurantId) {
       config.headers['x-restaurant-id'] = user.restaurantId;
     }
+
+    // Ensure we have a device token stored in localStorage for customer table sessions
+    let deviceToken = localStorage.getItem('tawla_device_token');
+    if (!deviceToken) {
+      deviceToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('tawla_device_token', deviceToken);
+    }
+    config.headers['x-device-token'] = deviceToken;
+
     return config;
   },
   (error) => Promise.reject(error)
