@@ -131,7 +131,6 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
           </thead>
           <tbody>
             {printingOrder.items.map((item: any, idx: number) => {
-              const itemTotal = item.price * item.quantity;
               return (
                  <tr key={idx}>
                   <td className="text-center font-mono font-black text-[11px]">{item.quantity}</td>
@@ -152,24 +151,12 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
                         * ملاحظة: {item.notes}
                       </div>
                     )}
-                    {item.originalPrice && item.originalPrice > item.price && (
-                      <div className="text-[8.5px] text-red-650 font-bold mt-0.5" style={{ color: '#dc2626' }}>
-                        (خصم العرض: -{((item.originalPrice - item.price) * item.quantity).toFixed(2)} ج.م)
-                      </div>
-                    )}
                   </td>
                   <td className="text-center font-mono font-bold">
                     {(item.originalPrice || item.price).toFixed(2)}
                   </td>
                   <td className="text-left font-mono font-black">
-                    {item.originalPrice && item.originalPrice > item.price ? (
-                      <div>
-                        <div className="line-through text-[9px] text-zinc-500 font-normal">{((item.originalPrice) * item.quantity).toFixed(2)}</div>
-                        <div>{itemTotal.toFixed(2)}</div>
-                      </div>
-                    ) : (
-                      itemTotal.toFixed(2)
-                    )}
+                    {((item.originalPrice || item.price) * item.quantity).toFixed(2)}
                   </td>
                 </tr>
               );
@@ -201,22 +188,6 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
                 <span>إجمالي الطلبات:</span>
                 <span className="font-mono">{formatCurrency(originalSubtotal)}</span>
               </div>
-
-              {/* Scheduled Discount if applied */}
-              {scheduledDiscount > 0 && (
-                <div className="flex justify-between font-bold text-[11px] text-zinc-900">
-                  <span>خصم العروض المجدولة:</span>
-                  <span className="font-mono">-{formatCurrency(scheduledDiscount)}</span>
-                </div>
-              )}
-
-              {/* Manual Discount if applied */}
-              {manualDiscount > 0 && (
-                <div className="flex justify-between font-bold text-[11px] text-zinc-900">
-                  <span>الخصم المباشر / النقاط:</span>
-                  <span className="font-mono">-{formatCurrency(manualDiscount)}</span>
-                </div>
-              )}
               
               {/* VAT Tax */}
               {taxRatePercent > 0 && (
@@ -231,6 +202,14 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
                 <div className="flex justify-between font-bold text-[11px]">
                   <span>الخدمة ({serviceRatePercent}%):</span>
                   <span className="font-mono">{formatCurrency(serviceAmount)}</span>
+                </div>
+              )}
+
+              {/* Discount under Service charge */}
+              {totalDiscount > 0 && (
+                <div className="flex justify-between font-bold text-[11px]" style={{ color: '#dc2626' }}>
+                  <span>خصم العروض:</span>
+                  <span className="font-mono">-{formatCurrency(totalDiscount)}</span>
                 </div>
               )}
 

@@ -185,7 +185,21 @@ export default function CartDrawer({
                                   <span className="text-[9px] bg-red-500 text-white font-extrabold px-1.5 py-0.5 rounded shadow">نفذ حالياً</span>
                                 )}
                               </h4>
-                              <span className="text-xs text-orange-600 font-extrabold font-mono mt-1 block">{itemUnitPrice} ج.م</span>
+                              {discountPercent > 0 ? (
+                                <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                                  <span className="text-xs text-orange-600 font-extrabold font-mono">
+                                    {itemUnitPrice} ج.م
+                                  </span>
+                                  <span className="text-[10px] line-through text-zinc-400 font-bold font-mono">
+                                    {originalTotal} ج.م
+                                  </span>
+                                  <span className="text-[8px] bg-red-500/10 text-red-500 px-1 py-0.5 rounded font-extrabold">
+                                    -{Math.round(discountPercent * 100)}%
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-orange-600 font-extrabold font-mono mt-1 block">{itemUnitPrice} ج.م</span>
+                              )}
                               
                               {/* Display Custom Options & Modifiers in Cart */}
                               {((item.selectedOptions && item.selectedOptions.length > 0) || 
