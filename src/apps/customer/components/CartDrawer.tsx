@@ -147,9 +147,18 @@ export default function CartDrawer({
                   {cart.map((item, index) => {
                     const latestProduct = products?.find(p => p.id === item.product.id);
                     const isAvailable = latestProduct ? latestProduct.isAvailable : item.product.isAvailable;
-                    const optionsPrice = item.selectedOptions?.reduce((sum, opt) => sum + opt.priceAdjustment, 0) || 0;
-                    const modifiersPrice = item.selectedModifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
-                    const itemUnitPrice = item.product.price + optionsPrice + modifiersPrice;
+                    const discountPercent = item.product.originalPrice && item.product.originalPrice > 0
+                      ? (item.product.originalPrice - item.product.price) / item.product.originalPrice
+                      : 0;
+
+                    const selectedOptionValues = item.selectedOptions || [];
+                    const baseOriginalPrice = selectedOptionValues.length > 0
+                      ? selectedOptionValues[0].priceAdjustment
+                      : (item.product.originalPrice || item.product.price);
+
+                    const modsOriginalPrice = item.selectedModifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
+                    const originalTotal = baseOriginalPrice + modsOriginalPrice;
+                    const itemUnitPrice = Number((originalTotal * (1 - discountPercent)).toFixed(2));
 
                     return (
                       <motion.div
@@ -184,7 +193,7 @@ export default function CartDrawer({
                                 <div className="flex flex-wrap gap-1 mt-1 text-[10px] text-zinc-500 font-semibold">
                                   {item.selectedOptions?.map((opt, i) => (
                                     <span key={i} className="bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
-                                      {opt.name}: {opt.value} {opt.priceAdjustment > 0 ? `(+${opt.priceAdjustment} ج.م)` : ''}
+                                      {opt.name}: {opt.value} ({opt.priceAdjustment} ج.م)
                                     </span>
                                   ))}
                                   {item.selectedModifiers?.map((mod, i) => (

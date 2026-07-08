@@ -579,7 +579,7 @@ export default function ProductsTab() {
                           type="number"
                           value={choice.priceAdjustment}
                           onChange={(e) => updateOptionChoicePrice(gIdx, cIdx, Number(e.target.value))}
-                          placeholder="فرق السعر"
+                          placeholder="سعر المقاس"
                           className="w-16 bg-admin-bg-base border border-admin-border text-admin-text-primary text-[10px] rounded px-2 py-1 focus:outline-none text-left"
                         />
                         <button type="button" onClick={() => removeOptionChoice(gIdx, cIdx)} className="text-zinc-500 hover:text-red-500">

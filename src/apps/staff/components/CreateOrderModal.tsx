@@ -40,7 +40,7 @@ export default function CreateOrderModal({
   const [selectedTableNumber, setSelectedTableNumber] = useState<number | ''>('');
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
   const [menuSelectedCategory, setMenuSelectedCategory] = useState<string>('all');
-  const [newOrderCart, setNewOrderCart] = useState<{ product: any; quantity: number; notes: string; selectedOptions?: any[]; selectedModifiers?: any[]; calculatedPrice: number }[]>([]);
+  const [newOrderCart, setNewOrderCart] = useState<{ product: any; quantity: number; notes: string; selectedOptions?: any[]; selectedModifiers?: any[]; originalPrice?: number; calculatedPrice: number }[]>([]);
   const [newOrderSpecialNotes, setNewOrderSpecialNotes] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
@@ -241,13 +241,101 @@ export default function CreateOrderModal({
     });
   };
 
+  const getProductDiscountInfo = (prod: any) => {
+    const plan = restaurant?.subscription?.plan || 'trial';
+    const allowedPlans = systemSettings?.features?.customDiscounts || ['pro'];
+    const isDiscountAllowed = allowedPlans.includes(plan);
+
+    if (!isDiscountAllowed || !restaurant || !restaurant.settings?.discountConfig) {
+      return { discountActive: false, price: prod.price, originalPrice: prod.price, percent: 0 };
+    }
+
+    const config = restaurant.settings.discountConfig;
+    if (!config.enabled) {
+      return { discountActive: false, price: prod.price, originalPrice: prod.price, percent: 0 };
+    }
+
+    // 1. Verify schedule
+    const now = new Date();
+    if (config.scheduleType === 'weekly') {
+      const weekdayStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: restaurant.settings.timezone || 'Africa/Cairo',
+        weekday: 'long',
+      }).format(now);
+
+      const weekdayMap: Record<string, number> = {
+        'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6,
+      };
+
+      const cairoDay = weekdayMap[weekdayStr];
+      if (config.daysOfWeek === undefined || !config.daysOfWeek.includes(cairoDay)) {
+        return { discountActive: false, price: prod.price, originalPrice: prod.price, percent: 0 };
+      }
+    } else if (config.scheduleType === 'custom_range') {
+      const currentTime = now.getTime();
+      if (config.startDate) {
+        const start = new Date(config.startDate).getTime();
+        if (currentTime < start) return { discountActive: false, price: prod.price, originalPrice: prod.price, percent: 0 };
+      }
+      if (config.endDate) {
+        const end = new Date(config.endDate).getTime();
+        if (currentTime > end) return { discountActive: false, price: prod.price, originalPrice: prod.price, percent: 0 };
+      }
+    }
+
+    // 2. Verify scope
+    let applies = false;
+    if (config.discountType === 'all') {
+      applies = true;
+    } else if (config.discountType === 'categories') {
+      if (prod.categoryId && config.targetIds?.includes(prod.categoryId)) {
+        applies = true;
+      }
+    } else if (config.discountType === 'products') {
+      if (prod.id && config.targetIds?.includes(prod.id)) {
+        applies = true;
+      }
+    }
+
+    if (!applies) {
+      return { discountActive: false, price: prod.price, originalPrice: prod.price, percent: 0 };
+    }
+
+    // 3. Calculate discount
+    let discountAmount = 0;
+    if (config.valueType === 'percentage') {
+      discountAmount = prod.price * (config.value / 100);
+    } else if (config.valueType === 'fixed') {
+      discountAmount = config.value;
+    }
+
+    discountAmount = Math.max(0, Math.min(prod.price, discountAmount));
+    const finalPrice = Math.max(0, prod.price - discountAmount);
+    const percent = prod.price > 0 ? (discountAmount / prod.price) : 0;
+
+    return {
+      discountActive: discountAmount > 0,
+      price: Number(finalPrice.toFixed(2)),
+      originalPrice: prod.price,
+      percent,
+    };
+  };
+
   const calculatedCustomTotal = useMemo(() => {
     if (!customizingProduct) return 0;
-    const base = customizingProduct.price;
-    const opts = Object.values(selectedOptions).reduce((sum, o) => sum + o.priceAdjustment, 0);
-    const mods = Object.values(selectedModifiers).reduce((sum, m) => sum + m.price, 0);
-    return base + opts + mods;
-  }, [customizingProduct, selectedOptions, selectedModifiers]);
+    
+    const discInfo = getProductDiscountInfo(customizingProduct);
+    
+    const selectedOptionValues = Object.values(selectedOptions);
+    const baseOriginalPrice = selectedOptionValues.length > 0 
+      ? selectedOptionValues[0].priceAdjustment 
+      : customizingProduct.price;
+
+    const modsOriginalPrice = Object.values(selectedModifiers).reduce((sum, m) => sum + m.price, 0);
+    const originalTotal = baseOriginalPrice + modsOriginalPrice;
+    
+    return originalTotal * (1 - discInfo.percent);
+  }, [customizingProduct, selectedOptions, selectedModifiers, restaurant, systemSettings]);
 
   const addToCart = (
     product: any,
@@ -256,10 +344,16 @@ export default function CreateOrderModal({
     selectedOptions?: { name: string; value: string; priceAdjustment: number }[],
     selectedModifiers?: { name: string; value: string; price: number }[]
   ) => {
-    const base = product.price;
-    const opts = (selectedOptions || []).reduce((sum, o) => sum + o.priceAdjustment, 0);
-    const mods = (selectedModifiers || []).reduce((sum, m) => sum + m.price, 0);
-    const calculatedPrice = base + opts + mods;
+    const discInfo = getProductDiscountInfo(product);
+
+    const selectedOptionValues = selectedOptions || [];
+    const baseOriginalPrice = selectedOptionValues.length > 0 
+      ? selectedOptionValues[0].priceAdjustment 
+      : product.price;
+
+    const modsOriginalPrice = (selectedModifiers || []).reduce((sum, m) => sum + m.price, 0);
+    const originalTotal = baseOriginalPrice + modsOriginalPrice;
+    const calculatedPrice = Number((originalTotal * (1 - discInfo.percent)).toFixed(2));
 
     setNewOrderCart((prev) => {
       const existingIdx = prev.findIndex((item) => {
@@ -283,6 +377,7 @@ export default function CreateOrderModal({
           notes,
           selectedOptions,
           selectedModifiers,
+          originalPrice: Number(originalTotal.toFixed(2)),
           calculatedPrice
         }];
       }
@@ -934,7 +1029,14 @@ export default function CreateOrderModal({
                     <div className="flex justify-between items-start gap-2">
                       <div>
                         <h5 className="text-xs font-black text-white leading-snug">{item.product.name}</h5>
-                        <span className="text-[10px] text-staff-accent font-black font-mono">{item.calculatedPrice} ج.م</span>
+                        {item.originalPrice && item.originalPrice > item.calculatedPrice ? (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-staff-accent font-black font-mono">{item.calculatedPrice} ج.م</span>
+                            <span className="text-[9px] line-through text-zinc-500 font-mono">{item.originalPrice} ج.م</span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-staff-accent font-black font-mono">{item.calculatedPrice} ج.م</span>
+                        )}
                         
                         {/* Options & Modifiers display */}
                         {item.selectedOptions && item.selectedOptions.length > 0 && (
@@ -1170,9 +1272,23 @@ export default function CreateOrderModal({
                           </div>
                           
                           <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-staff-border/60 px-0.5">
-                            <span className="font-mono text-[13px] font-black text-staff-text-primary">
-                              {prod.price} <span className="text-[9px] font-bold text-staff-text-muted">ج.م</span>
-                            </span>
+                            {(() => {
+                              const disc = getProductDiscountInfo(prod);
+                              return disc.discountActive ? (
+                                <div className="flex flex-col text-right">
+                                  <span className="font-mono text-[13px] font-black text-staff-accent leading-none">
+                                    {disc.price} <span className="text-[8px] font-bold">ج.م</span>
+                                  </span>
+                                  <span className="font-mono text-[9px] line-through text-zinc-500 mt-0.5 leading-none">
+                                    {disc.originalPrice} ج.م
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="font-mono text-[13px] font-black text-staff-text-primary">
+                                  {prod.price} <span className="text-[9px] font-bold text-staff-text-muted">ج.م</span>
+                                </span>
+                              );
+                            })()}
                             <button
                               onClick={() => handleProductClick(prod)}
                               className={`text-[9px] font-black px-2.5 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
@@ -1258,11 +1374,20 @@ export default function CreateOrderModal({
                             />
                             <span className="text-white font-bold">{choice.name}</span>
                           </div>
-                          {choice.priceAdjustment > 0 ? (
-                            <span className="text-zinc-400 font-mono">+{choice.priceAdjustment} ج.م</span>
-                          ) : (
-                            <span className="text-zinc-400 font-bold">مشمول</span>
-                          )}
+                          {(() => {
+                            const discInfo = getProductDiscountInfo(customizingProduct);
+                            const originalOptionPrice = choice.priceAdjustment;
+                            const finalOptionPrice = originalOptionPrice * (1 - discInfo.percent);
+
+                            return discInfo.percent > 0 ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-zinc-500 font-mono line-through text-[9px]">{originalOptionPrice} ج.م</span>
+                                <span className="text-staff-accent font-mono font-bold">{finalOptionPrice.toFixed(2)} ج.م</span>
+                              </div>
+                            ) : (
+                              <span className="text-zinc-400 font-mono">{originalOptionPrice} ج.م</span>
+                            );
+                          })()}
                         </label>
                       ))}
                     </div>
@@ -1288,9 +1413,22 @@ export default function CreateOrderModal({
                             />
                             <span className="text-white font-bold">{choice.name}</span>
                           </div>
-                          {choice.price > 0 && (
-                            <span className="text-zinc-400 font-mono">+{choice.price} ج.م</span>
-                          )}
+                          {(() => {
+                            const discInfo = getProductDiscountInfo(customizingProduct);
+                            const originalModifierPrice = choice.price;
+                            const finalModifierPrice = originalModifierPrice * (1 - discInfo.percent);
+
+                            return discInfo.percent > 0 ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-zinc-500 font-mono line-through text-[9px] font-bold">+{originalModifierPrice} ج.م</span>
+                                <span className="text-staff-accent font-mono font-extrabold">+{finalModifierPrice.toFixed(2)} ج.م</span>
+                              </div>
+                            ) : (
+                              choice.price > 0 ? (
+                                <span className="text-zinc-400 font-mono">+{choice.price} ج.م</span>
+                              ) : null
+                            );
+                          })()}
                         </label>
                       );
                     })}

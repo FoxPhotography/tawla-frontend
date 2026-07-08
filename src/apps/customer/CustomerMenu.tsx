@@ -298,10 +298,20 @@ export default function CustomerMenu() {
 
   const calculatedCustomTotal = useMemo(() => {
     if (!customizingProduct) return 0;
-    const base = customizingProduct.price;
-    const opts = Object.values(selectedOptions).reduce((sum, o) => sum + o.priceAdjustment, 0);
-    const mods = Object.values(selectedModifiers).reduce((sum, m) => sum + m.price, 0);
-    return base + opts + mods;
+    
+    const discountPercent = customizingProduct.originalPrice && customizingProduct.originalPrice > 0
+      ? (customizingProduct.originalPrice - customizingProduct.price) / customizingProduct.originalPrice
+      : 0;
+
+    const selectedOptionValues = Object.values(selectedOptions);
+    const baseOriginalPrice = selectedOptionValues.length > 0 
+      ? selectedOptionValues[0].priceAdjustment 
+      : (customizingProduct.originalPrice || customizingProduct.price);
+
+    const modsOriginalPrice = Object.values(selectedModifiers).reduce((sum, m) => sum + m.price, 0);
+    const originalTotal = baseOriginalPrice + modsOriginalPrice;
+    
+    return originalTotal * (1 - discountPercent);
   }, [customizingProduct, selectedOptions, selectedModifiers]);
 
   const handleConfirmCustomization = () => {
@@ -394,9 +404,19 @@ export default function CustomerMenu() {
 
   const cartTotal = useMemo(() => {
     return cart.reduce((total, item) => {
-      const optionsPrice = item.selectedOptions?.reduce((sum, opt) => sum + opt.priceAdjustment, 0) || 0;
-      const modifiersPrice = item.selectedModifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
-      const itemUnitPrice = item.product.price + optionsPrice + modifiersPrice;
+      const discountPercent = item.product.originalPrice && item.product.originalPrice > 0
+        ? (item.product.originalPrice - item.product.price) / item.product.originalPrice
+        : 0;
+
+      const selectedOptionValues = item.selectedOptions || [];
+      const baseOriginalPrice = selectedOptionValues.length > 0
+        ? selectedOptionValues[0].priceAdjustment
+        : (item.product.originalPrice || item.product.price);
+
+      const modsOriginalPrice = item.selectedModifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
+      const originalTotal = baseOriginalPrice + modsOriginalPrice;
+      const itemUnitPrice = originalTotal * (1 - discountPercent);
+
       return total + itemUnitPrice * item.quantity;
     }, 0);
   }, [cart]);
@@ -1257,11 +1277,24 @@ export default function CustomerMenu() {
                             />
                             <span className="text-customer-text-primary font-bold">{choice.name}</span>
                           </div>
-                          {choice.priceAdjustment > 0 ? (
-                            <span className="text-customer-text-secondary font-mono">+{choice.priceAdjustment} ج.م</span>
-                          ) : (
-                            <span className="text-customer-text-secondary font-bold">مشمول</span>
-                          )}
+                           {(() => {
+                            const discountPercent = customizingProduct
+                              ? (customizingProduct.originalPrice && customizingProduct.originalPrice > 0
+                                ? (customizingProduct.originalPrice - customizingProduct.price) / customizingProduct.originalPrice
+                                : 0)
+                              : 0;
+                            const originalOptionPrice = choice.priceAdjustment;
+                            const finalOptionPrice = originalOptionPrice * (1 - discountPercent);
+
+                            return discountPercent > 0 ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-customer-text-secondary font-mono line-through text-[9px]">{originalOptionPrice} ج.م</span>
+                                <span className="text-customer-accent font-mono font-bold">{finalOptionPrice.toFixed(2)} ج.م</span>
+                              </div>
+                            ) : (
+                              <span className="text-customer-text-secondary font-mono">{originalOptionPrice} ج.م</span>
+                            );
+                          })()}
                         </label>
                       ))}
                     </div>
@@ -1285,7 +1318,24 @@ export default function CustomerMenu() {
                           />
                           <span className="text-customer-text-primary font-bold">{choice.name}</span>
                         </div>
-                        <span className="text-customer-text-secondary font-mono">+{choice.price} ج.م</span>
+                        {(() => {
+                          const discountPercent = customizingProduct
+                            ? (customizingProduct.originalPrice && customizingProduct.originalPrice > 0
+                              ? (customizingProduct.originalPrice - customizingProduct.price) / customizingProduct.originalPrice
+                              : 0)
+                            : 0;
+                          const originalModifierPrice = choice.price;
+                          const finalModifierPrice = originalModifierPrice * (1 - discountPercent);
+
+                          return discountPercent > 0 ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-customer-text-secondary font-mono line-through text-[9px] font-bold">+{originalModifierPrice} ج.م</span>
+                              <span className="text-customer-accent font-mono font-extrabold">+{finalModifierPrice.toFixed(2)} ج.م</span>
+                            </div>
+                          ) : (
+                            <span className="text-customer-text-secondary font-mono">+{originalModifierPrice} ج.م</span>
+                          );
+                        })()}
                       </label>
                     ))}
                   </div>
