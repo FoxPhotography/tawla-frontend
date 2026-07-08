@@ -42,6 +42,9 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   const [featureAudit, setFeatureAudit] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
   const [featureDelivery, setFeatureDelivery] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
   const [featureLoyalty, setFeatureLoyalty] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
+  const [featureSeparateRestCafe, setFeatureSeparateRestCafe] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
+  const [featureCustomPopular, setFeatureCustomPopular] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
+  const [featureCustomDiscounts, setFeatureCustomDiscounts] = useState<('trial' | 'basic' | 'pro')[]>(['pro']);
 
   // Sync settings
   useEffect(() => {
@@ -87,11 +90,17 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
         setFeatureAudit(systemSettings.features.audit || ['pro']);
         setFeatureDelivery(systemSettings.features.delivery || ['pro']);
         setFeatureLoyalty(systemSettings.features.loyalty || ['pro']);
+        setFeatureSeparateRestCafe(systemSettings.features.separateRestCafe || ['pro']);
+        setFeatureCustomPopular(systemSettings.features.customPopularProducts || ['pro']);
+        setFeatureCustomDiscounts(systemSettings.features.customDiscounts || ['pro']);
       } else {
         setFeatureAnalytics(['pro']);
         setFeatureAudit(['pro']);
         setFeatureDelivery(['pro']);
         setFeatureLoyalty(['pro']);
+        setFeatureSeparateRestCafe(['pro']);
+        setFeatureCustomPopular(['pro']);
+        setFeatureCustomDiscounts(['pro']);
       }
     }
   }, [systemSettings]);
@@ -137,6 +146,9 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
           audit: featureAudit,
           delivery: featureDelivery,
           loyalty: featureLoyalty,
+          separateRestCafe: featureSeparateRestCafe,
+          customPopularProducts: featureCustomPopular,
+          customDiscounts: featureCustomDiscounts,
         },
       };
       return api.put('/super-admin/system-settings', payload);
@@ -500,6 +512,87 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
                           setFeatureDelivery([...featureDelivery, p as any]);
                         } else {
                           setFeatureDelivery(featureDelivery.filter(x => x !== p));
+                        }
+                      }}
+                      className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"
+                    />
+                    <span className="uppercase">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Feature: Separate Restaurant & Cafe */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-admin-border/50">
+              <div>
+                <span className="text-xs font-black text-admin-text-primary block">فصل حسابات المطعم عن الكافيه (Split Restaurant & Cafe Accounts)</span>
+                <span className="text-[10px] text-admin-text-secondary font-medium">تتيح للمطعم تصنيف أقسام المينيو لتكون تابعة للمطعم أو الكافيه بشكل منفصل ورصد تحليلات المبيعات لكل منهما على حدة.</span>
+              </div>
+              <div className="flex items-center gap-4">
+                {['trial', 'basic', 'pro'].map((p) => (
+                  <label key={p} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-admin-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={featureSeparateRestCafe.includes(p as any)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFeatureSeparateRestCafe([...featureSeparateRestCafe, p as any]);
+                        } else {
+                          setFeatureSeparateRestCafe(featureSeparateRestCafe.filter(x => x !== p));
+                        }
+                      }}
+                      className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"
+                    />
+                    <span className="uppercase">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Feature: Custom Popular Products */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-admin-border/50">
+              <div>
+                <span className="text-xs font-black text-admin-text-primary block">تخصيص الأكثر طلباً (Custom Most Popular Products)</span>
+                <span className="text-[10px] text-admin-text-secondary font-medium">تتيح للمطعم تحديد منتجات معينة يدوياً لعرضها في المنيو كمنتجات أكثر طلباً لأغراض تسويقية.</span>
+              </div>
+              <div className="flex items-center gap-4">
+                {['trial', 'basic', 'pro'].map((p) => (
+                  <label key={p} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-admin-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={featureCustomPopular.includes(p as any)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFeatureCustomPopular([...featureCustomPopular, p as any]);
+                        } else {
+                          setFeatureCustomPopular(featureCustomPopular.filter(x => x !== p));
+                        }
+                      }}
+                      className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"
+                    />
+                    <span className="uppercase">{p}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Feature: Custom Discounts */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-admin-border/50">
+              <div>
+                <span className="text-xs font-black text-admin-text-primary block">تخصيص الخصومات والعروض المجدولة (Scheduled Discounts)</span>
+                <span className="text-[10px] text-admin-text-secondary font-medium">تتيح للمطعم إنشاء خصومات وعروض أسعار مجدولة بنسب مئوية أو قيمة ثابتة وتطبيقها تلقائياً بالمنيو.</span>
+              </div>
+              <div className="flex items-center gap-4">
+                {['trial', 'basic', 'pro'].map((p) => (
+                  <label key={p} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-admin-text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={featureCustomDiscounts.includes(p as any)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFeatureCustomDiscounts([...featureCustomDiscounts, p as any]);
+                        } else {
+                          setFeatureCustomDiscounts(featureCustomDiscounts.filter(x => x !== p));
                         }
                       }}
                       className="rounded border-zinc-300 text-admin-accent focus:ring-admin-accent cursor-pointer"

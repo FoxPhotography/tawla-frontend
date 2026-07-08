@@ -174,6 +174,13 @@ export default function CustomerMenu() {
   }, [restaurant]);
 
   const popularProducts = useMemo(() => {
+    if (restaurant?.settings?.customPopularEnabled && restaurant?.settings?.customPopularProducts?.length) {
+      const customIds = restaurant.settings.customPopularProducts;
+      return customIds
+        .map(id => products.find(p => p.id === id || (p as any)._id === id))
+        .filter((p): p is Product => !!p && p.isAvailable);
+    }
+
     const sorted = [...products].sort((a, b) => {
       const catA = categories.find(c => c.id === a.categoryId);
       const catB = categories.find(c => c.id === b.categoryId);
@@ -187,7 +194,7 @@ export default function CustomerMenu() {
       return a.order - b.order;
     });
     return sorted.slice(0, 5);
-  }, [products, categories]);
+  }, [products, categories, restaurant]);
 
   // Real-time Socket.io menu updates listener
   useEffect(() => {
@@ -777,7 +784,17 @@ export default function CustomerMenu() {
                   
                   <div className="min-w-0 mb-2.5">
                     <h4 className="font-bold text-customer-text-primary text-xs truncate">{prod.name}</h4>
-                    <span className="text-[11px] font-bold text-customer-accent block mt-0.5">{prod.price} ج.م</span>
+                    {prod.originalPrice ? (
+                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                        <span className="text-[11px] font-bold text-customer-accent">{prod.price} ج.م</span>
+                        <span className="text-[9px] line-through text-customer-text-muted">{prod.originalPrice} ج.م</span>
+                        <span className="text-[7.5px] bg-red-500/10 text-red-500 px-1 py-0.2 rounded font-extrabold">
+                          -{Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}%
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] font-bold text-customer-accent block mt-0.5">{prod.price} ج.م</span>
+                    )}
                   </div>
                   
                   {!isReadOnly && (
@@ -917,10 +934,25 @@ export default function CustomerMenu() {
                     )}
                   </div>
                   <div className="product-footer">
-                    <span className="product-price">
-                      {product.price}
-                      <span className="currency">ج.م</span>
-                    </span>
+                    {product.originalPrice ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="product-price">
+                          {product.price}
+                          <span className="currency">ج.م</span>
+                        </span>
+                        <span className="text-[10px] line-through text-customer-text-muted font-bold font-mono">
+                          {product.originalPrice} ج.م
+                        </span>
+                        <span className="text-[8px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded-md font-extrabold">
+                          -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="product-price">
+                        {product.price}
+                        <span className="currency">ج.م</span>
+                      </span>
+                    )}
 
                     {/* Quantity Adjustment / Add button */}
                     {!isReadOnly && (

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ShoppingBag, Edit2, Trash2, Check, GripVertical, Search, Plus, X, ListPlus, Loader2 
+  ShoppingBag, Edit2, Trash2, Check, GripVertical, Search, Plus, X, ListPlus, Loader2, Flame
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
+import { useAuthStore } from '../../../shared/store/authStore';
 import type { Category, Product, ProductOption, ProductModifier } from '../../../shared/types';
 import { ImageUploadZone } from './ImageUploadZone.js';
 import { ImageCropperModal } from './ImageCropperModal.js';
@@ -13,6 +14,7 @@ import CustomSelect from './CustomSelect.js';
 
 export default function ProductsTab() {
   const queryClient = useQueryClient();
+  const { restaurant, updateRestaurant } = useAuthStore();
 
   // Search & Filters
   const [prodSearchQuery, setProdSearchQuery] = useState('');
@@ -42,6 +44,16 @@ export default function ProductsTab() {
   const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null);
   const [syncingIds, setSyncingIds] = useState<string[]>([]);
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
+
+  // Popular products states
+  const [customPopularProducts, setCustomPopularProducts] = useState<string[]>(restaurant?.settings?.customPopularProducts || []);
+  const [draggedPopularId, setDraggedPopularId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (restaurant?.settings?.customPopularProducts) {
+      setCustomPopularProducts(restaurant.settings.customPopularProducts);
+    }
+  }, [restaurant]);
 
   // Queries
   const { data: categories = [] } = useQuery({
@@ -116,6 +128,22 @@ export default function ProductsTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     },
+  });
+
+  const updatePopularProductsMutation = useMutation({
+    mutationFn: async (variables: { products: string[] }) => {
+      const response = await api.put('/subscriptions/settings', {
+        customPopularProducts: variables.products,
+      });
+      return response.data.data;
+    },
+    onSuccess: (updatedRest) => {
+      updateRestaurant(updatedRest);
+      toast.success('تم تحديث المنتجات الأكثر طلباً.');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل تحديث الإعدادات.');
+    }
   });
 
   // Reorder Products
@@ -368,6 +396,48 @@ export default function ProductsTab() {
     setDraggedCategoryId(null);
   };
 
+  // Popular products drag & drop handlers
+  const handleDragStartPopular = (e: React.DragEvent, id: string) => {
+    setDraggedPopularId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnterPopular = (targetId: string) => {
+    if (!draggedPopularId || draggedPopularId === targetId) return;
+
+    const list = [...customPopularProducts];
+    const draggedIdx = list.indexOf(draggedPopularId);
+    const targetIdx = list.indexOf(targetId);
+    if (draggedIdx === -1 || targetIdx === -1) return;
+
+    list.splice(draggedIdx, 1);
+    list.splice(targetIdx, 0, draggedPopularId);
+
+    setCustomPopularProducts(list);
+  };
+
+  const handleDragEndPopular = () => {
+    setDraggedPopularId(null);
+  };
+
+  const handleDropPopular = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!draggedPopularId) return;
+    updatePopularProductsMutation.mutate({ products: customPopularProducts });
+    setDraggedPopularId(null);
+  };
+
+  const togglePopularStatus = (productId: string) => {
+    let updatedPopular: string[];
+    if (customPopularProducts.includes(productId)) {
+      updatedPopular = customPopularProducts.filter(id => id !== productId);
+    } else {
+      updatedPopular = [...customPopularProducts, productId];
+    }
+    setCustomPopularProducts(updatedPopular);
+    updatePopularProductsMutation.mutate({ products: updatedPopular });
+  };
+
   return (
     <div className="space-y-6 text-right" dir="rtl">
       <div className="flex items-center justify-between">
@@ -617,6 +687,91 @@ export default function ProductsTab() {
             />
           </div>
 
+          {/* Custom Popular Products Drag-n-Drop Section */}
+          {restaurant?.settings?.customPopularEnabled && !loadingProds && products.length > 0 && (
+            <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-4 shadow-sm space-y-3 text-right">
+              <div className="flex justify-between items-center border-b border-admin-border/50 pb-2">
+                <div className="flex items-center gap-1.5 text-amber-500 font-extrabold text-xs">
+                  <Flame className="w-4 h-4 animate-pulse" />
+                  <span>المنتجات الأكثر طلباً المخصصة ({customPopularProducts.length} منتجات)</span>
+                  {updatePopularProductsMutation.isPending && (
+                    <span className="text-[8px] bg-admin-accent/10 text-admin-accent border border-admin-accent/20 px-1.5 py-0.5 rounded flex items-center gap-1 animate-pulse font-bold mr-2">
+                      <Loader2 className="w-2 h-2 animate-spin" />
+                      <span>جاري الحفظ...</span>
+                    </span>
+                  )}
+                </div>
+                <span className="text-[9px] text-admin-text-secondary font-medium">اسحب لترتيب ظهورها في المينيو</span>
+              </div>
+
+              {customPopularProducts.length === 0 ? (
+                <div className="text-center py-6 border-dashed border border-admin-border rounded-lg bg-admin-bg-subtle/5">
+                  <p className="text-[10px] text-admin-text-muted font-bold">لم تقم بتحديد أي منتجات بعد. اضغط على أيقونة اللهب 🔥 بجانب أي صنف بالأسفل لإضافته هنا.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-admin-border">
+                  <AnimatePresence initial={false}>
+                    {customPopularProducts.map((prodId) => {
+                      const prod = products.find((p: any) => p.id === prodId);
+                      if (!prod) return null;
+                      const isDraggingPopular = draggedPopularId === prodId;
+
+                      return (
+                        <motion.div
+                          key={prodId}
+                          layout
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          draggable={!updatePopularProductsMutation.isPending}
+                          onDragStart={(e: any) => handleDragStartPopular(e, prodId)}
+                          onDragOver={(e: any) => handleDragOver(e)}
+                          onDragEnter={() => handleDragEnterPopular(prodId)}
+                          onDragEnd={handleDragEndPopular}
+                          onDrop={(e: any) => handleDropPopular(e)}
+                          className={`flex justify-between items-center gap-4 py-3 cursor-move hover:bg-admin-bg-subtle/10 px-2 rounded-lg transition-all ${
+                            isDraggingPopular ? 'opacity-30 border-dashed border border-admin-accent/30 bg-admin-accent/[0.01]' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="text-admin-text-muted cursor-grab">
+                              <GripVertical className="w-3.5 h-3.5" />
+                            </div>
+                            {prod.image?.url ? (
+                              <img src={prod.image.url} alt="" draggable={false} className="w-10 h-10 rounded-lg object-cover border border-admin-border" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-admin-bg-subtle flex items-center justify-center border border-admin-border text-admin-text-muted">
+                                <ShoppingBag className="w-4 h-4" />
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="font-bold text-xs text-admin-text-primary">
+                                {prod.name}
+                              </h4>
+                              {prod.description && <p className="text-[10px] text-admin-text-secondary mt-0.5 leading-relaxed line-clamp-1">{prod.description}</p>}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-admin-accent font-mono text-xs font-black">{prod.price} ج.م</span>
+                            <button
+                              type="button"
+                              disabled={updatePopularProductsMutation.isPending}
+                              onClick={() => togglePopularStatus(prodId)}
+                              className="text-zinc-400 hover:text-red-500 transition-colors cursor-pointer border-none bg-transparent p-1 rounded-lg hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+          )}
+
           {loadingProds ? (
             <div className="flex items-center justify-center py-20 bg-admin-bg-elevated border border-admin-border rounded-xl">
               <div className="w-6 h-6 border-2 border-admin-accent border-t-transparent rounded-full animate-spin" />
@@ -695,6 +850,24 @@ export default function ProductsTab() {
                                   <div>
                                     <h4 className="font-bold text-xs text-admin-text-primary flex items-center gap-2">
                                       <span>{prod.name}</span>
+                                      {restaurant?.settings?.customPopularEnabled && (
+                                        <button
+                                          type="button"
+                                          disabled={updatePopularProductsMutation.isPending}
+                                          onMouseDown={(e) => e.stopPropagation()}
+                                          onClick={() => togglePopularStatus(prod.id)}
+                                          title="تحديد كـ الأكثر طلباً"
+                                          className={`p-0.5 rounded transition-colors cursor-pointer ${
+                                            updatePopularProductsMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
+                                          } ${
+                                            customPopularProducts.includes(prod.id)
+                                              ? 'text-amber-500 bg-amber-500/10'
+                                              : 'text-zinc-400 hover:text-amber-500 bg-transparent'
+                                          }`}
+                                        >
+                                          <Flame className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
                                       {isSyncing && (
                                         <span className="text-[8px] bg-admin-accent/10 text-admin-accent border border-admin-accent/20 px-1.5 py-0.5 rounded flex items-center gap-1 animate-pulse">
                                           <Loader2 className="w-2 h-2 animate-spin" />

@@ -52,7 +52,7 @@ export default function AnalyticsTab() {
   const [densitySelectedDayIdx, setDensitySelectedDayIdx] = useState(0);
 
   // Queries (only active if unlocked to avoid wasted backend loads)
-  const { data: salesData = { sales: [], totalRevenue: 0, totalOrders: 0, averageOrderValue: 0, payments: { cash: 0, card: 0, wallet: 0 } } } = useQuery({
+  const { data: salesData = { sales: [], totalRevenue: 0, totalOrders: 0, averageOrderValue: 0, payments: { cash: 0, card: 0, wallet: 0 }, splitEnabled: false, restaurantSales: { total: 0, ordersCount: 0, averageOrderValue: 0 }, cafeSales: { total: 0, ordersCount: 0, averageOrderValue: 0 } } } = useQuery({
     queryKey: ['admin-analytics-sales', period],
     queryFn: async () => {
       const res = await api.get(`/analytics/sales?period=${period}`);
@@ -66,7 +66,12 @@ export default function AnalyticsTab() {
           label: t.label,
           sales: t.amount || 0,
           orders: t.orders || 0,
+          restaurantSales: t.restaurantAmount || 0,
+          cafeSales: t.cafeAmount || 0,
         })),
+        restaurantSales: raw.restaurantSales,
+        cafeSales: raw.cafeSales,
+        splitEnabled: raw.splitEnabled || false,
       };
     },
     enabled: !isLocked,
@@ -166,7 +171,24 @@ export default function AnalyticsTab() {
             <span className="text-xs font-bold">إجمالي المبيعات</span>
             <BarChart3 className="w-4.5 h-4.5 text-admin-accent" />
           </div>
-          <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{salesData.totalRevenue} ج.م</h3>
+          {salesData.splitEnabled ? (
+            <div className="space-y-1 mt-2 text-[10px] font-bold">
+              <div className="flex justify-between text-zinc-400 border-b border-admin-border/30 pb-0.5">
+                <span>الإجمالي:</span>
+                <span className="font-mono text-admin-text-primary">{salesData.totalRevenue} ج.م</span>
+              </div>
+              <div className="flex justify-between text-emerald-600 border-b border-admin-border/30 pb-0.5">
+                <span>المطعم:</span>
+                <span className="font-mono">{salesData.restaurantSales?.total || 0} ج.م</span>
+              </div>
+              <div className="flex justify-between text-orange-600">
+                <span>الكافيه:</span>
+                <span className="font-mono">{salesData.cafeSales?.total || 0} ج.م</span>
+              </div>
+            </div>
+          ) : (
+            <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{salesData.totalRevenue} ج.م</h3>
+          )}
         </div>
 
         <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-4 shadow-sm flex flex-col justify-between min-h-[110px]">
@@ -204,7 +226,24 @@ export default function AnalyticsTab() {
             <span className="text-xs font-bold">عدد الطلبات المكتملة</span>
             <ShoppingBag className="w-4.5 h-4.5 text-emerald-500" />
           </div>
-          <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{salesData.totalOrders} طلب</h3>
+          {salesData.splitEnabled ? (
+            <div className="space-y-1 mt-2 text-[10px] font-bold">
+              <div className="flex justify-between text-zinc-400 border-b border-admin-border/30 pb-0.5">
+                <span>الإجمالي:</span>
+                <span className="font-mono text-admin-text-primary">{salesData.totalOrders} طلب</span>
+              </div>
+              <div className="flex justify-between text-emerald-600 border-b border-admin-border/30 pb-0.5">
+                <span>المطعم:</span>
+                <span className="font-mono">{salesData.restaurantSales?.ordersCount || 0} طلب</span>
+              </div>
+              <div className="flex justify-between text-orange-600">
+                <span>الكافيه:</span>
+                <span className="font-mono">{salesData.cafeSales?.ordersCount || 0} طلب</span>
+              </div>
+            </div>
+          ) : (
+            <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{salesData.totalOrders} طلب</h3>
+          )}
         </div>
 
         <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-sm flex flex-col justify-between min-h-[110px]">
@@ -212,14 +251,49 @@ export default function AnalyticsTab() {
             <span className="text-xs font-bold">متوسط قيمة الطلب الواحد</span>
             <ArrowUpRight className="w-4.5 h-4.5 text-blue-500" />
           </div>
-          <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{Math.round(salesData.averageOrderValue)} ج.م</h3>
+          {salesData.splitEnabled ? (
+            <div className="space-y-1 mt-2 text-[10px] font-bold">
+              <div className="flex justify-between text-zinc-400 border-b border-admin-border/30 pb-0.5">
+                <span>العام:</span>
+                <span className="font-mono text-admin-text-primary">{Math.round(salesData.averageOrderValue)} ج.م</span>
+              </div>
+              <div className="flex justify-between text-emerald-600 border-b border-admin-border/30 pb-0.5">
+                <span>المطعم:</span>
+                <span className="font-mono">{Math.round(salesData.restaurantSales?.averageOrderValue || 0)} ج.م</span>
+              </div>
+              <div className="flex justify-between text-orange-600">
+                <span>الكافيه:</span>
+                <span className="font-mono">{Math.round(salesData.cafeSales?.averageOrderValue || 0)} ج.م</span>
+              </div>
+            </div>
+          ) : (
+            <h3 className="text-xl font-black text-admin-text-primary font-mono mt-2">{Math.round(salesData.averageOrderValue)} ج.م</h3>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sales Chart Card */}
         <div className="lg:col-span-2 bg-admin-bg-elevated border border-admin-border rounded-xl p-5 shadow-sm flex flex-col justify-between">
-          <h3 className="font-extrabold text-admin-text-primary text-sm mb-4">مخطط حجم المبيعات الإجمالي</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-extrabold text-admin-text-primary text-sm">مخطط حجم المبيعات الإجمالي</h3>
+            {salesData.splitEnabled && (
+              <div className="flex items-center gap-3 text-[10px] font-bold">
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 rounded bg-[#c5a85c]" />
+                  <span className="text-admin-text-secondary">الإجمالي</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 rounded bg-[#10b981]" />
+                  <span className="text-admin-text-secondary">المطعم</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 rounded bg-[#f97316]" />
+                  <span className="text-admin-text-secondary">الكافيه</span>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="w-full h-72">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={salesData.sales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -228,14 +302,28 @@ export default function AnalyticsTab() {
                     <stop offset="5%" stopColor="#c5a85c" stopOpacity={0.2}/>
                     <stop offset="95%" stopColor="#c5a85c" stopOpacity={0}/>
                   </linearGradient>
+                  <linearGradient id="colorRest" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorCafe" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
                 <XAxis dataKey="label" stroke="#8c95a5" fontSize={10} tickLine={false} />
                 <YAxis stroke="#8c95a5" fontSize={10} tickLine={false} axisLine={false} />
                 <ChartTooltip
-                  contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px', fontSize: '11px', direction: 'rtl', textAlign: 'right' }}
                 />
-                <Area type="monotone" dataKey="sales" stroke="#c5a85c" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
+                <Area type="monotone" name="إجمالي المبيعات" dataKey="sales" stroke="#c5a85c" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
+                {salesData.splitEnabled && (
+                  <Area type="monotone" name="مبيعات المطعم" dataKey="restaurantSales" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorRest)" />
+                )}
+                {salesData.splitEnabled && (
+                  <Area type="monotone" name="مبيعات الكافيه" dataKey="cafeSales" stroke="#f97316" strokeWidth={2} fillOpacity={1} fill="url(#colorCafe)" />
+                )}
               </AreaChart>
             </ResponsiveContainer>
           </div>

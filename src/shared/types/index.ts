@@ -20,6 +20,20 @@ export interface Restaurant {
     menuTitle?: string;
     menuDescription?: string;
     isDeliveryEnabled?: boolean;
+    separateRestCafe?: boolean;
+    customPopularEnabled?: boolean;
+    customPopularProducts?: string[];
+    discountConfig?: {
+      enabled: boolean;
+      discountType: 'all' | 'categories' | 'products';
+      targetIds: string[];
+      valueType: 'percentage' | 'fixed';
+      value: number;
+      scheduleType: 'always' | 'weekly' | 'custom_range';
+      daysOfWeek?: number[];
+      startDate?: string;
+      endDate?: string;
+    };
   };
   receiptSettings?: {
     showLogo: boolean;
@@ -54,6 +68,7 @@ export interface Category {
   order: number;
   isActive: boolean;
   delayLimit?: number;
+  type?: 'restaurant' | 'cafe';
 }
 
 export interface ProductOption {
@@ -80,6 +95,7 @@ export interface Product {
   name: string;
   description?: string;
   price: number;
+  originalPrice?: number;
   image?: {
     url: string;
     publicId: string;
@@ -119,6 +135,7 @@ export interface OrderItem {
   productId: string;
   name: string;
   price: number;
+  originalPrice?: number;
   quantity: number;
   notes?: string;
   selectedOptions?: SelectedOption[];
@@ -193,5 +210,8 @@ export interface SystemSettings {
     audit?: ('trial' | 'basic' | 'pro')[];
     delivery?: ('trial' | 'basic' | 'pro')[];
     loyalty?: ('trial' | 'basic' | 'pro')[];
+    separateRestCafe?: ('trial' | 'basic' | 'pro')[];
+    customPopularProducts?: ('trial' | 'basic' | 'pro')[];
+    customDiscounts?: ('trial' | 'basic' | 'pro')[];
   };
 }

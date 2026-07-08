@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
-  FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList, UserCheck
+  FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList, UserCheck, Percent
 } from 'lucide-react';
 
 import { useAuthStore } from '../../shared/store/authStore';
@@ -20,13 +20,14 @@ import SubscriptionTab from './components/SubscriptionTab.js';
 import StaffTab from './components/StaffTab.js';
 import AuditLogsTab from './components/AuditLogsTab.js';
 import CustomersTab from './components/CustomersTab.js';
+import DiscountsTab from './components/DiscountsTab.js';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, restaurant, logout, updateRestaurant } = useAuthStore();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers' | 'discounts'>('categories');
 
   const handleLogout = () => {
     logout();
@@ -43,7 +44,7 @@ export default function AdminDashboard() {
     }
   });
 
-  const isFeatureAllowed = (featureName: 'analytics' | 'audit' | 'delivery' | 'loyalty') => {
+  const isFeatureAllowed = (featureName: 'analytics' | 'audit' | 'delivery' | 'loyalty' | 'customDiscounts') => {
     if (!systemSettings) {
       return plan === 'pro';
     }
@@ -99,6 +100,7 @@ export default function AdminDashboard() {
     { id: 'orders', label: 'أرشيف الطلبات', icon: ClipboardList, premium: false },
     { id: 'customers', label: 'العملاء والهدايا', icon: Users, premium: !isFeatureAllowed('loyalty') },
     { id: 'analytics', label: 'التقارير والتحليلات', icon: BarChart3, premium: !isFeatureAllowed('analytics') },
+    { id: 'discounts', label: 'الخصومات والعروض', icon: Percent, premium: !isFeatureAllowed('customDiscounts') },
     { id: 'audit', label: 'سجلات العمليات', icon: ClipboardList, premium: !isFeatureAllowed('audit') },
     { id: 'subscription', label: 'الاشتراك والنظام', icon: Crown, premium: false },
     { id: 'staff', label: 'حسابات الموظفين', icon: UserCheck, premium: false },
@@ -183,6 +185,7 @@ export default function AdminDashboard() {
             {activeTab === 'analytics' && <AnalyticsTab />}
             {activeTab === 'audit' && <AuditLogsTab />}
             {activeTab === 'subscription' && <SubscriptionTab />}
+            {activeTab === 'discounts' && <DiscountsTab />}
             {activeTab === 'staff' && <StaffTab />}
           </motion.div>
         </AnimatePresence>

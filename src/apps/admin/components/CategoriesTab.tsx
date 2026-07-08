@@ -7,6 +7,7 @@ import { api } from '../../../shared/services/api';
 import type { Category } from '../../../shared/types';
 import { ImageUploadZone } from './ImageUploadZone.js';
 import { ImageCropperModal } from './ImageCropperModal.js';
+import { useAuthStore } from '../../../shared/store/authStore';
 
 export default function CategoriesTab() {
   const queryClient = useQueryClient();
@@ -17,6 +18,10 @@ export default function CategoriesTab() {
   const [catImage, setCatImage] = useState<File | null>(null);
   const [catImagePreview, setCatImagePreview] = useState<string | null>(null);
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [catType, setCatType] = useState<'restaurant' | 'cafe'>('restaurant');
+
+  const { restaurant } = useAuthStore();
+  const isSplitActive = restaurant?.settings?.separateRestCafe === true;
 
   // Cropper states
   const [cropperFile, setCropperFile] = useState<File | null>(null);
@@ -50,6 +55,7 @@ export default function CategoriesTab() {
     setCatImage(null);
     setCatImagePreview(null);
     setEditingCatId(null);
+    setCatType('restaurant');
   };
 
   // Category Mutation (Create/Update)
@@ -166,6 +172,9 @@ export default function CategoriesTab() {
     fd.append('name', catName);
     fd.append('description', catDesc);
     fd.append('delayLimit', catDelayLimit !== '' ? String(catDelayLimit) : '20');
+    if (isSplitActive) {
+      fd.append('type', catType);
+    }
     if (catImage) {
       fd.append('image', catImage);
     }
@@ -270,6 +279,36 @@ export default function CategoriesTab() {
                 className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors text-right"
               />
             </div>
+
+            {isSplitActive && (
+              <div className="space-y-1.5">
+                <label className="block text-xs text-admin-text-secondary font-bold">نوع القسم (جهة المبيعات)</label>
+                <div className="grid grid-cols-2 gap-2 bg-admin-bg-base p-1 rounded-lg border border-admin-border">
+                  <button
+                    type="button"
+                    onClick={() => setCatType('restaurant')}
+                    className={`py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      catType === 'restaurant'
+                        ? 'bg-admin-accent text-white shadow-sm'
+                        : 'text-admin-text-secondary hover:text-admin-text-primary'
+                    }`}
+                  >
+                    مطعم
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCatType('cafe')}
+                    className={`py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      catType === 'cafe'
+                        ? 'bg-admin-accent text-white shadow-sm'
+                        : 'text-admin-text-secondary hover:text-admin-text-primary'
+                    }`}
+                  >
+                    كافيه
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Image upload zone wrapper */}
             <div className="space-y-1.5">
@@ -380,6 +419,15 @@ export default function CategoriesTab() {
                               <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
                                 {category.delayLimit !== undefined ? category.delayLimit : 20} دقيقة
                               </span>
+                              {isSplitActive && (
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${
+                                  category.type === 'cafe'
+                                    ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                }`}>
+                                  {category.type === 'cafe' ? 'كافيه' : 'مطعم'}
+                                </span>
+                              )}
                             </h4>
                             {category.description && <p className="text-[10px] text-admin-text-secondary mt-0.5">{category.description}</p>}
                           </div>
@@ -393,6 +441,7 @@ export default function CategoriesTab() {
                             setCatDesc(category.description || '');
                             setCatImagePreview(category.image?.url || null);
                             setCatDelayLimit(category.delayLimit !== undefined ? category.delayLimit : '');
+                            setCatType(category.type || 'restaurant');
                           }}
                           className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors cursor-pointer"
                         >

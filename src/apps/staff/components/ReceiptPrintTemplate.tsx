@@ -153,7 +153,16 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
                       </div>
                     )}
                   </td>
-                  <td className="text-center font-mono font-bold">{item.price.toFixed(2)}</td>
+                  <td className="text-center font-mono font-bold">
+                    {item.originalPrice && item.originalPrice > item.price ? (
+                      <div>
+                        <div className="line-through text-[9px] text-zinc-500">{item.originalPrice.toFixed(2)}</div>
+                        <div>{item.price.toFixed(2)}</div>
+                      </div>
+                    ) : (
+                      item.price.toFixed(2)
+                    )}
+                  </td>
                   <td className="text-left font-mono font-black">{itemTotal.toFixed(2)}</td>
                 </tr>
               );
@@ -167,9 +176,12 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
           const serviceRatePercent = isTakeaway ? 0 : (restaurant?.receiptSettings?.serviceRate ?? 0);
           const taxRatePercent = restaurant?.receiptSettings?.taxRate ?? 0;
           
-          const itemsSubtotal = printingOrder.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
-          const discount = printingOrder.discountAmount || 0;
-          const afterDiscount = Math.max(0, itemsSubtotal - discount);
+          const originalSubtotal = printingOrder.items.reduce((acc: number, item: any) => acc + (item.originalPrice || item.price) * item.quantity, 0);
+          const currentItemsTotal = printingOrder.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
+          const scheduledDiscount = Math.max(0, originalSubtotal - currentItemsTotal);
+          const manualDiscount = printingOrder.discountAmount || 0;
+          const totalDiscount = scheduledDiscount + manualDiscount;
+          const afterDiscount = Math.max(0, originalSubtotal - totalDiscount);
 
           const taxAmount = afterDiscount * (taxRatePercent / 100);
           const serviceAmount = afterDiscount * (serviceRatePercent / 100);
@@ -180,14 +192,22 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
               {/* Items Subtotal */}
               <div className="flex justify-between font-bold text-[11px]">
                 <span>إجمالي الطلبات:</span>
-                <span className="font-mono">{formatCurrency(itemsSubtotal)}</span>
+                <span className="font-mono">{formatCurrency(originalSubtotal)}</span>
               </div>
 
-              {/* Discount if applied */}
-              {discount > 0 && (
+              {/* Scheduled Discount if applied */}
+              {scheduledDiscount > 0 && (
                 <div className="flex justify-between font-bold text-[11px] text-zinc-900">
-                  <span>الخصم المطبق ({itemsSubtotal > 0 ? Math.round((discount / itemsSubtotal) * 100) : 0}%):</span>
-                  <span className="font-mono">-{formatCurrency(discount)}</span>
+                  <span>خصم العروض المجدولة:</span>
+                  <span className="font-mono">-{formatCurrency(scheduledDiscount)}</span>
+                </div>
+              )}
+
+              {/* Manual Discount if applied */}
+              {manualDiscount > 0 && (
+                <div className="flex justify-between font-bold text-[11px] text-zinc-900">
+                  <span>الخصم المباشر / النقاط:</span>
+                  <span className="font-mono">-{formatCurrency(manualDiscount)}</span>
                 </div>
               )}
               

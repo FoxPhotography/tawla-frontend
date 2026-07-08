@@ -14,6 +14,9 @@ export default function SubscriptionTab() {
   const [menuTitle, setMenuTitle] = useState(restaurant?.settings?.menuTitle || '');
   const [menuDescription, setMenuDescription] = useState(restaurant?.settings?.menuDescription || '');
   const [isDeliveryEnabled, setIsDeliveryEnabled] = useState(restaurant?.settings?.isDeliveryEnabled !== false);
+  const [separateRestCafe, setSeparateRestCafe] = useState(restaurant?.settings?.separateRestCafe === true);
+  const [customPopularEnabled, setCustomPopularEnabled] = useState(restaurant?.settings?.customPopularEnabled === true);
+  const [customPopularProducts, setCustomPopularProducts] = useState<string[]>(restaurant?.settings?.customPopularProducts || []);
   const initialMode = restaurant?.loyaltySettings?.mode || (restaurant?.loyaltySettings?.enabled ? 'loyalty_enabled' : 'disabled');
   const [isCustomerDbEnabled, setIsCustomerDbEnabled] = useState(
     initialMode === 'database_only' || initialMode === 'loyalty_enabled'
@@ -34,7 +37,7 @@ export default function SubscriptionTab() {
     }
   });
 
-  const isFeatureAllowed = (featureName: 'analytics' | 'audit' | 'delivery' | 'loyalty') => {
+  const isFeatureAllowed = (featureName: 'analytics' | 'audit' | 'delivery' | 'loyalty' | 'separateRestCafe' | 'customPopularProducts' | 'customDiscounts') => {
     if (!systemSettings) {
       return plan === 'pro';
     }
@@ -42,11 +45,16 @@ export default function SubscriptionTab() {
     return allowedPlans.includes(plan);
   };
 
+
+
   useEffect(() => {
     if (restaurant) {
       setMenuTitle(restaurant.settings?.menuTitle || '');
       setMenuDescription(restaurant.settings?.menuDescription || '');
       setIsDeliveryEnabled(restaurant.settings?.isDeliveryEnabled !== false);
+      setSeparateRestCafe(restaurant.settings?.separateRestCafe === true);
+      setCustomPopularEnabled(restaurant.settings?.customPopularEnabled === true);
+      setCustomPopularProducts(restaurant.settings?.customPopularProducts || []);
       const mode = restaurant.loyaltySettings?.mode || (restaurant.loyaltySettings?.enabled ? 'loyalty_enabled' : 'disabled');
       setIsCustomerDbEnabled(mode === 'database_only' || mode === 'loyalty_enabled');
       setIsGiftsEnabled(mode === 'loyalty_enabled');
@@ -103,7 +111,7 @@ export default function SubscriptionTab() {
   // Save Receipt Settings
   const saveReceiptSettingsMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const response = await api.put('/subscriptions/receipt-settings', payload);
+      const response = await api.put('/subscriptions/settings', payload);
       return response.data.data;
     },
     onSuccess: (updatedRest) => {
@@ -123,7 +131,14 @@ export default function SubscriptionTab() {
 
   const handleSaveMenuSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    saveMenuSettingsMutation.mutate({ menuTitle, menuDescription, isDeliveryEnabled });
+    saveMenuSettingsMutation.mutate({ 
+      menuTitle, 
+      menuDescription, 
+      isDeliveryEnabled, 
+      separateRestCafe,
+      customPopularEnabled,
+      customPopularProducts
+    });
   };
 
   const handleCustomerDbToggle = (checked: boolean) => {
@@ -315,6 +330,49 @@ export default function SubscriptionTab() {
                 />
                 <div className={`w-11 h-6 bg-zinc-200 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-admin-accent cursor-pointer ${!isFeatureAllowed('delivery') ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
                 {!isFeatureAllowed('delivery') && (
+                  <span className="mr-2 text-[8px] bg-admin-accent/10 text-admin-accent px-1.5 py-0.5 rounded font-black uppercase">PRO</span>
+                )}
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-admin-border/50 pt-4">
+              <div>
+                <label className="text-xs text-admin-text-secondary font-bold block mb-1">فصل حسابات المطعم عن الكافيه (Split Restaurant & Cafe Accounts)</label>
+                <p className="text-[10px] text-admin-text-muted">تتيح لك هذه الميزة تصنيف أقسام المينيو لتكون تابعة للمطعم أو الكافيه بشكل منفصل ورصد تحليلات المبيعات لكل منهما على حدة.</p>
+              </div>
+              
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  disabled={!isFeatureAllowed('separateRestCafe')}
+                  checked={separateRestCafe && isFeatureAllowed('separateRestCafe')}
+                  onChange={(e) => setSeparateRestCafe(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className={`w-11 h-6 bg-zinc-200 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-admin-accent cursor-pointer ${!isFeatureAllowed('separateRestCafe') ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
+                {!isFeatureAllowed('separateRestCafe') && (
+                  <span className="mr-2 text-[8px] bg-admin-accent/10 text-admin-accent px-1.5 py-0.5 rounded font-black uppercase">PRO</span>
+                )}
+              </label>
+            </div>
+
+            {/* Feature: Custom Popular Products */}
+            <div className="flex items-center justify-between border-t border-admin-border/50 pt-4">
+              <div>
+                <label className="text-xs text-admin-text-secondary font-bold block mb-1">تخصيص المنتجات الأكثر طلباً (Custom Most Popular Products)</label>
+                <p className="text-[10px] text-admin-text-muted">تتيح لك تحديد منتجات معينة يدوياً وتثبيتها كمنتجات "أكثر طلباً" للترويج لها وبيعها بشكل أسرع.</p>
+              </div>
+              
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  disabled={!isFeatureAllowed('customPopularProducts')}
+                  checked={customPopularEnabled && isFeatureAllowed('customPopularProducts')}
+                  onChange={(e) => setCustomPopularEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className={`w-11 h-6 bg-zinc-200 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-admin-accent cursor-pointer ${!isFeatureAllowed('customPopularProducts') ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
+                {!isFeatureAllowed('customPopularProducts') && (
                   <span className="mr-2 text-[8px] bg-admin-accent/10 text-admin-accent px-1.5 py-0.5 rounded font-black uppercase">PRO</span>
                 )}
               </label>
