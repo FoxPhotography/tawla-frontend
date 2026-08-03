@@ -6,7 +6,7 @@ const filePath = path.join(__dirname, '..', 'dist', '_redirects');
 if (fs.existsSync(filePath)) {
   let content = fs.readFileSync(filePath, 'utf8');
   // Use VITE_API_BASE from Netlify env, or fallback to the production URL
-  let backendUrl = process.env.VITE_API_BASE || 'https://tawla-backend-production.up.railway.app';
+  let backendUrl = process.env.VITE_API_BASE || 'https://tawla-backend.up.railway.app';
   backendUrl = backendUrl.trim();
   if (!backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
     backendUrl = 'https://' + backendUrl;

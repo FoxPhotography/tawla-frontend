@@ -37,7 +37,7 @@ const getSocketUrl = (): string => {
   }
 
   // Production Railway backend URL for all live deployments
-  return 'https://tawla-backend-production.up.railway.app';
+  return 'https://tawla-backend.up.railway.app';
 };
 
 const VITE_SOCKET_URL = getSocketUrl();

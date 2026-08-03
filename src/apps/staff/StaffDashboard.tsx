@@ -291,19 +291,22 @@ export default function StaffDashboard() {
     if (!user || !restaurant) return;
 
     const handleConnect = () => {
-      console.log('Socket connected, joining restaurant room:', restaurant.id);
-      socket.emit('join_restaurant', restaurant.id, (res: any) => {
-        if (res && !res.success) {
-          console.error('[Socket.io]: Failed to join restaurant room:', res.error);
-          setIsOnline(false);
-        } else {
-          console.log('[Socket.io]: Successfully joined restaurant room:', restaurant.id);
-          setIsOnline(true);
-          // Refetch queries on connect/reconnect to sync state missed during disconnect
-          queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
-          queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
-        }
-      });
+      const restId = restaurant?.id || (restaurant as any)?._id || user?.restaurantId;
+      console.log('Socket connected, joining restaurant room:', restId);
+      setIsOnline(true);
+
+      if (restId) {
+        socket.emit('join_restaurant', restId, (res: any) => {
+          if (res && !res.success) {
+            console.error('[Socket.io]: Failed to join restaurant room:', res.error);
+          } else {
+            console.log('[Socket.io]: Successfully joined restaurant room:', restId);
+            // Refetch queries on connect/reconnect to sync state missed during disconnect
+            queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
+          }
+        });
+      }
     };
 
     const handleDisconnect = () => {
