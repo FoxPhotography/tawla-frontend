@@ -286,9 +286,22 @@ export default function StaffDashboard() {
     },
   });
 
+  // Auto-fetch profile if restaurant store object is missing
+  useEffect(() => {
+    if (user && !restaurant) {
+      api.get('/auth/profile')
+        .then(res => {
+          if (res.data?.success && res.data.data?.restaurant) {
+            updateRestaurant(res.data.data.restaurant);
+          }
+        })
+        .catch(err => console.warn('Failed to fetch restaurant profile:', err));
+    }
+  }, [user, restaurant, updateRestaurant]);
+
   // Socket Listener
   useEffect(() => {
-    if (!user || !restaurant) return;
+    if (!user) return;
 
     const handleConnect = () => {
       const restId = restaurant?.id || (restaurant as any)?._id || user?.restaurantId;
