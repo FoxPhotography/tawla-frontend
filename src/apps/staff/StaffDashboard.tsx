@@ -396,8 +396,14 @@ export default function StaffDashboard() {
       setAlerts(prev => [newAlert, ...prev]);
     };
 
+    const handleConnectError = (err: any) => {
+      console.error('[Socket.io]: Connection error:', err);
+      setIsOnline(false);
+    };
+
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
 
     // Provide authentication token
     socket.auth = { token: useAuthStore.getState().token };
@@ -414,7 +420,11 @@ export default function StaffDashboard() {
       }
     };
 
-    socket.disconnect().connect();
+    if (socket.connected) {
+      handleConnect();
+    } else {
+      socket.connect();
+    }
 
     socket.on('new_order', handleNewOrder);
     socket.on('order_status_updated', handleOrderStatusUpdated);
@@ -426,6 +436,7 @@ export default function StaffDashboard() {
     return () => {
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
       socket.off('new_order', handleNewOrder);
       socket.off('order_status_updated', handleOrderStatusUpdated);
       socket.off('table_status_changed', handleTableStatusChanged);
