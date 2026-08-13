@@ -98,7 +98,7 @@ export default function SuperAdminDashboard() {
             </div>
             <div>
               <h1 className="text-sm font-black tracking-wide text-zinc-900">Tawla OS SuperAdmin</h1>
-              <span className="text-[10px] text-zinc-500 font-bold">الدور: <span className="text-indigo-600 font-black uppercase">مشرف النظام</span></span>
+              <span className="text-[10px] text-zinc-500 font-bold">الدور: <span className="text-[#801B2C] font-black uppercase">مشرف النظام</span></span>
             </div>
           </div>
 
@@ -114,7 +114,7 @@ export default function SuperAdminDashboard() {
                   onClick={() => setActiveTab(item.id as any)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/15'
+                      ? 'bg-[#801B2C] text-white shadow-lg shadow-[#801B2C]/20'
                       : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
                   }`}
                 >

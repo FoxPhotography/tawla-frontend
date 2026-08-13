@@ -23,9 +23,9 @@ export default function StatsGrid({
       label: 'إجمالي الكافيهات والمطاعم', 
       value: restaurantsCount, 
       icon: Coffee, 
-      color: 'text-indigo-400', 
-      bg: 'from-indigo-500/5 to-transparent', 
-      border: 'border-indigo-500/10' 
+      color: 'text-[#801B2C]', 
+      bg: 'from-[#801B2C]/5 to-transparent', 
+      border: 'border-[#801B2C]/10' 
     },
     { 
       label: 'الاشتراكات النشطة حالياً', 
@@ -39,9 +39,9 @@ export default function StatsGrid({
       label: 'أكواد التفعيل المصدرة', 
       value: totalSerialsCount, 
       icon: Key, 
-      color: 'text-violet-400', 
-      bg: 'from-violet-500/5 to-transparent', 
-      border: 'border-violet-500/10' 
+      color: 'text-[#962436]', 
+      bg: 'from-[#801B2C]/5 to-transparent', 
+      border: 'border-[#801B2C]/10' 
     },
     { 
       label: 'أكواد تفعيل غير مستخدمة', 
