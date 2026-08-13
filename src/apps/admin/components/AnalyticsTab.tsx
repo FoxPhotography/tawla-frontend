@@ -181,7 +181,7 @@ export default function AnalyticsTab() {
                 <span>المطعم:</span>
                 <span className="font-mono">{salesData.restaurantSales?.total || 0} ج.م</span>
               </div>
-              <div className="flex justify-between text-orange-600">
+              <div className="flex justify-between text-[#801B2C]">
                 <span>الكافيه:</span>
                 <span className="font-mono">{salesData.cafeSales?.total || 0} ج.م</span>
               </div>
@@ -236,7 +236,7 @@ export default function AnalyticsTab() {
                 <span>المطعم:</span>
                 <span className="font-mono">{salesData.restaurantSales?.ordersCount || 0} طلب</span>
               </div>
-              <div className="flex justify-between text-orange-600">
+              <div className="flex justify-between text-[#801B2C]">
                 <span>الكافيه:</span>
                 <span className="font-mono">{salesData.cafeSales?.ordersCount || 0} طلب</span>
               </div>
@@ -261,7 +261,7 @@ export default function AnalyticsTab() {
                 <span>المطعم:</span>
                 <span className="font-mono">{Math.round(salesData.restaurantSales?.averageOrderValue || 0)} ج.م</span>
               </div>
-              <div className="flex justify-between text-orange-600">
+              <div className="flex justify-between text-[#801B2C]">
                 <span>الكافيه:</span>
                 <span className="font-mono">{Math.round(salesData.cafeSales?.averageOrderValue || 0)} ج.م</span>
               </div>

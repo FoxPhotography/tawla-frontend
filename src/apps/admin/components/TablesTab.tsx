@@ -153,7 +153,7 @@ export default function TablesTab() {
                       <h4 className="font-extrabold text-sm text-admin-text-primary">طاولة رقم {table.number}</h4>
                       {table.label && <p className="text-[10px] text-admin-text-secondary mt-0.5">{table.label}</p>}
                       <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 ${
-                        table.status === 'occupied' ? 'bg-orange-500/10 text-orange-500' : table.status === 'waitingBill' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
+                        table.status === 'occupied' ? 'bg-[#801B2C]/10 text-[#801B2C]' : table.status === 'waitingBill' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
                       }`}>
                         {table.status === 'occupied' ? 'مشغولة' : table.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'}
                       </span>

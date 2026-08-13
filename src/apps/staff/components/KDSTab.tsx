@@ -85,9 +85,9 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <span className="flex-1 sm:flex-none text-[11px] font-black bg-zinc-50 text-zinc-800 px-4 py-2.5 rounded-xl border border-zinc-200 flex items-center justify-center gap-1.5 shadow-sm">
-            <CookingPot className="w-3.5 h-3.5 text-orange-500" />
+            <CookingPot className="w-3.5 h-3.5 text-[#801B2C]" />
             <span>تحت التحضير:</span>
-            <span className="font-mono text-xs text-orange-500 font-black">{kdsOrders.length}</span>
+            <span className="font-mono text-xs text-[#801B2C] font-black">{kdsOrders.length}</span>
           </span>
           <span className={`flex-1 sm:flex-none text-[11px] font-black px-4 py-2.5 rounded-xl border flex items-center justify-center gap-1.5 shadow-sm transition-all ${
             delayedOrdersCount > 0 
@@ -179,7 +179,7 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
                       <div>
                         <span className={`text-[10px] font-black px-2 py-1 rounded-md mb-2 inline-block ${
                           order.type === 'dine_in' 
-                            ? 'bg-orange-50 text-orange-600 border border-orange-100/60' 
+                            ? 'bg-[#801B2C]/10 text-[#801B2C] border border-[#801B2C]/20' 
                             : 'bg-blue-50 text-blue-600 border border-blue-100/60'
                         }`}>
                           {order.type === 'dine_in' ? `طاولة ${order.tableNumber}` : order.type === 'takeaway' ? 'تيك أواي' : 'توصيل'}
@@ -221,7 +221,7 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
                                 </span>
                               ))}
                               {item.selectedModifiers?.map((mod, i) => (
-                                <span key={i} className="bg-orange-100/90 text-orange-800 border border-orange-200 px-2 py-0.5 rounded shadow-sm">
+                                <span key={i} className="bg-[#801B2C]/10 text-[#801B2C] border border-[#801B2C]/20 px-2 py-0.5 rounded shadow-sm">
                                   {mod.value}
                                 </span>
                               ))}
@@ -261,7 +261,7 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
                         <button
                           disabled={isStatusPending}
                           onClick={() => onUpdateStatus(order.id, 'preparing')}
-                          className="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-black text-xs py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                          className="flex-1 bg-[#801B2C] hover:bg-[#962436] text-white font-black text-xs py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                         >
                           <span>بدء التحضير</span>
                           <CookingPot className="w-4 h-4 animate-pulse" />

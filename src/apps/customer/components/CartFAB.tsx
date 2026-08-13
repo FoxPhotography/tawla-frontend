@@ -38,7 +38,7 @@ export default function CartFAB({ cartCount, cartTotal, onClick }: CartFABProps)
         whileHover={{ scale: 1.03, y: -2 }}
         whileTap={{ scale: 0.97 }}
         onClick={onClick}
-        className="pointer-events-auto flex items-center justify-between gap-4 bg-orange-600 text-white rounded-2xl p-4 shadow-[0_12px_32px_rgba(255,85,0,0.25)] border border-orange-500/20 hover:bg-orange-500 transition-colors w-full max-w-[396px] cursor-pointer"
+        className="pointer-events-auto flex items-center justify-between gap-4 bg-[#801B2C] text-white rounded-2xl p-4 shadow-[0_12px_32px_rgba(128,27,44,0.25)] border border-[#801B2C]/20 hover:bg-[#962436] transition-colors w-full max-w-[396px] cursor-pointer"
       >
         {/* Left Side: Counter & Icon */}
         <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export default function CartFAB({ cartCount, cartTotal, onClick }: CartFABProps)
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.5, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                className="absolute -top-1.5 -right-1.5 bg-black text-orange-500 text-[10px] font-black rounded-lg min-w-[20px] h-5 px-1.5 flex items-center justify-center border border-orange-600 shadow-md"
+                className="absolute -top-1.5 -right-1.5 bg-black text-[#801B2C] text-[10px] font-black rounded-lg min-w-[20px] h-5 px-1.5 flex items-center justify-center border border-[#801B2C] shadow-md"
               >
                 {cartCount}
               </motion.span>
@@ -62,7 +62,7 @@ export default function CartFAB({ cartCount, cartTotal, onClick }: CartFABProps)
           </div>
           
           <div className="text-right">
-            <span className="block text-[10px] text-orange-100 font-bold uppercase tracking-wider">سلة المشتريات</span>
+            <span className="block text-[10px] text-rose-100 font-bold uppercase tracking-wider">سلة المشتريات</span>
             <span className="block text-xs font-black text-white">عرض السلة وتأكيد الطلب</span>
           </div>
         </div>
@@ -70,7 +70,7 @@ export default function CartFAB({ cartCount, cartTotal, onClick }: CartFABProps)
         {/* Right Side: Total & Arrow */}
         <div className="flex items-center gap-2 bg-black/10 rounded-xl py-1.5 px-3">
           <span className="text-sm font-extrabold text-white font-mono">
-            {cartTotal} <span className="text-[10px] font-bold text-orange-100">ج.م</span>
+            {cartTotal} <span className="text-[10px] font-bold text-rose-100">ج.م</span>
           </span>
           <ArrowLeft className="w-4 h-4 text-white animate-pulse" />
         </div>

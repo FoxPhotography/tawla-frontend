@@ -138,7 +138,7 @@ export default function OrdersTab() {
                             </span>
                           ))}
                           {item.selectedModifiers?.map((m, modIdx) => (
-                            <span key={modIdx} className="bg-orange-500/5 text-orange-600/90 px-1 rounded">
+                            <span key={modIdx} className="bg-[#801B2C]/5 text-[#801B2C]/90 px-1 rounded">
                               {m.value}
                             </span>
                           ))}

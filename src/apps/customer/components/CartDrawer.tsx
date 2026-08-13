@@ -123,7 +123,7 @@ export default function CartDrawer({
             {/* Header */}
             <div className="px-6 pb-4 border-b border-zinc-100 flex justify-between items-center flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-orange-600/10 border border-orange-500/20 flex items-center justify-center text-orange-600">
+                <div className="w-9 h-9 rounded-xl bg-[#801B2C]/10 border border-[#801B2C]/20 flex items-center justify-center text-[#801B2C]">
                   <ShoppingBag className="w-4.5 h-4.5" />
                 </div>
                 <div>
@@ -187,7 +187,7 @@ export default function CartDrawer({
                               </h4>
                               {discountPercent > 0 ? (
                                 <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                                  <span className="text-xs text-orange-600 font-extrabold font-mono">
+                                  <span className="text-xs text-[#801B2C] font-extrabold font-mono">
                                     {itemUnitPrice} ج.م
                                   </span>
                                   <span className="text-[10px] line-through text-zinc-400 font-bold font-mono">
@@ -198,7 +198,7 @@ export default function CartDrawer({
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-xs text-orange-600 font-extrabold font-mono mt-1 block">{itemUnitPrice} ج.م</span>
+                                <span className="text-xs text-[#801B2C] font-extrabold font-mono mt-1 block">{itemUnitPrice} ج.م</span>
                               )}
                               
                               {/* Display Custom Options & Modifiers in Cart */}
@@ -211,7 +211,7 @@ export default function CartDrawer({
                                     </span>
                                   ))}
                                   {item.selectedModifiers?.map((mod, i) => (
-                                    <span key={i} className="bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded border border-orange-200/40">
+                                    <span key={i} className="bg-[#801B2C]/10 text-[#801B2C] px-1.5 py-0.5 rounded border border-[#801B2C]/20/40">
                                       {mod.value} (+{mod.price} ج.م)
                                     </span>
                                   ))}
@@ -264,7 +264,7 @@ export default function CartDrawer({
                                 }}
                                 onBlur={() => setActiveItemNotesIndex(null)}
                                 autoFocus
-                                className="w-full bg-white border border-zinc-200 text-zinc-800 rounded-xl px-3 py-1.5 text-xs text-right focus:border-orange-500/50 focus:outline-none placeholder:text-zinc-400 transition-colors"
+                                className="w-full bg-white border border-zinc-200 text-zinc-800 rounded-xl px-3 py-1.5 text-xs text-right focus:border-[#801B2C]/50 focus:outline-none placeholder:text-zinc-400 transition-colors"
                               />
                             ) : (
                               <button
@@ -272,9 +272,9 @@ export default function CartDrawer({
                                   setActiveItemNotesIndex(index);
                                   setActiveItemNotesText(item.notes || '');
                                 }}
-                                className="flex items-center gap-1.5 text-[10px] text-zinc-500 hover:text-orange-600 border border-zinc-200 hover:border-orange-500/20 bg-white rounded-xl px-3 py-1.5 transition-all font-bold w-full justify-center cursor-pointer shadow-sm"
+                                className="flex items-center gap-1.5 text-[10px] text-zinc-500 hover:text-[#801B2C] border border-zinc-200 hover:border-[#801B2C]/20 bg-white rounded-xl px-3 py-1.5 transition-all font-bold w-full justify-center cursor-pointer shadow-sm"
                               >
-                                <MessageSquare className="w-3.5 h-3.5 text-orange-500/70" />
+                                <MessageSquare className="w-3.5 h-3.5 text-[#801B2C]/70" />
                                 <span className="truncate">{item.notes ? item.notes : 'إضافة ملاحظة'}</span>
                               </button>
                             )}
@@ -294,7 +294,7 @@ export default function CartDrawer({
               {/* Special Order Notes Box */}
               <div className="bg-white border border-zinc-200/60 rounded-2xl p-4 shadow-sm">
                 <label className="block text-xs text-zinc-500 mb-2 font-black flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-orange-500" />
+                  <Info className="w-3.5 h-3.5 text-[#801B2C]" />
                   <span>ملاحظات إضافية على الطلب بالكامل</span>
                 </label>
                 <textarea
@@ -302,7 +302,7 @@ export default function CartDrawer({
                   placeholder="مثال: سرعة تحضير، التوصيل دفعة واحدة..."
                   value={specialNotes}
                   onChange={(e) => setSpecialNotes(e.target.value)}
-                  className="w-full bg-white border border-zinc-200 text-zinc-800 rounded-xl p-3 text-xs text-right resize-none focus:border-orange-500/50 focus:outline-none placeholder:text-zinc-400 transition-colors"
+                  className="w-full bg-white border border-zinc-200 text-zinc-800 rounded-xl p-3 text-xs text-right resize-none focus:border-[#801B2C]/50 focus:outline-none placeholder:text-zinc-400 transition-colors"
                 />
               </div>
 
@@ -310,13 +310,13 @@ export default function CartDrawer({
               {!tableNumber && (
                 <div className="bg-white border border-zinc-200/60 rounded-2xl p-4 space-y-4 shadow-sm">
                   <div className="flex items-center gap-2 pb-2 border-b border-zinc-100">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#801B2C]" />
                     <h4 className="text-xs font-black text-zinc-900">🚚 بيانات التوصيل (الدليفري)</h4>
                   </div>
                   
                   <div className="space-y-1">
                     <label className="text-[10px] text-zinc-500 font-bold flex items-center gap-1 mb-1">
-                      <User className="w-3 h-3 text-orange-500/70" />
+                      <User className="w-3 h-3 text-[#801B2C]/70" />
                       <span>الاسم بالكامل</span>
                     </label>
                     <input
@@ -325,13 +325,13 @@ export default function CartDrawer({
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="الاسم لتسجيل الطلب"
-                      className="w-full bg-white border border-zinc-200 focus:border-orange-500/50 text-zinc-800 rounded-xl px-3 py-2.5 text-xs focus:outline-none placeholder:text-zinc-400 transition-colors"
+                      className="w-full bg-white border border-zinc-200 focus:border-[#801B2C]/50 text-zinc-800 rounded-xl px-3 py-2.5 text-xs focus:outline-none placeholder:text-zinc-400 transition-colors"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] text-zinc-500 font-bold flex items-center gap-1 mb-1">
-                      <Phone className="w-3 h-3 text-orange-500/70" />
+                      <Phone className="w-3 h-3 text-[#801B2C]/70" />
                       <span>رقم الموبايل للتواصل</span>
                     </label>
                     <input
@@ -340,14 +340,14 @@ export default function CartDrawer({
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       placeholder="مثال: 01012345678"
-                      className="w-full bg-white border border-zinc-200 focus:border-orange-500/50 text-zinc-850 rounded-xl px-3 py-2.5 text-xs focus:outline-none text-left placeholder:text-zinc-400 transition-colors font-mono"
+                      className="w-full bg-white border border-zinc-200 focus:border-[#801B2C]/50 text-zinc-850 rounded-xl px-3 py-2.5 text-xs focus:outline-none text-left placeholder:text-zinc-400 transition-colors font-mono"
                       dir="ltr"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] text-zinc-500 font-bold flex items-center gap-1 mb-1">
-                      <MapPin className="w-3 h-3 text-orange-500/70" />
+                      <MapPin className="w-3 h-3 text-[#801B2C]/70" />
                       <span>العنوان بالتفصيل</span>
                     </label>
                     <input
@@ -356,7 +356,7 @@ export default function CartDrawer({
                       value={customerAddress}
                       onChange={(e) => setCustomerAddress(e.target.value)}
                       placeholder="المنطقة، اسم الشارع، رقم العمارة، الدور..."
-                      className="w-full bg-white border border-zinc-200 focus:border-orange-500/50 text-zinc-800 rounded-xl px-3 py-2.5 text-xs focus:outline-none placeholder:text-zinc-400 transition-colors"
+                      className="w-full bg-white border border-zinc-200 focus:border-[#801B2C]/50 text-zinc-800 rounded-xl px-3 py-2.5 text-xs focus:outline-none placeholder:text-zinc-400 transition-colors"
                     />
                   </div>
                 </div>
@@ -367,7 +367,7 @@ export default function CartDrawer({
             <div className="p-6 border-t border-zinc-100 bg-white space-y-4 flex-shrink-0">
               <div className="flex justify-between items-center px-1">
                 <span className="text-zinc-500 text-xs font-bold">إجمالي الحساب</span>
-                <span className="text-xl font-black text-orange-600 font-mono">{cartTotal} ج.م</span>
+                <span className="text-xl font-black text-[#801B2C] font-mono">{cartTotal} ج.م</span>
               </div>
               
               {(() => {
@@ -433,7 +433,7 @@ export default function CartDrawer({
                     disabled={isSubmitting}
                     whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
                     whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
-                    className="w-full py-4 text-sm font-black bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-200 disabled:text-zinc-400 text-white rounded-2xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-[0_8px_24px_rgba(255,85,0,0.25)]"
+                    className="w-full py-4 text-sm font-black bg-[#801B2C] hover:bg-[#962436] disabled:bg-zinc-200 disabled:text-zinc-400 text-white rounded-2xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-[0_8px_24px_rgba(128,27,44,0.25)]"
                   >
                     {isSubmitting ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

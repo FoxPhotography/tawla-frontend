@@ -72,7 +72,7 @@ export default function OrderConfirmationModal({ order, onTrack }: OrderConfirma
     >
       {/* Background patterns */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
-        <div className="absolute top-1/4 -right-1/4 w-[350px] h-[350px] rounded-full bg-orange-500/5 blur-[100px]" />
+        <div className="absolute top-1/4 -right-1/4 w-[350px] h-[350px] rounded-full bg-[#801B2C]/5 blur-[100px]" />
         <div className="absolute bottom-1/4 -left-1/4 w-[350px] h-[350px] rounded-full bg-zinc-200/50 blur-[100px]" />
       </div>
 
@@ -95,7 +95,7 @@ export default function OrderConfirmationModal({ order, onTrack }: OrderConfirma
                 ease: "easeOut", 
                 delay: 0.45 
               }}
-              className="absolute w-2 h-2 rounded-full bg-orange-500 left-1/2 top-1/2 -ml-1 -mt-1"
+              className="absolute w-2 h-2 rounded-full bg-[#801B2C] left-1/2 top-1/2 -ml-1 -mt-1"
             />
           ))}
 
@@ -105,7 +105,7 @@ export default function OrderConfirmationModal({ order, onTrack }: OrderConfirma
             className="w-20 h-20 rounded-full bg-white border border-zinc-200/80 flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.04)]"
           >
             <svg
-              className="w-10 h-10 text-orange-600"
+              className="w-10 h-10 text-[#801B2C]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -141,12 +141,12 @@ export default function OrderConfirmationModal({ order, onTrack }: OrderConfirma
           variants={itemVariants}
           className="w-full bg-white border border-zinc-200 rounded-2xl p-5 mb-8 relative overflow-hidden shadow-sm"
         >
-          <div className="absolute top-0 right-0 w-24 h-[1px] bg-gradient-to-l from-orange-500 to-transparent" />
+          <div className="absolute top-0 right-0 w-24 h-[1px] bg-gradient-to-l from-[#801B2C] to-transparent" />
           
           <div className="flex justify-between items-center mb-3">
             <span className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-widest">تفاصيل الطلب</span>
             {order.tableNumber ? (
-              <span className="text-[10px] bg-orange-600/10 border border-orange-500/20 text-orange-600 font-bold px-2 py-0.5 rounded-lg">
+              <span className="text-[10px] bg-[#801B2C]/10 border border-[#801B2C]/20 text-[#801B2C] font-bold px-2 py-0.5 rounded-lg">
                 طاولة {order.tableNumber}
               </span>
             ) : (
@@ -170,11 +170,11 @@ export default function OrderConfirmationModal({ order, onTrack }: OrderConfirma
           className="w-full max-w-[260px] flex items-center justify-between gap-2 mb-10"
         >
           <div className="flex flex-col items-center gap-1.5 flex-1">
-            <div className="w-6 h-6 rounded-full bg-orange-600 border border-orange-500 flex items-center justify-center text-[10px] font-black text-white">١</div>
-            <span className="text-[9px] font-extrabold text-orange-600">تم الطلب</span>
+            <div className="w-6 h-6 rounded-full bg-[#801B2C] border border-[#801B2C] flex items-center justify-center text-[10px] font-black text-white">١</div>
+            <span className="text-[9px] font-extrabold text-[#801B2C]">تم الطلب</span>
           </div>
           <div className="h-[2px] bg-zinc-200 flex-1 -mt-4 relative overflow-hidden">
-            <div className="absolute inset-0 bg-orange-500 animate-pulse" style={{ width: '40%' }} />
+            <div className="absolute inset-0 bg-[#801B2C] animate-pulse" style={{ width: '40%' }} />
           </div>
           <div className="flex flex-col items-center gap-1.5 flex-1">
             <div className="w-6 h-6 rounded-full bg-white border border-zinc-250 flex items-center justify-center text-[10px] font-black text-zinc-400 shadow-sm">٢</div>
@@ -193,11 +193,11 @@ export default function OrderConfirmationModal({ order, onTrack }: OrderConfirma
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onTrack}
-          className="w-full py-4 bg-orange-600 hover:bg-orange-500 text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-[0_8px_24px_rgba(255,85,0,0.25)] cursor-pointer"
+          className="w-full py-4 bg-[#801B2C] hover:bg-[#962436] text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-[0_8px_24px_rgba(128,27,44,0.25)] cursor-pointer"
         >
           <Clock className="w-4 h-4 text-white" />
           <span>متابعة وتتبع حالة الطلب</span>
-          <ArrowRight className="w-4 h-4 mr-1 text-orange-100" />
+          <ArrowRight className="w-4 h-4 mr-1 text-rose-100" />
         </motion.button>
       </div>
     </motion.div>

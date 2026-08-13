@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Playfair+Display:wght@500;600&family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,15 +12,15 @@
   --c-border:           rgba(9,9,11,0.06);          /* حدود رقيقة جداً بلون داكن */
   --c-border-strong:    rgba(9,9,11,0.12);
 
-  --c-accent:           #FF5500;                    /* برتقالي ملكي فاخر */
-  --c-accent-glow:      rgba(255,85,0,0.15);        /* توهج برتقالي ناعم */
-  --c-accent-subtle:    rgba(255,85,0,0.06);        /* خلفية برتقالية خفيفة للغاية */
-  --c-accent-border:    rgba(255,85,0,0.20);        /* حدود بلون برتقالي شفاف */
+  --c-accent:           #801B2C;                    /* برتقالي ملكي فاخر */
+  --c-accent-glow:      rgba(128,27,44,0.15);        /* توهج برتقالي ناعم */
+  --c-accent-subtle:    rgba(128,27,44,0.06);        /* خلفية برتقالية خفيفة للغاية */
+  --c-accent-border:    rgba(128,27,44,0.20);        /* حدود بلون برتقالي شفاف */
 
   --c-text-primary:     #09090B;                    /* أسود ملكي فحمى للنصوص الأساسية */
   --c-text-secondary:   #52525B;                    /* رمادي داكن للنصوص الثانوية */
   --c-text-muted:       #8E8E98;                    /* رمادي باهت للنص المساعد */
-  --c-text-accent:      #FF5500;
+  --c-text-accent:      #801B2C;
 
   --c-success:          #00B074;
   --c-error:            #FF3B30;
@@ -30,15 +30,15 @@
   --s-bg-elevated:      #FFFFFF;                    /* أبيض ناصع للكروت والأسطح */
   --s-bg-panel:         #F3F3F6;                    /* رمادي هادئ جداً للمكونات الداخلية */
   --s-border:           rgba(9,9,11,0.06);          /* حدود رقيقة جداً بلون داكن */
-  --s-border-accent:    rgba(255,85,0,0.20);        /* حدود بلون برتقالي شفاف */
+  --s-border-accent:    rgba(128,27,44,0.20);        /* حدود بلون برتقالي شفاف */
 
-  --s-accent:           #FF5500;                    /* برتقالي ملكي فاخر */
-  --s-accent-glow:      rgba(255,85,0,0.15);        /* توهج برتقالي ناعم */
-  --s-accent-soft:      rgba(255,85,0,0.06);        /* خلفية برتقالية خفيفة للغاية */
+  --s-accent:           #801B2C;                    /* برتقالي ملكي فاخر */
+  --s-accent-glow:      rgba(128,27,44,0.15);        /* توهج برتقالي ناعم */
+  --s-accent-soft:      rgba(128,27,44,0.06);        /* خلفية برتقالية خفيفة للغاية */
 
   /* Order Status — لازم تبان من بعيد ولكن بلمسة فاخرة */
-  --s-pending:          #FF7A00;                    /* برتقالي متوهج للطلبات الجديدة */
-  --s-pending-bg:       rgba(255,122,0,0.08);
+  --s-pending:          #801B2C;                    /* برتقالي متوهج للطلبات الجديدة */
+  --s-pending-bg:       rgba(128,27,44,0.08);
   --s-preparing:        #18181B;                    /* أسود ملكي للطلبات التي يتم تحضيرها */
   --s-preparing-bg:     rgba(24,24,27,0.06);
   --s-ready:            #00B074;                    /* أخضر زمردي للطلبات الجاهزة */
@@ -56,15 +56,15 @@
   --a-border:           rgba(0,0,0,0.07);
   --a-border-strong:    rgba(0,0,0,0.12);
 
-  --a-accent:           #4F46E5;
-  --a-accent-light:     rgba(79,70,229,0.08);
-  --a-accent-medium:    rgba(79,70,229,0.15);
+  --a-accent:           #801B2C;
+  --a-accent-light:     rgba(128,27,44,0.08);
+  --a-accent-medium:    rgba(128,27,44,0.15);
 
   --a-text-primary:     #0F0F10;
   --a-text-secondary:   #6B7280;
   --a-text-muted:       #9CA3AF;
 
-  --a-chart-1:          #4F46E5;
+  --a-chart-1:          #801B2C;
   --a-chart-2:          #7C3AED;
   --a-chart-3:          #EC4899;
   --a-chart-4:          #F59E0B;
@@ -108,7 +108,7 @@
   --admin-text-muted: var(--a-text-muted);
 
   /* Typography */
-  --font-display: 'Playfair Display', 'Cairo', Georgia, serif;
+  --font-display: 'Tajawal', 'Playfair Display', 'Cairo', sans-serif;
   --font-body:    'Inter', 'Cairo', system-ui, sans-serif;
 
   /* Spacing */
@@ -132,13 +132,13 @@
   /* Shadows — Dark interfaces */
   --shadow-card:     0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);
   --shadow-elevated: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
-  --shadow-gold:     0 6px 24px rgba(212,168,83,0.35), 0 2px 8px rgba(212,168,83,0.2);
+  --shadow-gold:     0 6px 24px rgba(128,27,44,0.35), 0 2px 8px rgba(128,27,44,0.2);
   --shadow-indigo:   0 0 20px rgba(99,102,241,0.25);
 
   /* Shadows — Light interface (Admin) */
   --shadow-card-light:     0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
   --shadow-elevated-light: 0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
-  --shadow-accent-light:   0 4px 16px rgba(79,70,229,0.20);
+  --shadow-accent-light:   0 4px 16px rgba(128,27,44,0.20);
 }
 
 @layer base {
@@ -217,8 +217,8 @@
   min-height: 200px;
   background: var(--c-bg-base);
   background-image:
-    radial-gradient(circle at 70% 30%, rgba(255,85,0,0.05) 0%, transparent 60%),
-    radial-gradient(circle at 20% 80%, rgba(255,85,0,0.03) 0%, transparent 40%);
+    radial-gradient(circle at 70% 30%, rgba(128,27,44,0.05) 0%, transparent 60%),
+    radial-gradient(circle at 20% 80%, rgba(128,27,44,0.03) 0%, transparent 40%);
   padding: 32px 20px 24px;
   border-bottom: 1px solid var(--c-border);
 }
@@ -228,13 +228,13 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(255,85,0,0.12);
-  border: 1px solid rgba(255,85,0,0.25);
+  background: rgba(128,27,44,0.12);
+  border: 1px solid rgba(128,27,44,0.25);
   border-radius: 9999px;
   padding: 4px 12px;
   font-size: 10px;
   font-weight: 600;
-  color: #FF5500;
+  color: #801B2C;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 14px;
@@ -351,9 +351,9 @@
 }
 
 .cat-tab.active {
-  background: rgba(212,168,83,0.10);
-  border-color: rgba(212,168,83,0.25);
-  color: #D4A853;
+  background: rgba(128,27,44,0.10);
+  border-color: rgba(128,27,44,0.25);
+  color: #801B2C;
 }
 
 .cat-tab:hover:not(.active) {
@@ -438,7 +438,7 @@
 .product-price .currency {
   font-size: 10px;
   font-weight: 500;
-  color: rgba(255,85,0,0.7);
+  color: rgba(128,27,44,0.7);
   margin-left: 2px;
 }
 
@@ -490,7 +490,7 @@
 }
 .product-img-placeholder i, .product-img-placeholder svg {
   font-size: 22px;
-  color: rgba(255,85,0,0.20);
+  color: rgba(128,27,44,0.20);
 }
 
 /* tag "نفد" */
@@ -518,7 +518,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: #D4A853;
+  background: #801B2C;
   color: #0A0A0B;
   border-radius: 9999px;
   padding: 14px 28px;
@@ -534,12 +534,12 @@
 
 .cart-fab:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 32px rgba(212,168,83,0.45), 0 4px 12px rgba(212,168,83,0.25);
+  box-shadow: 0 10px 32px rgba(128,27,44,0.45), 0 4px 12px rgba(128,27,44,0.25);
 }
 
 .cart-fab .count-badge {
   background: #0A0A0B;
-  color: #D4A853;
+  color: #801B2C;
   border-radius: 50%;
   width: 22px;
   height: 22px;
@@ -603,14 +603,14 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(212,168,83,0.10);
-  border: 1px solid rgba(212,168,83,0.25);
+  background: rgba(128,27,44,0.10);
+  border: 1px solid rgba(128,27,44,0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 28px;
 }
-.confirm-icon i, .confirm-icon svg { font-size: 36px; color: #D4A853; }
+.confirm-icon i, .confirm-icon svg { font-size: 36px; color: #801B2C; }
 
 .confirm-title {
   font-family: var(--font-display);
@@ -1029,7 +1029,7 @@
   margin-bottom: 32px;
   letter-spacing: -0.01em;
 }
-.admin-brand span { color: #4F46E5; }   /* الـ accent على اسم المشروع */
+.admin-brand span { color: #801B2C; }   /* الـ accent على اسم المشروع */
 
 /* Nav */
 .admin-nav-item {
@@ -1053,8 +1053,8 @@
 }
 
 .admin-nav-item.active {
-  background: rgba(79,70,229,0.08);
-  color: #4F46E5;
+  background: rgba(128,27,44,0.08);
+  color: #801B2C;
 }
 
 /* Section divider في الـ sidebar */
@@ -1100,7 +1100,7 @@
   border-radius: 50%;
   opacity: 0.08;
 }
-.metric-card:nth-child(1)::after { background: #4F46E5; }
+.metric-card:nth-child(1)::after { background: #801B2C; }
 .metric-card:nth-child(2)::after { background: #7C3AED; }
 .metric-card:nth-child(3)::after { background: #EC4899; }
 .metric-card:nth-child(4)::after { background: #10B981; }
@@ -1180,7 +1180,7 @@
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 .chart-tooltip-label { color: rgba(245,245,240,0.50); margin-bottom: 4px; }
-.chart-tooltip-value { font-weight: 600; font-size: 14px; color: #D4A853; }
+.chart-tooltip-value { font-weight: 600; font-size: 14px; color: #801B2C; }
 
 /* Weekly Heatmap Grid */
 .heatmap-grid {
@@ -1197,10 +1197,10 @@
   cursor: pointer;
 }
 
-.heatmap-cell[data-intensity="low"]    { background: rgba(79,70,229,0.15); }
-.heatmap-cell[data-intensity="medium"] { background: rgba(79,70,229,0.35); }
-.heatmap-cell[data-intensity="high"]   { background: rgba(79,70,229,0.60); }
-.heatmap-cell[data-intensity="peak"]   { background: #4F46E5; }
+.heatmap-cell[data-intensity="low"]    { background: rgba(128,27,44,0.15); }
+.heatmap-cell[data-intensity="medium"] { background: rgba(128,27,44,0.35); }
+.heatmap-cell[data-intensity="high"]   { background: rgba(128,27,44,0.60); }
+.heatmap-cell[data-intensity="peak"]   { background: #801B2C; }
 
 .heatmap-cell:hover { transform: scale(1.3); z-index: 1; }
 
@@ -1252,7 +1252,7 @@
 }
 
 .status-badge.pending   { background: rgba(245,158,11,0.10); color: #B45309; }
-.status-badge.preparing { background: rgba(79,70,229,0.10);  color: #4338CA; }
+.status-badge.preparing { background: rgba(128,27,44,0.10);  color: #4338CA; }
 .status-badge.ready     { background: rgba(16,185,129,0.10); color: #047857; }
 .status-badge.delivered { background: rgba(0,0,0,0.05);      color: #6B7280; }
 

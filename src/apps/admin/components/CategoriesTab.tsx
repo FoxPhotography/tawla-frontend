@@ -422,7 +422,7 @@ export default function CategoriesTab() {
                               {isSplitActive && (
                                 <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${
                                   category.type === 'cafe'
-                                    ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                    ? 'bg-[#801B2C]/10 text-[#801B2C] border-[#801B2C]/20'
                                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 }`}>
                                   {category.type === 'cafe' ? 'كافيه' : 'مطعم'}

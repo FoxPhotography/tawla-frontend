@@ -66,7 +66,7 @@ export default function StaffLogin() {
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="absolute top-1/4 -left-1/4 w-[450px] h-[450px] rounded-full bg-[#FF5500]/5 blur-[100px]" 
+          className="absolute top-1/4 -left-1/4 w-[450px] h-[450px] rounded-full bg-[#801B2C]/5 blur-[100px]" 
         />
         <motion.div 
           animate={{ 
@@ -79,7 +79,7 @@ export default function StaffLogin() {
             ease: "easeInOut",
             delay: 2
           }}
-          className="absolute bottom-1/4 -right-1/4 w-[400px] h-[400px] rounded-full bg-[#FF5500]/5 blur-[90px]" 
+          className="absolute bottom-1/4 -right-1/4 w-[400px] h-[400px] rounded-full bg-[#801B2C]/5 blur-[90px]" 
         />
         <div className="absolute inset-0 dot-pattern opacity-10" />
       </div>
@@ -110,7 +110,7 @@ export default function StaffLogin() {
         <div className="bg-white border border-zinc-200/80 rounded-3xl p-8 space-y-6 shadow-xl relative overflow-hidden text-zinc-800">
           
           {/* Subtle top brand orange bar */}
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#FF5500]" />
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#801B2C]" />
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username */}
@@ -123,9 +123,9 @@ export default function StaffLogin() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="اسم المستخدم الخاص بك"
-                  className="w-full bg-[#F8F9FA] border border-zinc-200 text-zinc-900 rounded-xl px-4 py-3.5 pr-11 text-right text-xs transition-all focus:border-[#FF5500] focus:ring-1 focus:ring-[#FF5500]/25 focus:outline-none placeholder:text-zinc-400 font-bold"
+                  className="w-full bg-[#F8F9FA] border border-zinc-200 text-zinc-900 rounded-xl px-4 py-3.5 pr-11 text-right text-xs transition-all focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/25 focus:outline-none placeholder:text-zinc-400 font-bold"
                 />
-                <UserIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-[#FF5500] transition-colors" />
+                <UserIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-[#801B2C] transition-colors" />
               </div>
             </div>
 
@@ -139,9 +139,9 @@ export default function StaffLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#F8F9FA] border border-zinc-200 text-zinc-900 rounded-xl px-4 py-3.5 pr-11 pl-11 text-right text-xs transition-all focus:border-[#FF5500] focus:ring-1 focus:ring-[#FF5500]/25 focus:outline-none placeholder:text-zinc-400 font-bold"
+                  className="w-full bg-[#F8F9FA] border border-zinc-200 text-zinc-900 rounded-xl px-4 py-3.5 pr-11 pl-11 text-right text-xs transition-all focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/25 focus:outline-none placeholder:text-zinc-400 font-bold"
                 />
-                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-[#FF5500] transition-colors" />
+                <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-[#801B2C] transition-colors" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -157,7 +157,7 @@ export default function StaffLogin() {
               type="submit"
               disabled={loginMutation.isPending}
               whileTap={{ scale: 0.97 }}
-              className="w-full py-3.5 bg-[#FF5500] hover:bg-[#FF5500]/95 text-white font-black rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#FF5500]/10 active:scale-[0.98] transition-all text-xs cursor-pointer font-body border border-[#FF5500] mt-2"
+              className="w-full py-3.5 bg-[#801B2C] hover:bg-[#801B2C]/95 text-white font-black rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/10 active:scale-[0.98] transition-all text-xs cursor-pointer font-body border border-[#801B2C] mt-2"
             >
               {loginMutation.isPending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
