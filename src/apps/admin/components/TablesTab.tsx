@@ -142,17 +142,17 @@ export default function TablesTab() {
               <p className="text-xs text-admin-text-muted font-medium">لم يتم إضافة طاولات بعد.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 font-cairo">
               {tables.map((table: Table) => (
                 <div
                   key={table.id}
-                  className="bg-admin-bg-elevated border border-admin-border rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-admin-accent/30 transition-all"
+                  className="bg-admin-bg-elevated border border-admin-border rounded-2xl p-5 flex flex-col justify-between shadow-xs hover:shadow-md hover:border-admin-accent/30 transition-all gap-4"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-extrabold text-sm text-admin-text-primary">طاولة رقم {table.number}</h4>
-                      {table.label && <p className="text-[10px] text-admin-text-secondary mt-0.5">{table.label}</p>}
-                      <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 ${
+                      <h4 className="font-extrabold text-base text-admin-text-primary font-cairo">طاولة رقم {table.number}</h4>
+                      {table.label && <p className="text-xs text-admin-text-secondary mt-0.5 font-bold font-cairo">{table.label}</p>}
+                      <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-lg mt-2 font-cairo ${
                         table.status === 'occupied' ? 'bg-[#801B2C]/10 text-[#801B2C]' : table.status === 'waitingBill' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
                       }`}>
                         {table.status === 'occupied' ? 'مشغولة' : table.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'}
@@ -161,22 +161,24 @@ export default function TablesTab() {
 
                     <button
                       onClick={() => { if (confirm(`هل أنت متأكد من حذف طاولة رقم ${table.number}؟`)) deleteTableMutation.mutate(table.id); }}
-                      className="p-1.5 text-admin-text-secondary hover:text-red-500 rounded-lg hover:bg-red-500/5 transition-colors cursor-pointer"
+                      className="p-2 text-admin-text-secondary hover:text-red-500 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
                       title="حذف الطاولة"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* QR Box */}
-                  <div className="mt-4 bg-admin-bg-subtle p-3 rounded-lg flex flex-col items-center gap-2 border border-admin-border/50">
-                    <img src={table.qrCode.url} alt="" className="w-24 h-24 rounded border border-white/10 bg-white" />
+                  {/* QR Box with Luxury Rounded Preview */}
+                  <div className="bg-admin-bg-subtle p-4 rounded-2xl flex flex-col items-center gap-3 border border-admin-border/60">
+                    <div className="w-32 h-32 rounded-2xl bg-white p-2 border border-zinc-200/80 shadow-2xs flex items-center justify-center overflow-hidden">
+                      <img src={table.qrCode.url} alt={`QR طاولة ${table.number}`} className="w-full h-full object-contain" />
+                    </div>
                     <button
                       onClick={() => handleDownloadQR(table)}
-                      className="w-full flex items-center justify-center gap-1.5 text-[10px] font-black text-admin-text-secondary hover:text-admin-accent bg-admin-bg-elevated border border-admin-border hover:border-admin-accent/20 py-1.5 rounded transition-all cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2 text-xs font-bold text-admin-text-primary bg-admin-bg-elevated hover:bg-[#801B2C] hover:text-white border border-admin-border hover:border-[#801B2C] py-2 px-3 rounded-xl transition-all cursor-pointer shadow-xs font-cairo"
                     >
-                      <Download className="w-3 h-3" />
-                      <span>تحميل QR</span>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>تحميل كود QR</span>
                     </button>
                   </div>
                 </div>
