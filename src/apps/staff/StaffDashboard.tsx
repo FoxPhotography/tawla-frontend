@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LogOut, LayoutGrid, MapPin, ChefHat,
-  Sparkles, Download, PlusCircle, Wifi, WifiOff,
+  ShoppingBag, X, Download, PlusCircle, Wifi, WifiOff,
   Volume2, VolumeX, Layers, Users, Bell, Clock
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -596,37 +596,69 @@ export default function StaffDashboard() {
         }
       }} />
 
-      {/* ===== New Order Toast Notification Banner (Light Luxury) ===== */}
+      {/* ===== Luxury Incoming Order Toast Banner ===== */}
       <AnimatePresence>
         {showNewOrderToast && newOrderDetails && (
           <motion.div
-            initial={{ y: -60, opacity: 0, scale: 0.92 }}
+            initial={{ y: -60, opacity: 0, scale: 0.94 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: -60, opacity: 0, scale: 0.92 }}
-            transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="fixed top-20 left-6 z-50 bg-white border border-[#801B2C]/25 p-4.5 rounded-3xl shadow-2xl flex items-center gap-4 max-w-sm text-zinc-900"
+            exit={{ y: -60, opacity: 0, scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 380, damping: 24 }}
+            onClick={() => {
+              staffAudio.play('click');
+              setActiveTab('orders');
+              setShowNewOrderToast(false);
+            }}
+            className="fixed top-6 left-6 z-50 bg-white/95 backdrop-blur-xl border border-zinc-200/90 hover:border-[#801B2C]/40 p-4 px-5 rounded-2xl shadow-[0_20px_50px_-10px_rgba(128,27,44,0.25)] flex items-center gap-4 min-w-[340px] max-w-sm text-zinc-900 font-cairo cursor-pointer select-none transition-all group"
           >
-            <div className="w-11 h-11 rounded-2xl bg-[#801B2C]/10 flex items-center justify-center text-[#801B2C] flex-shrink-0 shadow-inner">
-              <Sparkles className="w-5 h-5 animate-pulse" />
+            {/* Animated Order Icon with Live Indicator */}
+            <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-[#801B2C] to-[#962436] flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-[#801B2C]/30">
+              <ShoppingBag className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-300" />
+              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white"></span>
+              </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h4 className="font-black text-sm text-zinc-900 font-cairo">طلب جديد وارد! 🔔</h4>
-                <span className="text-[10px] bg-[#801B2C] text-white px-2 py-0.5 rounded-full font-mono font-black">
+
+            {/* Content Details */}
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-sm text-zinc-900 font-cairo">طلب جديد وارد!</span>
+                  <span className="inline-block w-2 h-2 rounded-full bg-[#801B2C] animate-pulse" />
+                </div>
+                <span className="text-[11px] bg-[#801B2C]/10 border border-[#801B2C]/20 text-[#801B2C] px-2 py-0.5 rounded-lg font-mono font-black">
                   #{newOrderDetails.id.slice(-4).toUpperCase()}
                 </span>
               </div>
-              <p className="text-xs text-zinc-600 font-bold mt-0.5 truncate">
+
+              <p className="text-xs text-zinc-600 font-bold truncate">
                 {newOrderDetails.type === 'delivery' 
-                  ? `دليفري · ${newOrderDetails.customerName || 'عميل'}` 
+                  ? `🛵 دليفري · ${newOrderDetails.customerName || 'عميل'}` 
                   : newOrderDetails.tableNumber > 0 
-                  ? `طاولة رقم ${newOrderDetails.tableNumber}` 
-                  : 'تيك أواي سفري'}
+                  ? `🍽️ طاولة رقم ${newOrderDetails.tableNumber}` 
+                  : '🥡 تيك أواي سفري'}
               </p>
-              <p className="text-[11px] text-[#801B2C] font-black font-mono mt-0.5">
-                الإجمالي: {newOrderDetails.totalAmount} ج.م
-              </p>
+
+              <div className="flex items-center justify-between text-xs pt-0.5">
+                <span className="text-[11px] text-zinc-500 font-bold">الحساب الإجمالي:</span>
+                <span className="text-xs text-[#801B2C] font-black font-cairo">
+                  {newOrderDetails.totalAmount} ج.م
+                </span>
+              </div>
             </div>
+
+            {/* Close Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowNewOrderToast(false);
+              }}
+              className="p-1 text-zinc-400 hover:text-zinc-700 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer self-start -mr-2 -mt-1"
+              title="إغلاق التنبيه"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -915,12 +947,10 @@ export default function StaffDashboard() {
                       whileHover={{ scale: 1.2, zIndex: 10 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => {
-                        staffAudio.play('click');
-                        setActiveTab('tables');
-                        toast(`طاولة رقم ${table.number}: ${table.status === 'occupied' ? 'مشغولة' : table.status === 'waitingBill' ? 'تطلب الحساب 💳' : 'متاحة للطلب'}`);
+                        handleStartOrderForTable(table.number);
                       }}
                       className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-xs font-mono font-bold transition-all cursor-pointer border ${circleClass} relative`}
-                      title={`طاولة رقم ${table.number} (${table.status === 'occupied' ? 'مشغولة' : table.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'})`}
+                      title={`طاولة رقم ${table.number} - انقر لبدء طلب جديد (${table.status === 'occupied' ? 'مشغولة' : table.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'})`}
                     >
                       <span>{table.number}</span>
                       {table.status === 'waitingBill' && (
