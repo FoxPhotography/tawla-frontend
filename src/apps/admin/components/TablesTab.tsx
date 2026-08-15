@@ -82,17 +82,17 @@ export default function TablesTab() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Table Creation Form */}
-        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card space-y-5 h-fit">
-          <h3 className="font-extrabold text-admin-text-primary text-sm flex items-center gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Table Creation Form (Sticky on scroll) */}
+        <div className="bg-admin-bg-elevated border border-admin-border rounded-2xl p-6 shadow-admin-card space-y-5 h-fit lg:sticky lg:top-0 z-10 font-cairo">
+          <h3 className="font-extrabold text-admin-text-primary text-sm flex items-center gap-2 font-cairo">
             <PlusCircle className="w-4.5 h-4.5 text-admin-accent" />
             <span>إضافة طاولة جديدة</span>
           </h3>
 
-          <form onSubmit={handleCreateTableSubmit} className="space-y-4">
+          <form onSubmit={handleCreateTableSubmit} className="space-y-4 font-cairo">
             <div className="space-y-1.5">
-              <label className="block text-xs text-admin-text-secondary font-bold">رقم الطاولة *</label>
+              <label className="block text-xs text-admin-text-secondary font-bold font-cairo">رقم الطاولة *</label>
               <input
                 type="number"
                 min="1"
@@ -100,18 +100,18 @@ export default function TablesTab() {
                 value={tableNum}
                 onChange={(e) => setTableNum(e.target.value)}
                 placeholder="مثال: 5"
-                className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-mono"
+                className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-xl px-3.5 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-mono font-bold shadow-2xs"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs text-admin-text-secondary font-bold">مسمى إضافي أو موقع (اختياري)</label>
+              <label className="block text-xs text-admin-text-secondary font-bold font-cairo">مسمى إضافي أو موقع (اختياري)</label>
               <input
                 type="text"
                 value={tableLabel}
                 onChange={(e) => setTableLabel(e.target.value)}
                 placeholder="مثال: بجوار النافذة، طابق 2"
-                className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-xl px-3.5 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-cairo shadow-2xs"
               />
             </div>
 
@@ -119,7 +119,7 @@ export default function TablesTab() {
               type="submit"
               disabled={createTableMutation.isPending}
               whileTap={{ scale: 0.97 }}
-              className="w-full py-2.5 bg-admin-accent text-white font-bold text-xs rounded-lg hover:opacity-95 transition-opacity flex items-center justify-center gap-1.5 shadow-admin-accent cursor-pointer"
+              className="w-full py-3 bg-admin-accent text-white font-bold text-xs rounded-xl hover:opacity-95 transition-opacity flex items-center justify-center gap-2 shadow-admin-accent cursor-pointer font-cairo mt-2"
             >
               {createTableMutation.isPending ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -1272,24 +1272,24 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   outline-offset: 2px;
 }
 
-/* Heatmap Density Cell Colors (Gold theme) */
+/* Heatmap Density Cell Colors (Royal Burgundy theme) */
 .density-cell.level-0 {
-  background-color: #f1f3f5;
+  background-color: #f4f4f5;
 }
 .density-cell.level-1 {
-  background-color: #fdf6e2;
+  background-color: #f7e6e9;
 }
 .density-cell.level-2 {
-  background-color: #f7e7c4;
+  background-color: #ecc0c7;
 }
 .density-cell.level-3 {
-  background-color: #f3d492;
+  background-color: #d68390;
 }
 .density-cell.level-4 {
-  background-color: #e5b95a;
+  background-color: #a83246;
 }
 .density-cell.level-5 {
-  background-color: #c5a85c;
+  background-color: #801B2C;
 }
 
 /* Custom Font Utilities */

@@ -443,12 +443,12 @@ export default function AnalyticsTab() {
 
               <div className="flex justify-end gap-3 pt-4 text-[10px] text-admin-text-muted font-semibold items-center">
                 <span>أقل نشاطاً</span>
-                <div className="w-3.5 h-3.5 rounded-sm bg-[#f1f3f5]" />
-                <div className="w-3.5 h-3.5 rounded-sm bg-[#fdf6e2]" />
-                <div className="w-3.5 h-3.5 rounded-sm bg-[#f7e7c4]" />
-                <div className="w-3.5 h-3.5 rounded-sm bg-[#f3d492]" />
-                <div className="w-3.5 h-3.5 rounded-sm bg-[#e5b95a]" />
-                <div className="w-3.5 h-3.5 rounded-sm bg-[#c5a85c]" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-[#f4f4f5]" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-[#f7e6e9]" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-[#ecc0c7]" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-[#d68390]" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-[#a83246]" />
+                <div className="w-3.5 h-3.5 rounded-sm bg-[#801B2C]" />
                 <span>أكثر نشاطاً</span>
               </div>
             </div>
@@ -472,7 +472,7 @@ export default function AnalyticsTab() {
                         contentStyle={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px', fontSize: '11px' }}
                         labelFormatter={(value) => `الساعة: ${value}`}
                       />
-                      <Bar dataKey="عدد الطلبات" fill="#c5a85c" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="عدد الطلبات" fill="#801B2C" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 );
