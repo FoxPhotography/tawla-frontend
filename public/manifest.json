@@ -3,19 +3,33 @@
   "short_name": "طاولة",
   "description": "نظام منيو الـ QR الذكي وإدارة المطاعم والكافيهات",
   "start_url": "/staff",
+  "scope": "/",
+  "id": "tawla-restaurant-os-v6",
   "display": "standalone",
-  "background_color": "#0D0F12",
-  "theme_color": "#0D0F12",
+  "background_color": "#09090B",
+  "theme_color": "#801B2C",
   "orientation": "any",
   "icons": [
     {
-      "src": "/favicon-192.png?v=2",
-      "sizes": "192x192",
+      "src": "/favicon-512.png?v=6",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/favicon-512.png?v=2",
+      "src": "/favicon-512.png?v=6",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon-192.png?v=6",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/3.png?v=6",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

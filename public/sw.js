@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tawla-cache-v5';
+const CACHE_NAME = 'tawla-cache-v6';
 const ASSETS_TO_CACHE = [
   '/staff',
   '/index.html',
@@ -34,6 +34,12 @@ self.addEventListener('activate', (event) => {
     })
   );
   self.clients.claim();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && (event.data.type === 'SKIP_WAITING' || event.data === 'skipWaiting')) {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
