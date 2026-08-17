@@ -4,13 +4,14 @@ import { motion, AnimatePresence, useScroll, useTransform, useInView } from 'fra
 import { 
   QrCode, Coffee, Bell, TrendingUp, Receipt,
   Laptop, Check, ArrowLeft,
-  ChevronDown, Send, Sparkles, Menu, X,
+  ChevronDown, Send, Menu, X,
   Lock, ShoppingBag, Plus, Trash2, CloudOff
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket';
-import logoImg from '../../assets/newlogo.svg';
+import logoImg from '../../assets/TAWLA_Logo.png';
+import iconLogoImg from '../../assets/3.png';
 
 interface SystemSettings {
   pricing: {
@@ -87,11 +88,10 @@ export default function LandingPage() {
   const faqRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
 
-  // Scroll controls for header and effects
   const { scrollY } = useScroll();
   const headerBg = useTransform(scrollY, [0, 50], ["rgba(250, 248, 245, 0)", "rgba(250, 248, 245, 0.85)"]);
   const headerBorder = useTransform(scrollY, [0, 50], ["rgba(128, 27, 44, 0)", "rgba(128, 27, 44, 0.08)"]);
-  const headerHeight = useTransform(scrollY, [0, 50], ["76px", "60px"]);
+  const headerHeight = useTransform(scrollY, [0, 50], ["86px", "70px"]);
 
   // Fetch initial system settings
   useEffect(() => {
@@ -358,13 +358,8 @@ export default function LandingPage() {
         className="fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-md transition-all duration-300 flex items-center"
       >
         <div className="max-w-7xl mx-auto w-full px-6 flex items-center justify-between">
-          <a href="#" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center transition-all duration-300 group-hover:scale-110 bg-white border border-[#801B2C]/20">
-              <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-0.5" />
-            </div>
-            <span className="text-[20px] text-[#1C1612] font-bold tracking-tight" style={{ fontFamily: '"Tajawal", sans-serif' }}>
-              طاولة
-            </span>
+          <a href="#" className="flex items-center group py-1">
+            <img src={logoImg} alt="طاولة - Tawla" className="h-14 sm:h-16 w-auto object-contain transition-all duration-300 group-hover:scale-105" />
           </a>
 
           <nav className="hidden md:flex items-center gap-10">
@@ -432,13 +427,8 @@ export default function LandingPage() {
             >
               {/* Header inside drawer */}
               <div className="p-6 border-b border-[#801B2C]/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-[#801B2C]/20">
-                    <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-0.5" />
-                  </div>
-                  <span className="text-[18px] text-[#1C1612] font-bold tracking-tight" style={{ fontFamily: '"Tajawal", sans-serif' }}>
-                    طاولة
-                  </span>
+                <div className="flex items-center">
+                  <img src={logoImg} alt="طاولة - Tawla" className="h-11 w-auto object-contain" />
                 </div>
                 <button 
                   onClick={() => setMobileMenuOpen(false)}
@@ -506,10 +496,9 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 bg-[#801B2C]/8 border border-[#801B2C]/20 rounded-full px-4.5 py-1.5"
+              className="inline-flex items-center bg-white/95 backdrop-blur-md border border-[#801B2C]/25 rounded-full px-5 py-2 shadow-[0_4px_16px_rgba(128,27,44,0.06)] hover:border-[#801B2C]/40 hover:shadow-md transition-all select-none"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#801B2C]" />
-              <span className="text-[11px] text-[#5E1422] font-bold tracking-wide">
+              <span className="text-[13px] sm:text-[13.5px] text-[#801B2C] font-black tracking-wide" style={{ fontFamily: '"Tajawal", sans-serif' }}>
                 منظومة طلبات سحابية راقية للمطاعم والكافيهات
               </span>
             </motion.div>
@@ -623,9 +612,9 @@ export default function LandingPage() {
                 
                 {/* Visual Stand Card Details */}
                 <div className="relative border border-[#801B2C]/10 bg-white rounded-2xl p-6 text-center space-y-6 shadow-sm">
-                  {/* Restaurant Logo Area */}
-                  <div className="mx-auto w-12 h-12 rounded-full bg-[#FAF8F5] border border-[#801B2C]/15 flex items-center justify-center">
-                    <Coffee className="w-5 h-5 text-[#801B2C]" />
+                  {/* Tawla Brand Stand Logo Area */}
+                  <div className="mx-auto flex items-center justify-center h-14 max-w-[200px]">
+                    <img src={logoImg} alt="طاولة - Tawla" className="w-full h-full object-contain" />
                   </div>
                   
                   <div className="space-y-1">
@@ -643,8 +632,8 @@ export default function LandingPage() {
                     <div className="w-full h-full opacity-90 relative">
                       <QrCode className="w-full h-full text-[#1C1612]" strokeWidth={1.5} />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-8 h-8 rounded-lg bg-[#1C1612] border-2 border-white flex items-center justify-center">
-                          <Coffee className="w-4 h-4 text-[#801B2C]" />
+                        <div className="w-9 h-9 rounded-xl bg-white border-2 border-[#801B2C]/30 p-1 flex items-center justify-center shadow-md">
+                          <img src={iconLogoImg} alt="Tawla Logo" className="w-full h-full object-contain" />
                         </div>
                       </div>
                     </div>
@@ -1358,9 +1347,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-[12px] text-[#5C524C]/60">
           
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-[#801B2C]/20">
-              <img src={logoImg} alt="Logo" className="w-full h-full object-contain p-0.5" />
-            </div>
+            <img src={logoImg} alt="طاولة - Tawla" className="h-10 w-auto object-contain" />
             <span className="font-bold text-[#1C1612] tracking-tight" style={{ fontFamily: '"Tajawal", sans-serif' }}>
               طاولة © {new Date().getFullYear()}
             </span>

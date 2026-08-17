@@ -1,10 +1,13 @@
-const CACHE_NAME = 'tawla-cache-v3'; // Bumped cache name
+const CACHE_NAME = 'tawla-cache-v5';
 const ASSETS_TO_CACHE = [
   '/staff',
   '/index.html',
+  '/3.png',
+  '/TAWLA_Logo.png',
+  '/TAWLA_Logo_2.png',
+  '/favicon.png',
   '/favicon-192.png',
   '/favicon-512.png',
-  '/favicon.svg',
   '/icons.svg',
   '/manifest.json'
 ];

@@ -6,7 +6,7 @@ import { User as UserIcon, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
-import logoImg from '../../assets/newlogo.svg';
+import logoImg from '../../assets/TAWLA_Logo.png';
 
 export default function StaffLogin() {
   const navigate = useNavigate();
@@ -34,48 +34,46 @@ export default function StaffLogin() {
         navigate('/staff');
       }
     },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'فشل تسجيل الدخول. تأكد من البيانات.');
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || error.response?.data?.error || 'اسم المستخدم أو كلمة المرور غير صحيحة');
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
-      toast.error('يرجى ملء جميع الحقول.');
+    if (!username.trim() || !password) {
+      toast.error('يرجى إدخال اسم المستخدم وكلمة المرور');
       return;
     }
     loginMutation.mutate();
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#09090B] flex items-center justify-center relative overflow-hidden noise" dir="rtl">
-      <Toaster position="top-center" toastOptions={{
-        style: { background: '#ffffff', color: '#09090B', border: '1px solid rgba(0,0,0,0.08)' }
-      }} />
+    <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center relative overflow-hidden font-cairo" dir="rtl">
+      <Toaster position="top-center" />
 
-      {/* Floating Animated Light Glows */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Luxury subtle background glow & dots */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div 
           animate={{ 
-            x: [0, 40, -20, 0],
-            y: [0, -30, 20, 0]
+            scale: [1, 1.15, 1],
+            opacity: [0.35, 0.55, 0.35]
           }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "easeInOut"
+          transition={{ 
+            duration: 8, 
+            repeat: Infinity, 
+            ease: "easeInOut" 
           }}
-          className="absolute top-1/4 -left-1/4 w-[450px] h-[450px] rounded-full bg-[#801B2C]/5 blur-[100px]" 
+          className="absolute top-1/4 -left-1/4 w-[500px] h-[500px] rounded-full bg-[#801B2C]/8 blur-[100px]" 
         />
         <motion.div 
           animate={{ 
-            x: [0, -30, 30, 0],
-            y: [0, 40, -30, 0]
+            scale: [1, 1.2, 1],
+            opacity: [0.25, 0.45, 0.25]
           }}
-          transition={{
-            duration: 18,
-            repeat: Infinity,
+          transition={{ 
+            duration: 10, 
+            repeat: Infinity, 
             ease: "easeInOut",
             delay: 2
           }}
@@ -94,16 +92,21 @@ export default function StaffLogin() {
         }}
         className="relative z-10 w-full max-w-[420px] mx-4"
       >
-        {/* Brand Header */}
-        <div className="text-center mb-8">
+        {/* Brand Banner Header */}
+        <div className="text-center mb-6">
           <motion.div 
-            whileHover={{ scale: 1.05, rotate: 5 }}
-            className="mx-auto mb-4 w-14 h-14 rounded-2xl overflow-hidden border border-zinc-200/80 flex items-center justify-center transition-all duration-300 bg-white shadow-sm"
+            whileHover={{ scale: 1.03 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className="mx-auto mb-3 flex items-center justify-center max-w-[320px] cursor-pointer select-none"
           >
-            <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
+            <img 
+              src={logoImg} 
+              className="w-full max-h-28 object-contain filter drop-shadow-sm transition-transform duration-300" 
+              alt="طاولة - Tawla" 
+            />
           </motion.div>
           <h1 className="text-2xl font-black text-[#09090B] tracking-tight font-cairo">تسجيل الدخول</h1>
-          <p className="text-zinc-500 text-xs font-bold mt-1.5 font-body">نظام إدارة المطاعم والكافيهات الذكي - طاولة</p>
+          <p className="text-zinc-500 text-xs font-bold mt-1 font-body">نظام إدارة المطاعم والكافيهات الذكي</p>
         </div>
 
         {/* Clean Light Card */}

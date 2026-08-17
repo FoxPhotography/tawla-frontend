@@ -9,7 +9,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { SerialKey } from '../../shared/types';
-import logoImg from '../../assets/newlogo.svg';
+import logoImg from '../../assets/TAWLA_Logo.png';
 
 // Sub-components
 import StatsGrid from './components/StatsGrid';
@@ -93,11 +93,13 @@ export default function SuperAdminDashboard() {
         <div className="space-y-8">
           {/* Logo / Header */}
           <div className="flex items-center gap-3 pb-6 border-b border-zinc-200/85">
-            <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200/80 flex items-center justify-center bg-white shadow-sm flex-shrink-0">
-              <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
-            </div>
-            <div>
-              <h1 className="text-sm font-black tracking-wide text-zinc-900">Tawla OS SuperAdmin</h1>
+            <img 
+              src={logoImg} 
+              className="h-10 w-auto max-w-[110px] object-contain flex-shrink-0" 
+              alt="Tawla Logo" 
+            />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-sm font-black tracking-wide text-zinc-900">Tawla SuperAdmin</h1>
               <span className="text-[10px] text-zinc-500 font-bold">الدور: <span className="text-[#801B2C] font-black uppercase">مشرف النظام</span></span>
             </div>
           </div>

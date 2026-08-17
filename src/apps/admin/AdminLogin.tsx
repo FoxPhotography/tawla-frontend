@@ -6,7 +6,7 @@ import { Lock, User as UserIcon, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
-import logoImg from '../../assets/newlogo.svg';
+import logoImg from '../../assets/TAWLA_Logo.png';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -67,16 +67,19 @@ export default function AdminLogin() {
         transition={{ duration: 0.5 }}
         className="relative z-10 w-full max-w-md mx-4"
       >
-        {/* Brand Header */}
+        {/* Brand Banner Header */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center mb-8"
         >
-          <div className="mx-auto mb-5 w-16 h-16 rounded-2xl overflow-hidden border border-[#B8973E]/30 flex items-center justify-center transition-all duration-300 bg-white shadow-sm">
-            <img src={logoImg} className="w-full h-full object-contain" alt="Logo" />
-          </div>
+          <motion.div 
+            whileHover={{ scale: 1.03 }}
+            className="mx-auto mb-4 flex items-center justify-center max-w-[320px] transition-all duration-300"
+          >
+            <img src={logoImg} className="w-full max-h-24 object-contain" alt="طاولة - Tawla" />
+          </motion.div>
           <h1 className="text-3xl font-extrabold text-white mb-2 font-cairo">بوابة المدير</h1>
           <p className="text-zinc-400 text-sm font-medium font-body">إدارة المنيو، الطاولات، المبيعات والتحليلات</p>
         </motion.div>
