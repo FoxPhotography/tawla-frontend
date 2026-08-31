@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Coffee, Activity, Key, Sparkles } from 'lucide-react';
+import { Coffee, Activity, Key, KeyRound } from 'lucide-react';
 
 interface StatsGridProps {
   restaurantsCount: number;
@@ -46,7 +46,7 @@ export default function StatsGrid({
     { 
       label: 'أكواد تفعيل غير مستخدمة', 
       value: unusedSerialsCount, 
-      icon: Sparkles, 
+      icon: KeyRound, 
       color: 'text-amber-400', 
       bg: 'from-amber-500/5 to-transparent', 
       border: 'border-amber-500/10' 

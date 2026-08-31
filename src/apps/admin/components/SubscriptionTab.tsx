@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Crown, Sparkles } from 'lucide-react';
+import { Crown, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import { useAuthStore } from '../../../shared/store/authStore';
@@ -246,7 +246,7 @@ export default function SubscriptionTab() {
         <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card flex flex-col justify-between col-span-1 lg:col-span-2">
           <div className="space-y-2">
             <h3 className="font-extrabold text-admin-text-primary text-sm flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-admin-accent animate-pulse" />
+              <CreditCard className="w-4 h-4 text-admin-accent" />
               <span>تجديد أو ترقية الاشتراك</span>
             </h3>
             <p className="text-xs text-admin-text-secondary leading-relaxed font-medium">

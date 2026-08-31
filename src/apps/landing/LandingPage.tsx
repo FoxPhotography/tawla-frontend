@@ -5,7 +5,8 @@ import {
   QrCode, Coffee, Bell, TrendingUp, Receipt,
   Laptop, Check, ArrowLeft,
   ChevronDown, Send, Menu, X,
-  Lock, ShoppingBag, Plus, Trash2, CloudOff
+  Lock, ShoppingBag, Plus, Trash2, CloudOff,
+  Mail, MapPin, Shield, CreditCard
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -1159,12 +1160,21 @@ export default function LandingPage() {
                 </ul>
               </div>
 
-              <button 
-                onClick={handleWhatsappContact}
-                className="w-full mt-10 py-3.5 bg-[#FAF8F5] border border-[#801B2C]/20 hover:border-[#801B2C] hover:text-[#801B2C] rounded-xl text-[13px] font-bold text-[#5C524C] transition-all duration-300 cursor-pointer text-center"
-              >
-                اطلب الباقة الأساسية
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 mt-10">
+                <button 
+                  onClick={() => navigate('/checkout?plan=basic')}
+                  className="flex-1 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-[13px] font-bold shadow-md transition-all duration-300 cursor-pointer text-center flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>اشتراك أونلاين</span>
+                </button>
+                <button 
+                  onClick={handleWhatsappContact}
+                  className="py-3.5 px-4 bg-[#FAF8F5] border border-[#801B2C]/20 hover:border-[#801B2C] hover:text-[#801B2C] rounded-xl text-[12px] font-semibold text-[#5C524C] transition-all duration-300 cursor-pointer text-center"
+                >
+                  طلب عبر واتساب
+                </button>
+              </div>
             </div>
 
             {/* Pro Card (Recommended) */}
@@ -1222,12 +1232,21 @@ export default function LandingPage() {
                 </ul>
               </div>
 
-              <button 
-                onClick={handleWhatsappContact}
-                className="w-full mt-10 py-3.5 luxury-btn-gold rounded-xl text-[13px] font-bold transition-all duration-300 cursor-pointer text-center relative z-10"
-              >
-                اطلب الباقة المتقدمة
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 mt-10 relative z-10">
+                <button 
+                  onClick={() => navigate('/checkout?plan=pro')}
+                  className="flex-1 py-3.5 luxury-btn-gold rounded-xl text-[13px] font-bold transition-all duration-300 cursor-pointer text-center shadow-lg flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>اشترك بالباقة الآن</span>
+                </button>
+                <button 
+                  onClick={handleWhatsappContact}
+                  className="py-3.5 px-4 bg-white/80 border border-[#801B2C]/30 hover:bg-white rounded-xl text-[12px] font-semibold text-[#801B2C] transition-all duration-300 cursor-pointer text-center"
+                >
+                  استفسار واتساب
+                </button>
+              </div>
             </div>
 
           </div>
@@ -1238,12 +1257,12 @@ export default function LandingPage() {
       <section id="faq" ref={faqRef} className="relative bg-white py-28 px-6 text-right overflow-hidden border-t border-[#801B2C]/10">
         <div className="max-w-3xl mx-auto relative z-10">
           
-          <div className="mb-16 space-y-4 text-center">
-            <span className="text-[11px] text-[#801B2C] font-bold tracking-[0.25em] uppercase block">
+          <div className="text-center mb-16 space-y-3">
+            <span className="text-[11px] font-bold text-[#801B2C] tracking-wider uppercase font-mono bg-[#801B2C]/5 px-3 py-1 rounded-full border border-[#801B2C]/10">
               الأسئلة الشائعة
             </span>
-            <h2 className="text-[32px] sm:text-[44px] font-bold text-[#1C1612] tracking-tight" style={{ fontFamily: '"Tajawal", sans-serif' }}>
-              لديك استفسارات؟
+            <h2 className="text-[clamp(24px,3.5vw,38px)] text-[#1C1612] font-bold tracking-tight" style={{ fontFamily: '"Tajawal", sans-serif' }}>
+              كل ما تود معرفته عن منصة طاولة
             </h2>
           </div>
 
@@ -1255,7 +1274,7 @@ export default function LandingPage() {
               },
               {
                 q: "كيف تتم طريقة سداد قيمة اشتراك باقتي Basic و Pro؟",
-                a: "تقوم باختيار الباقة المناسبة والاشتراك معنا عبر الواتساب. تمنحك المنصة شهراً كاملاً لتجربة المنظومة مجاناً. يمكنك إيقاف الخدمة أو ترقيتها في أي وقت دون شروط معقدة."
+                a: "تقوم باختيار الباقة المناسبة والاشتراك معنا مباشرة بالدفع الإلكتروني الآمن (فواتيرك) أو عبر الواتساب. تمنحك المنصة 14 يوماً تجربة مجانية بالكامل للتحقق من جودة النظام."
               },
               {
                 q: "هل أستطيع تعديل المنيو والأسعار بنفسي لحظياً؟",
@@ -1309,7 +1328,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════════════════ CTA FOOTER BLOCK ═══════════════════════ */}
-      <section id="contact" className="relative bg-[#FAF8F5] py-32 px-6 text-center overflow-hidden border-t border-[#801B2C]/10">
+      <section id="contact" className="relative bg-[#FAF8F5] py-24 px-6 text-center overflow-hidden border-t border-[#801B2C]/10">
         {/* Big decorative QR in background */}
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.015] pointer-events-none">
           <QrCode className="w-[600px] h-[600px] text-[#801B2C]" strokeWidth={0.3} />
@@ -1318,47 +1337,111 @@ export default function LandingPage() {
         {/* Ambient glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-[0.06] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, #801B2C 0%, transparent 70%)' }} />
 
-        <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center space-y-8">
-          <h2 className="text-[clamp(32px,5vw,60px)] text-[#1C1612] leading-[1.15] font-bold tracking-tight" style={{ fontFamily: '"Tajawal", sans-serif' }}>
+        <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center space-y-8">
+          <h2 className="text-[clamp(30px,4.5vw,54px)] text-[#1C1612] leading-[1.15] font-bold tracking-tight" style={{ fontFamily: '"Tajawal", sans-serif' }}>
             جاهز لترقية جودة
             <br />
             <span className="bg-gradient-to-r from-[#5E1422] to-[#801B2C] bg-clip-text text-transparent">ضيافتك الرقمية؟</span>
           </h2>
 
-          <p className="text-[#5C524C] text-[14.5px] max-w-md mx-auto leading-relaxed">
-            الاشتراك والإطلاق يستغرق دقائق معدودة عبر الواتساب. يسعدنا ترتيب موعد لتدريب فريق عملكم بالكامل مجاناً.
+          <p className="text-[#5C524C] text-[14.5px] max-w-lg mx-auto leading-relaxed">
+            اشترك الآن بضمان تجربة مجانية لمدة 14 يوماً بالكامل، أو تواصل مع فريقنا لترتيب موعد تدريب مجاني لفريق العمل.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center gap-4 justify-center pt-2">
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 justify-center pt-2 w-full max-w-md">
+            <button
+              onClick={() => navigate('/checkout')}
+              className="w-full sm:w-auto flex-1 bg-[#801B2C] hover:bg-[#5E1422] text-white px-8 py-4 rounded-xl text-[14px] font-bold flex items-center justify-center gap-2.5 shadow-[0_8px_30px_rgba(128,27,44,0.25)] transition-all transform hover:scale-[1.02] active:scale-95 cursor-pointer"
+            >
+              <CreditCard className="w-4.5 h-4.5" />
+              <span>الاشتراك والدفع الإلكتروني</span>
+            </button>
             <button
               onClick={handleWhatsappContact}
-              className="group bg-[#25D366] text-white px-8 py-4 rounded-xl text-[14px] font-bold flex items-center justify-center gap-3 cursor-pointer shadow-[0_8px_30px_rgba(37,211,102,0.18)] hover:shadow-[0_8px_30px_rgba(37,211,102,0.3)] transition-all duration-300 transform hover:scale-[1.02] active:scale-95"
+              className="w-full sm:w-auto bg-[#25D366] text-white px-6 py-4 rounded-xl text-[14px] font-bold flex items-center justify-center gap-2.5 shadow-[0_8px_30px_rgba(37,211,102,0.18)] hover:shadow-[0_8px_30px_rgba(37,211,102,0.3)] transition-all transform hover:scale-[1.02] active:scale-95 cursor-pointer"
             >
-              <Send className="w-4.5 h-4.5" />
-              تواصل معنا مباشرة عبر الواتساب
-              <span className="text-[12px] opacity-80 font-mono tracking-wider ml-1" dir="ltr">+201066980953</span>
+              <Send className="w-4 h-4" />
+              <span>واتساب المبيعات</span>
             </button>
+          </div>
+
+          {/* Contact Badges Grid for Compliance */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full pt-6 text-right">
+            <div className="p-3.5 rounded-2xl bg-white border border-[#801B2C]/10 flex items-center gap-3">
+              <Mail className="w-4 h-4 text-[#801B2C] shrink-0" />
+              <div className="overflow-hidden">
+                <span className="text-[10.5px] text-[#5C524C] block">البريد الإلكتروني للدعم</span>
+                <a href="mailto:support.tawla@gmail.com" className="text-[12px] font-bold text-[#801B2C] truncate block hover:underline" dir="ltr">
+                  support.tawla@gmail.com
+                </a>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white border border-[#801B2C]/10 flex items-center gap-3">
+              <MapPin className="w-4 h-4 text-[#801B2C] shrink-0" />
+              <div>
+                <span className="text-[10.5px] text-[#5C524C] block">المقر والعنوان الفعلي</span>
+                <span className="text-[11.5px] font-bold text-[#1C1612] block">
+                  مركز بلقاس - الدقهلية - مصر
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white border border-[#801B2C]/10 flex items-center gap-3">
+              <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div>
+                <span className="text-[10.5px] text-[#5C524C] block">المدفوعات والأمان</span>
+                <span className="text-[11.5px] font-bold text-emerald-800 block">
+                  بوابة فواتيرك (Fawaterk) المعتمدة
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ═══════════════════════ FOOTER ═══════════════════════ */}
       <footer className="py-12 border-t border-[#801B2C]/10 bg-white px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-[12px] text-[#5C524C]/60">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-[12px] text-[#5C524C]/80">
           
-          <div className="flex items-center gap-3">
-            <img src={logoImg} alt="طاولة - Tawla" className="h-10 w-auto object-contain" />
+          <div className="flex flex-wrap items-center gap-3 text-center sm:text-right">
+            <img src={logoImg} alt="طاولة - Tawla" className="h-9 w-auto object-contain" />
             <span className="font-bold text-[#1C1612] tracking-tight" style={{ fontFamily: '"Tajawal", sans-serif' }}>
               طاولة © {new Date().getFullYear()}
             </span>
-            <span className="text-zinc-300">•</span>
-            <p>جميع الحقوق محفوظة — نظام إدارة المطاعم والكافيهات الذكي</p>
+            <span className="text-zinc-300 hidden sm:inline">•</span>
+            <p>نظام إدارة المطاعم والكافيهات الذكي — مركز بلقاس، الدقهلية، مصر</p>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <a 
+              href="/refund" 
+              className="hover:text-[#801B2C] transition-colors font-medium"
+            >
+              سياسة الاسترجاع (14 يوماً)
+            </a>
+            <a 
+              href="/privacy" 
+              className="hover:text-[#801B2C] transition-colors font-medium"
+            >
+              سياسة الخصوصية
+            </a>
+            <a 
+              href="/terms" 
+              className="hover:text-[#801B2C] transition-colors font-medium"
+            >
+              الشروط والأحكام
+            </a>
+            <a 
+              href="/checkout" 
+              className="hover:text-[#801B2C] transition-colors font-bold text-[#801B2C]"
+            >
+              الاشتراك والدفع
+            </a>
             <a 
               href="/login" 
-              className="hover:text-[#801B2C] transition-colors flex items-center gap-1.5 font-medium"
+              className="hover:text-[#801B2C] transition-colors flex items-center gap-1.5 font-medium border-r border-zinc-200 pr-4 mr-2"
             >
               <Lock className="w-3.5 h-3.5" />
               تسجيل الدخول للنظام

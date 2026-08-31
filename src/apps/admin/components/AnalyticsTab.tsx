@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer,
   BarChart, Bar
 } from 'recharts';
-import { Crown, Sparkles, BarChart3, Clock, ShoppingBag, ArrowUpRight, CreditCard, Coins, Wallet } from 'lucide-react';
+import { Crown, BarChart3, Clock, ShoppingBag, ArrowUpRight, CreditCard, Coins, Wallet, TrendingUp } from 'lucide-react';
 import { api } from '../../../shared/services/api';
 import { useAuthStore } from '../../../shared/store/authStore';
 
@@ -119,15 +119,15 @@ export default function AnalyticsTab() {
 
         <div className="bg-admin-bg-subtle p-5 rounded-xl text-xs space-y-3 font-semibold text-admin-text-secondary max-w-sm mx-auto mb-8 border border-admin-border">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-admin-accent" />
+            <TrendingUp className="w-4 h-4 text-admin-accent" />
             <span>مخططات تفاعلية لحجم المبيعات والأرباح اليومية والسنوية</span>
           </div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-admin-accent" />
+            <Clock className="w-4 h-4 text-admin-accent" />
             <span>خريطة ذروة الطلبات لتنظيم نوبات عمل الكاشير والمطبخ</span>
           </div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-admin-accent" />
+            <BarChart3 className="w-4 h-4 text-admin-accent" />
             <span>تحليلات أكثر الأصناف مبيعاً ومعدلات إشغال الطاولات</span>
           </div>
         </div>
