@@ -27,7 +27,7 @@ interface PlanDetails {
   features: string[];
 }
 
-const PLANS: Record<string, PlanDetails> = {
+const DEFAULT_PLANS: Record<string, PlanDetails> = {
   trial: {
     id: 'trial',
     name: 'الباقة التجريبية (Trial)',
@@ -37,41 +37,44 @@ const PLANS: Record<string, PlanDetails> = {
     description: 'استكشف كافة إمكانيات طاولة دون دفع أية رسوم لمدة أسبوعين كاملين.',
     features: [
       '14 يوماً تجربة مجانية بالكامل',
-      'حتى 10 طاولات و 15 صنف في المنيو',
-      'منيو رقمي سريع بالباركود QR',
-      'لوحة تحكم الكاشير والمطبخ',
+      'تجربة منيو تفاعلي بـ QR سريع',
+      'إرسال طلبات فوري للمطبخ والويترات',
+      'لوحة تحكم الكاشير والمشرفين',
       'دعم فني وتدريب مجاني على الواتساب',
     ],
   },
   basic: {
     id: 'basic',
-    name: 'باقة بيزنس (Basic)',
-    monthlyPrice: 1000,
-    annualPrice: 10000, // 2 months free
-    description: 'مثالية للكافيهات والمطاعم الفردية الساعية لأتمتة الصالة والطلبات.',
+    name: 'الباقة الأساسية (Basic)',
+    monthlyPrice: 1500,
+    annualPrice: 15000, // 2 months free
+    description: 'مثالية للمطاعم والكافيهات الناشئة الراغبة في تشغيل الخدمة الرقمية والـ QR فوراً.',
     features: [
-      'حتى 15 طاولة و 50 صنف في المنيو',
-      'منيو رقمي QR غير محدود التصفح',
-      'إدارة أوردرات الصالة والتيك أواي',
-      'لوحة المطبخ الحية (KDS)',
-      'تقارير المبيعات اليومية الأساسية',
-      'إمكانية ربط الطابعة الحرارية للفواتير',
+      'منيو تفاعلي بـ QR لا نهائي للأصناف',
+      'إرسال طلبات فوري للمطبخ والويترات',
+      'استدعاء الويتر وطلب الحساب',
+      'دعم حتى 30 طاولة ذكية',
+      'إضافة حتى 200 منتج بالمنيو',
+      'تقسيم المنيو حتى 15 أقسام/تصنيفات',
+      'تقارير مبيعات متقدمة ومؤشرات أداء',
     ],
   },
   pro: {
     id: 'pro',
-    name: 'باقة بريميوم الكاملة (Pro)',
+    name: 'الباقة المتقدمة (Pro)',
     badge: 'الأكثر طلباً',
-    monthlyPrice: 1500,
-    annualPrice: 15000, // 2 months free
-    description: 'المنظومة الشاملة للمطاعم المتقدمة والسلاسل مع كافة المميزات.',
+    monthlyPrice: 3000,
+    annualPrice: 30000, // 2 months free
+    description: 'للإدارة والتحكم الكامل للفروع، الإيصالات المخصصة، الفواتير، ودعم الضريبة والخدمة.',
     features: [
-      'طاولات وأصناف غير محدودة (Unlimited)',
-      'نظام برامج الولاء والعملاء (Loyalty Points)',
-      'فصل مطبخ الكافيه عن المطعم (Dual Kitchen)',
-      'إدارة متقدمة لطلبات الدليفري والتوصيل',
-      'تحليلات الأرباح والمبيعات بالذكاء الاصطناعي',
-      'دعم فني VIP ونسخ احتياطي فوري للسحابة',
+      'كل مميزات الباقة الأساسية بلا استثناء',
+      'دعم حتى 60 طاولة ذكية',
+      'إضافة منتجات غير محدودة بالمنيو',
+      'تقسيم أقسام وتصنيفات غير محدود',
+      'تصميم وضبط إيصالات الدفع ولوجو المطعم',
+      'تفعيل الضرائب ورسوم الخدمة للفواتير',
+      'تلقي طلبات التوصيل / الدليفري الخارجية',
+      'سجلات العمليات لتتبع الكاشير والمشرفين',
     ],
   },
 };
@@ -80,12 +83,46 @@ export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  const [plans, setPlans] = useState<Record<string, PlanDetails>>(DEFAULT_PLANS);
+
   // Plan & Billing State
   const initialPlan = (searchParams.get('plan') as 'trial' | 'basic' | 'pro') || 'pro';
   const [selectedPlanId, setSelectedPlanId] = useState<'trial' | 'basic' | 'pro'>(
-    PLANS[initialPlan] ? initialPlan : 'pro'
+    DEFAULT_PLANS[initialPlan] ? initialPlan : 'pro'
   );
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+
+  // Load live system settings pricing if available
+  useEffect(() => {
+    async function loadLivePricing() {
+      try {
+        const res = await api.get('/system-settings');
+        if (res.data?.data) {
+          const sys = res.data.data;
+          setPlans((prev) => {
+            const basicMonthly = sys.offer?.active && sys.offer?.basicPrice ? sys.offer.basicPrice : (sys.pricing?.basic || 1500);
+            const proMonthly = sys.offer?.active && sys.offer?.proPrice ? sys.offer.proPrice : (sys.pricing?.pro || 3000);
+            return {
+              ...prev,
+              basic: {
+                ...prev.basic,
+                monthlyPrice: basicMonthly,
+                annualPrice: basicMonthly * 10,
+              },
+              pro: {
+                ...prev.pro,
+                monthlyPrice: proMonthly,
+                annualPrice: proMonthly * 10,
+              },
+            };
+          });
+        }
+      } catch (e) {
+        console.warn('Using default pricing in checkout');
+      }
+    }
+    loadLivePricing();
+  }, []);
 
   // Customer / Restaurant Form State
   const [formData, setFormData] = useState({
@@ -111,7 +148,7 @@ export default function CheckoutPage() {
     }
   }, [selectedPlanId]);
 
-  const selectedPlan = PLANS[selectedPlanId];
+  const selectedPlan = plans[selectedPlanId] || DEFAULT_PLANS[selectedPlanId];
   const isAnnual = billingCycle === 'annual' && selectedPlanId !== 'trial';
   const price = isAnnual ? selectedPlan.annualPrice : selectedPlan.monthlyPrice;
   const originalAnnualPrice = selectedPlan.monthlyPrice * 12;
@@ -321,7 +358,7 @@ export default function CheckoutPage() {
 
               {/* Plan Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {Object.values(PLANS).map((plan) => {
+                {Object.values(plans).map((plan) => {
                   const isSelected = selectedPlanId === plan.id;
                   const displayPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
 
