@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, KeyRound, Lock, Eye, EyeOff, X, ArrowLeft, CheckCircle2, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,12 +13,68 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
   const [step, setStep] = useState<'email' | 'code' | 'password' | 'success'>('email');
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [maskedEmail, setMaskedEmail] = useState('');
-  const [code, setCode] = useState('');
+  
+  // 6 Individual OTP Digits
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+
+  // Auto-focus first input when entering code step
+  useEffect(() => {
+    if (step === 'code') {
+      setTimeout(() => {
+        inputRefs.current[0]?.focus();
+      }, 200);
+    }
+  }, [step]);
+
+  // Handle single digit input
+  const handleOtpChange = (index: number, val: string) => {
+    const cleanVal = val.replace(/\D/g, '').slice(-1); // Only last numeric character
+    const newDigits = [...otpDigits];
+    newDigits[index] = cleanVal;
+    setOtpDigits(newDigits);
+
+    // Auto-focus next box
+    if (cleanVal && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  // Handle Backspace and Arrow navigation
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (!otpDigits[index] && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+    } else if (e.key === 'ArrowLeft' && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // Handle Pasting full 6-digit code
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pastedData) {
+      const newDigits = ['', '', '', '', '', ''];
+      for (let i = 0; i < pastedData.length; i++) {
+        newDigits[i] = pastedData[i];
+      }
+      setOtpDigits(newDigits);
+      const nextFocus = Math.min(pastedData.length, 5);
+      inputRefs.current[nextFocus]?.focus();
+    }
+  };
+
+  const getFullCode = () => otpDigits.join('');
 
   // Start 60s countdown timer
   const startTimer = () => {
@@ -62,8 +118,9 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
   // Step 2: Verify OTP Code
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim() || code.length < 6) {
-      toast.error('يرجى إدخال كود التحقق المكون من 6 أرقام.');
+    const fullCode = getFullCode();
+    if (!fullCode || fullCode.length < 6) {
+      toast.error('يرجى إدخال كود التحقق المكون من 6 أرقام بالكامل.');
       return;
     }
 
@@ -71,7 +128,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
     try {
       await api.post('/auth/verify-reset-code', {
         emailOrUsername: emailOrUsername.trim(),
-        code: code.trim(),
+        code: fullCode.trim(),
       });
       toast.success('تم التحقق من الكود بنجاح!');
       setStep('password');
@@ -85,6 +142,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
   // Step 3: Reset Password
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    const fullCode = getFullCode();
     if (newPassword.length < 6) {
       toast.error('يجب ألا تقل كلمة المرور عن 6 أحرف أو أرقام.');
       return;
@@ -98,7 +156,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
     try {
       await api.post('/auth/reset-password', {
         emailOrUsername: emailOrUsername.trim(),
-        code: code.trim(),
+        code: fullCode.trim(),
         newPassword,
       });
       setStep('success');
@@ -112,7 +170,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
   const handleResetModal = () => {
     setStep('email');
     setEmailOrUsername('');
-    setCode('');
+    setOtpDigits(['', '', '', '', '', '']);
     setNewPassword('');
     setConfirmPassword('');
     onClose();
@@ -192,18 +250,34 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
                 تم إرسال كود مكوّن من 6 أرقام إلى {maskedEmail ? <strong className="text-zinc-800">{maskedEmail}</strong> : 'بريدك الإلكتروني'}.
               </p>
 
-              <form onSubmit={handleVerifyCode} className="space-y-5">
+              <form onSubmit={handleVerifyCode} className="space-y-6">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 mb-2 text-center">كود التحقق المكون من 6 أرقام</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="• • • • • •"
-                    className="w-full bg-[#FAF8F5] border-2 border-dashed border-[#801B2C]/40 text-center tracking-[12px] text-2xl font-black font-mono py-3 rounded-2xl focus:border-[#801B2C] focus:outline-none"
-                  />
+                  <label className="block text-xs font-bold text-zinc-700 mb-3 text-center">أدخل الرمز المكون من 6 أرقام</label>
+                  
+                  {/* 6 Separate Animated Input Boxes */}
+                  <div className="flex items-center justify-center gap-2 sm:gap-3 my-2" dir="ltr">
+                    {otpDigits.map((digit, idx) => (
+                      <motion.input
+                        key={idx}
+                        ref={(el) => { inputRefs.current[idx] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                        onPaste={handleOtpPaste}
+                        whileFocus={{ scale: 1.08, y: -2 }}
+                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                        className={`w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black font-mono rounded-2xl border-2 transition-all duration-150 focus:outline-none select-none ${
+                          digit
+                            ? 'bg-[#FAF8F5] border-[#801B2C] text-[#801B2C] shadow-sm shadow-[#801B2C]/10'
+                            : 'bg-white border-zinc-200 text-zinc-900 hover:border-zinc-300 focus:border-[#801B2C] focus:ring-4 focus:ring-[#801B2C]/10'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-zinc-500">
