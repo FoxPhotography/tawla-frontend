@@ -149,7 +149,14 @@ export default function SubscriptionTab() {
         toast.error('تعذر إنشاء رابط الفاتورة من فواتيرك.');
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || err.response?.data?.message || 'فشلت معالجة طلب التجديد. يرجى المحاولة لاحقاً.');
+      const rawError = err.response?.data?.error || err.response?.data?.message;
+      let msg = 'فشلت معالجة طلب التجديد. يرجى المحاولة لاحقاً.';
+      if (typeof rawError === 'string') {
+        msg = rawError;
+      } else if (typeof rawError === 'object' && rawError !== null) {
+        msg = Object.values(rawError).flat().join(' - ');
+      }
+      toast.error(msg);
     } finally {
       setIsRenewing(false);
     }
