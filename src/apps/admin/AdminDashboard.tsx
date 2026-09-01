@@ -21,11 +21,14 @@ import StaffTab from './components/StaffTab.js';
 import AuditLogsTab from './components/AuditLogsTab.js';
 import CustomersTab from './components/CustomersTab.js';
 import DiscountsTab from './components/DiscountsTab.js';
+import { useOfflineGuard } from '../../shared/hooks/useOfflineGuard.js';
+import OfflineTamperModal from '../../shared/components/OfflineTamperModal.js';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, restaurant, logout, updateRestaurant } = useAuthStore();
   const queryClient = useQueryClient();
+  const offlineGuard = useOfflineGuard();
 
   const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers' | 'discounts'>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -121,6 +124,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#09090B] flex flex-col md:flex-row text-right" dir="rtl">
+      {/* Offline Guard & Anti-Tamper Security Modal */}
+      <OfflineTamperModal guardStatus={offlineGuard} />
+
       {/* Sidebar Navigation */}
       <aside className="w-full md:w-64 bg-white border-l border-zinc-200/80 flex flex-col justify-between p-6 flex-shrink-0 text-zinc-900">
         <div className="space-y-8">

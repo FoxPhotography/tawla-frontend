@@ -15,13 +15,14 @@ import type { Order, Table } from '../../shared/types';
 import { getOfflineOrders, syncOfflineOrders } from '../../shared/services/offlineOrders';
 import { staffAudio } from './services/staffAudio';
 
-// Import our modular components
 import LiveAlertsSidebar, { type LiveAlert } from './components/LiveAlertsSidebar';
 import OrdersTab from './components/OrdersTab';
 import TablesTab from './components/TablesTab';
 import CreateOrderModal from './components/CreateOrderModal';
 import ReceiptPrintTemplate from './components/ReceiptPrintTemplate';
 import KDSTab from './components/KDSTab';
+import { useOfflineGuard } from '../../shared/hooks/useOfflineGuard';
+import OfflineTamperModal from '../../shared/components/OfflineTamperModal';
 
 const formatLiveClock = (date: Date) => {
   let hours = date.getHours();
@@ -71,7 +72,8 @@ export default function StaffDashboard() {
   const [showNewOrderToast, setShowNewOrderToast] = useState(false);
   const [newOrderDetails, setNewOrderDetails] = useState<any | null>(null);
 
-  // Custom states for PWA and network
+  // Custom states for PWA, network and security offline guard
+  const offlineGuard = useOfflineGuard();
   const [isOnline, setIsOnline] = useState(socket.connected);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [, setTick] = useState(0);
@@ -595,6 +597,9 @@ export default function StaffDashboard() {
           borderRadius: '16px'
         }
       }} />
+
+      {/* Offline Guard & Anti-Tamper Protection Modal */}
+      <OfflineTamperModal guardStatus={offlineGuard} />
 
       {/* ===== Luxury Incoming Order Toast Banner ===== */}
       <AnimatePresence>

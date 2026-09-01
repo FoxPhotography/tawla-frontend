@@ -16,6 +16,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api.js';
 import { useAuthStore } from '../../shared/store/authStore.js';
+import { getDeviceFingerprint } from '../../shared/utils/fingerprint.js';
 import logoImg from '../../assets/TAWLA_Logo.png';
 
 export default function Register() {
@@ -75,6 +76,8 @@ export default function Register() {
     setIsSubmitting(true);
 
     try {
+      const deviceFingerprint = await getDeviceFingerprint();
+
       const response = await api.post('/auth/register-restaurant', {
         name: formData.name.trim(),
         slug: formData.slug.toLowerCase().trim(),
@@ -86,6 +89,7 @@ export default function Register() {
         password: formData.password,
         plan: formData.plan,
         invoiceId: formData.invoiceId || undefined,
+        deviceFingerprint,
       });
 
       const data = response.data?.data;
