@@ -100,12 +100,26 @@ export default function AdminDashboard() {
       }
     };
 
+    const handleSubscriptionUpdated = (updatedSub: any) => {
+      console.log('[Socket.io]: Subscription updated in real-time:', updatedSub);
+      queryClient.invalidateQueries({ queryKey: ['subscription-status'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-restaurant'] });
+      if (restaurant) {
+        updateRestaurant({
+          ...restaurant,
+          subscription: updatedSub,
+        });
+      }
+    };
+
     socket.on('system_settings_updated', handleSettingsUpdate);
     socket.on('menu_updated', handleMenuUpdated);
+    socket.on('subscription_updated', handleSubscriptionUpdated);
 
     return () => {
       socket.off('system_settings_updated', handleSettingsUpdate);
       socket.off('menu_updated', handleMenuUpdated);
+      socket.off('subscription_updated', handleSubscriptionUpdated);
     };
   }, [restaurant, queryClient, updateRestaurant]);
 

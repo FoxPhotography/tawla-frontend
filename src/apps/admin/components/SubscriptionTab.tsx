@@ -16,27 +16,55 @@ export default function SubscriptionTab() {
   const [isRenewing, setIsRenewing] = useState(false);
   const [showSerialInput, setShowSerialInput] = useState(false);
 
+  // Fetch real-time subscription status from backend
+  const { data: subStatusData } = useQuery({
+    queryKey: ['subscription-status'],
+    queryFn: async () => {
+      const response = await api.get('/subscriptions/status');
+      return response.data?.data;
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+
+  // Sync real-time subscription to authStore
+  useEffect(() => {
+    if (subStatusData?.subscription && restaurant) {
+      if (
+        restaurant.subscription?.expiresAt !== subStatusData.subscription.expiresAt ||
+        restaurant.subscription?.plan !== subStatusData.subscription.plan ||
+        restaurant.subscription?.status !== subStatusData.subscription.status
+      ) {
+        updateRestaurant({
+          ...restaurant,
+          subscription: subStatusData.subscription,
+          receiptSettings: subStatusData.receiptSettings || restaurant.receiptSettings,
+        });
+      }
+    }
+  }, [subStatusData]);
+
+  const currentSub = subStatusData?.subscription || restaurant?.subscription;
+
   // Check URL for payment completion and verify immediately
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get('status');
     const invoiceId = params.get('invoice_id') || params.get('invoiceId');
 
-    if (status === 'renewed') {
+    if (status === 'renewed' || status === 'paid' || status === 'success') {
       if (invoiceId) {
         api.get(`/subscriptions/verify-payment?invoiceId=${invoiceId}`)
           .then((res) => {
             if (res.data?.data?.status === 'paid') {
               toast.success('🎉 تم التحقق من سداد الفاتورة بنجاح وتحديث صلاحية الاشتراك والباقة!');
               queryClient.invalidateQueries({ queryKey: ['subscription-status'] });
-              queryClient.invalidateQueries({ queryKey: ['current-restaurant'] });
             }
           })
           .catch(() => {});
       } else {
         toast.success('🎉 تم تجديد الاشتراك بنجاح!');
         queryClient.invalidateQueries({ queryKey: ['subscription-status'] });
-        queryClient.invalidateQueries({ queryKey: ['current-restaurant'] });
       }
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (status === 'failed') {
@@ -250,8 +278,8 @@ export default function SubscriptionTab() {
     });
   };
 
-  const formattedExpiryDate = restaurant?.subscription?.expiresAt
-    ? new Date(restaurant.subscription.expiresAt).toLocaleDateString('ar-EG', {
+  const formattedExpiryDate = currentSub?.expiresAt
+    ? new Date(currentSub.expiresAt).toLocaleDateString('ar-EG', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -263,10 +291,10 @@ export default function SubscriptionTab() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-extrabold text-admin-text-primary">إعدادات الاشتراك والنظام</h2>
         <span className={`text-xs px-3.5 py-1.5 rounded-full font-black flex items-center gap-1.5 ${
-          restaurant?.subscription?.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
+          currentSub?.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
         }`}>
           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-          <span>حالة الاشتراك: {restaurant?.subscription?.status === 'active' ? 'نشط' : 'منتهي'}</span>
+          <span>حالة الاشتراك: {currentSub?.status === 'active' ? 'نشط' : 'منتهي'}</span>
         </span>
       </div>
 
@@ -278,7 +306,7 @@ export default function SubscriptionTab() {
               <Crown className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-admin-text-primary">الباقة الحالية: <span className="text-admin-accent font-black uppercase">{restaurant?.subscription?.plan || 'trial'}</span></h3>
+              <h3 className="text-sm font-extrabold text-admin-text-primary">الباقة الحالية: <span className="text-admin-accent font-black uppercase">{currentSub?.plan || 'trial'}</span></h3>
               <p className="text-[10px] text-admin-text-secondary font-bold mt-1">تاريخ انتهاء الصلاحية: {formattedExpiryDate}</p>
             </div>
           </div>
@@ -286,13 +314,13 @@ export default function SubscriptionTab() {
             <div className="flex justify-between">
               <span>المنتجات المسموحة:</span>
               <span className="text-admin-text-primary font-bold">
-                {restaurant?.subscription?.plan === 'trial' ? '15 منتج' : restaurant?.subscription?.plan === 'basic' ? '50 منتج' : 'غير محدود'}
+                {currentSub?.plan === 'trial' ? '15 منتج' : currentSub?.plan === 'basic' ? '50 منتج' : 'غير محدود'}
               </span>
             </div>
             <div className="flex justify-between">
               <span>التصنيفات المسموحة:</span>
               <span className="text-admin-text-primary font-bold">
-                {restaurant?.subscription?.plan === 'trial' ? '5 أقسام' : restaurant?.subscription?.plan === 'basic' ? '15 قسم' : 'غير محدود'}
+                {currentSub?.plan === 'trial' ? '5 أقسام' : currentSub?.plan === 'basic' ? '15 قسم' : 'غير محدود'}
               </span>
             </div>
             <div className="flex justify-between">
