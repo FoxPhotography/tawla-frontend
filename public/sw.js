@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tawla-cache-v6';
+const CACHE_NAME = 'tawla-cache-v8';
 const ASSETS_TO_CACHE = [
   '/staff',
   '/index.html',
@@ -27,6 +27,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('[SW]: Purging old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -53,31 +54,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip API requests and hot-reload websockets
-  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/socket.io')) {
+  // Skip API requests, socket.io and external third-party gateways
+  if (
+    url.pathname.startsWith('/api') || 
+    url.pathname.startsWith('/socket.io') ||
+    url.hostname.includes('fawaterk.com') ||
+    url.hostname.includes('railway.app')
+  ) {
     return;
   }
 
-  // Caching strategy: Stale-While-Revalidate for local assets/fonts, Network-First for others
-  const isLocalAsset = ASSETS_TO_CACHE.includes(url.pathname) || 
-                       url.pathname.includes('/assets/') || 
-                       url.hostname.includes('fonts.googleapis.com') || 
-                       url.hostname.includes('fonts.gstatic.com');
+  const isCss = url.pathname.endsWith('.css');
+  const isJs = url.pathname.endsWith('.js');
+  const isAsset = url.pathname.includes('/assets/');
+  const isFont = url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com');
 
-  if (isLocalAsset) {
+  // Strategy for CSS and JS assets: Network-First with strict MIME type validation
+  if (isCss || isJs || isAsset || isFont) {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request).then((networkResponse) => {
-          if (networkResponse.status === 200) {
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
             const contentType = networkResponse.headers.get('content-type') || '';
-            const isJsRequest = url.pathname.endsWith('.js') || (url.pathname.includes('/assets/') && !url.pathname.includes('.css'));
             
-            // Prevent caching SPA index.html fallbacks as actual JS asset files
-            if (isJsRequest && contentType.includes('text/html')) {
-              return new Response('Asset not found (SPA fallback)', { 
-                status: 404, 
-                statusText: 'Not Found', 
-                headers: { 'Content-Type': 'text/plain' } 
+            // CRITICAL ANTI-FOUC GUARD:
+            // Never cache or serve HTML document fallbacks for CSS or JS requests!
+            if ((isCss || isJs || isAsset) && contentType.includes('text/html')) {
+              return new Response('/* Asset not found - SPA fallback prevented */', {
+                status: 404,
+                statusText: 'Not Found',
+                headers: { 'Content-Type': isCss ? 'text/css' : 'application/javascript' }
               });
             }
 
@@ -85,27 +91,47 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
           }
           return networkResponse;
-        }).catch(() => null);
-
-        return cachedResponse || fetchPromise;
-      })
-    );
-  } else {
-    // If request mode is navigate, try network first, fallback to cached index.html
-    if (event.request.mode === 'navigate') {
-      event.respondWith(
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', responseToCache));
+        })
+        .catch(async () => {
+          // Fallback to cache if network fails (offline mode)
+          const cached = await caches.match(event.request);
+          if (cached) {
+            const cachedType = cached.headers.get('content-type') || '';
+            // If cached response was accidentally an HTML document, reject it
+            if ((isCss || isJs || isAsset) && cachedType.includes('text/html')) {
+              caches.open(CACHE_NAME).then((cache) => cache.delete(event.request));
+              return new Response('', { status: 404, headers: { 'Content-Type': isCss ? 'text/css' : 'application/javascript' } });
             }
-            return networkResponse;
-          })
-          .catch(() => {
-            return caches.match('/index.html');
-          })
-      );
-    }
+            return cached;
+          }
+          return new Response('', { status: 404 });
+        })
+    );
+    return;
   }
+
+  // Strategy for HTML page navigation: Network-First, fallback to cached index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match('/index.html') || caches.match('/staff');
+        })
+    );
+    return;
+  }
+
+  // Default fallback for other static assets
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      return cached || fetch(event.request);
+    })
+  );
 });
