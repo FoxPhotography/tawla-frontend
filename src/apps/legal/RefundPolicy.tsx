@@ -102,6 +102,25 @@ export default function RefundPolicy() {
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
           <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">4</span>
+          ترقية وتغيير الباقات (Plan Upgrades & Downgrades)
+        </h2>
+        <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#801B2C]/10 space-y-3 text-sm text-[#5C524C]">
+          <p className="leading-relaxed">
+            يحق للمشترك في أي وقت ترقية باقته الحالية (مثلاً: من Basic إلى Pro) أو تخفيضها أو الانتقال بين دورات الفوترة (شهري / سنوي).
+          </p>
+          <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-900 space-y-1">
+            <p className="font-bold">⚠️ تنبيه احتساب المدة وسياسة عدم استرداد المتبقي:</p>
+            <p className="leading-relaxed">
+              عند سداد رسوم الباقة الجديدة، يبدأ سريان وصلاحية الخطة الجديدة فوراً (لمدة شهر أو سنة كاملة) من تاريخ السداد، ويتم إلغاء واستبدال أي فترة أو أيام متبقية من الباقة السابقة تلقائياً دون استحقاق أي استرداد مالي أو تعويض عن المدة المتبقية.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 5 */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">5</span>
           إلغاء الاشتراك وإيقاف التجديد التلقائي
         </h2>
         <p className="text-[#5C524C]">
@@ -114,10 +133,10 @@ export default function RefundPolicy() {
         </ol>
       </section>
 
-      {/* Section 5 */}
+      {/* Section 6 */}
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">5</span>
+          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">6</span>
           استثناءات الأخطاء التقنية والخصم المزدوج
         </h2>
         <p className="text-[#5C524C]">

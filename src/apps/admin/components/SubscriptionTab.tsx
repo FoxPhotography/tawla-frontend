@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Crown, CreditCard, ArrowLeft, KeyRound } from 'lucide-react';
+import { Crown, CreditCard, ArrowLeft, KeyRound, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import { useAuthStore } from '../../../shared/store/authStore';
@@ -15,6 +15,35 @@ export default function SubscriptionTab() {
   const [renewCycle, setRenewCycle] = useState<'monthly' | 'annual'>('monthly');
   const [isRenewing, setIsRenewing] = useState(false);
   const [showSerialInput, setShowSerialInput] = useState(false);
+
+  // Check URL for payment completion and verify immediately
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    const invoiceId = params.get('invoice_id') || params.get('invoiceId');
+
+    if (status === 'renewed') {
+      if (invoiceId) {
+        api.get(`/subscriptions/verify-payment?invoiceId=${invoiceId}`)
+          .then((res) => {
+            if (res.data?.data?.status === 'paid') {
+              toast.success('🎉 تم التحقق من سداد الفاتورة بنجاح وتحديث صلاحية الاشتراك والباقة!');
+              queryClient.invalidateQueries({ queryKey: ['subscription-status'] });
+              queryClient.invalidateQueries({ queryKey: ['current-restaurant'] });
+            }
+          })
+          .catch(() => {});
+      } else {
+        toast.success('🎉 تم تجديد الاشتراك بنجاح!');
+        queryClient.invalidateQueries({ queryKey: ['subscription-status'] });
+        queryClient.invalidateQueries({ queryKey: ['current-restaurant'] });
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (status === 'failed') {
+      toast.error('❌ تعذر إتمام عملية الدفع عبر فواتيرك أو تم إلغاؤها.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const [menuTitle, setMenuTitle] = useState(restaurant?.settings?.menuTitle || '');
   const [menuDescription, setMenuDescription] = useState(restaurant?.settings?.menuDescription || '');
@@ -357,6 +386,19 @@ export default function SubscriptionTab() {
               <p className="text-[11px] text-admin-text-secondary">طاولات وأصناف غير محدودة، برامج الولاء، وتخصيص الفواتير والضريبة.</p>
             </div>
           </div>
+
+          {/* Plan Change Policy Warning */}
+          {restaurant?.subscription?.plan && restaurant.subscription.plan !== renewPlan && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-xs text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-500" />
+              <div className="space-y-1">
+                <span className="font-extrabold block">تنبيه ترقية / تغيير الخطة:</span>
+                <p className="leading-relaxed text-[11px]">
+                  عند تغيير الباقة من (<strong>{restaurant.subscription.plan === 'pro' ? 'المتقدمة Pro' : restaurant.subscription.plan === 'basic' ? 'الأساسية Basic' : 'التجريبية Trial'}</strong>) إلى (<strong>{renewPlan === 'pro' ? 'المتقدمة Pro' : 'الأساسية Basic'}</strong>)، سيبدأ احتساب الاشتراك الجديد فوراً لمدة ({renewCycle === 'annual' ? 'سنة كاملة' : 'شهر كامل'}) من تاريخ السداد، وسيتم إلغاء واستبدال أي فترة متبقية من باقتك الحالية تلقائياً دون استحقاق استرداد مالي.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Checkout Button & Fawaterk Badges */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
