@@ -187,6 +187,15 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
+      if (selectedPlanId === 'trial') {
+        // Free trial registration direct navigation
+        toast.success('🎉 مرحباً بك في طاولة! تم تفعيل تجربتك المجانية لمدة 14 يوماً.');
+        setTimeout(() => {
+          navigate(`/register?plan=trial&restaurant=${encodeURIComponent(formData.restaurantName)}&email=${encodeURIComponent(formData.email)}`);
+        }, 800);
+        return;
+      }
+
       // Prepared API Request Payload for Fawaterk & Backend
       const payload = {
         restaurantName: formData.restaurantName,
@@ -199,46 +208,30 @@ export default function CheckoutPage() {
         billingCycle,
         amount: price,
         currency: 'EGP',
-        paymentGateway: selectedPlanId === 'trial' ? 'free_trial' : 'fawaterk',
+        paymentGateway: 'fawaterk',
         redirectUrls: {
-          successUrl: `${window.location.origin}/register?status=paid&plan=${selectedPlanId}`,
+          successUrl: `${window.location.origin}/checkout?status=paid&plan=${selectedPlanId}`,
           failUrl: `${window.location.origin}/checkout?status=failed&plan=${selectedPlanId}`,
+          pendingUrl: `${window.location.origin}/checkout?status=pending&plan=${selectedPlanId}`,
         },
       };
 
-      // Call Tawla Subscription Checkout Endpoint
-      try {
-        const response = await api.post('/subscriptions/checkout', payload);
-        if (response.data?.data?.invoiceLink) {
-          toast.success('جاري توجيهك لبوابة الدفع الآمنة (فواتيرك)...');
-          window.location.href = response.data.data.invoiceLink;
-          return;
-        } else if (response.data?.data?.success) {
-          toast.success('تم تسجيل اشتراكك بنجاح!');
-          navigate(`/register?plan=${selectedPlanId}&email=${encodeURIComponent(formData.email)}`);
-          return;
-        }
-      } catch (apiErr) {
-        console.warn('Backend checkout route not active yet, handling fallback onboarding:', apiErr);
-      }
-
-      // If Trial Plan or Direct Demo: Smooth user journey fallback
-      if (selectedPlanId === 'trial') {
-        toast.success('🎉 مرحباً بك في طاولة! تم تفعيل تجربتك المجانية لمدة 14 يوماً.');
-        setTimeout(() => {
-          navigate(`/register?plan=trial&restaurant=${encodeURIComponent(formData.restaurantName)}&email=${encodeURIComponent(formData.email)}`);
-        }, 1200);
+      const response = await api.post('/subscriptions/checkout', payload);
+      if (response.data?.data?.invoiceLink) {
+        toast.success('جاري توجيهك لبوابة الدفع الآمنة (فواتيرك)...');
+        window.location.href = response.data.data.invoiceLink;
       } else {
-        // Mock Fawaterk Hosted Payment Invoice Redirection for Testing
-        toast.success(`تم إنشاء فاتورة الدفع بقيمة ${price} ج.م عبر بوابة فواتيرك.`);
-        setTimeout(() => {
-          // Open WhatsApp or Register directly with pending status
-          const message = `مرحباً، أود تفعيل باقة (${selectedPlan.name}) لنظام طاولة.\nالمطعم: ${formData.restaurantName}\nالمسؤول: ${formData.ownerName}\nالهاتف: ${formData.phone}\nالإيميل: ${formData.email}\nالقيمة: ${price} ج.م (${billingCycle === 'annual' ? 'سنوي' : 'شهري'})`;
-          window.open(`https://wa.me/201066980953?text=${encodeURIComponent(message)}`, '_blank');
-        }, 1000);
+        toast.error('تعذر إنشاء رابط الدفع من بوابة فواتيرك.');
       }
     } catch (err: any) {
-      toast.error(err?.message || 'حدث خطأ أثناء معالجة الطلب. يرجى المحاولة مجدداً.');
+      const rawError = err.response?.data?.error || err.response?.data?.message;
+      let msg = 'تعذر إنشاء فاتورة الدفع عبر فواتيرك. يرجى المحاولة لاحقاً.';
+      if (typeof rawError === 'string') {
+        msg = rawError;
+      } else if (typeof rawError === 'object' && rawError !== null) {
+        msg = Object.values(rawError).flat().join(' - ');
+      }
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
