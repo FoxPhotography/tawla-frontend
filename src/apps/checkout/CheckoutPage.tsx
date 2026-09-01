@@ -9,13 +9,18 @@ import {
   User,
   Phone,
   Mail,
-  MapPin,
-  Zap,
-  ChevronLeft
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  Globe,
+  Check,
+  X
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import logoImg from '../../assets/TAWLA_Logo.png';
 import { api } from '../../shared/services/api.js';
+import { useAuthStore } from '../../shared/store/authStore.js';
+import { getDeviceFingerprint } from '../../shared/utils/fingerprint.js';
 
 interface PlanDetails {
   id: 'trial' | 'basic' | 'pro';
@@ -38,34 +43,37 @@ const DEFAULT_PLANS: Record<string, PlanDetails> = {
     features: [
       '14 يوماً تجربة مجانية بالكامل',
       'تجربة منيو تفاعلي بـ QR سريع',
-      'إرسال طلبات فوري للمطبخ والويترات',
-      'لوحة تحكم الكاشير والمشرفين',
-      'دعم فني وتدريب مجاني على الواتساب',
+      'لوحة تحكم كاملة للمدير والموظفين',
+      'إدارة حتى 10 طاولات ذكية',
+      'إضافة حتى 20 صنف بالمنيو',
+      'دعم واستقبال طلبات الزبائن لحظياً',
+      'إلغاء أو ترقية في أي وقت بكل سهولة',
     ],
   },
   basic: {
     id: 'basic',
     name: 'الباقة الأساسية (Basic)',
+    badge: 'الأكثر شعبية',
     monthlyPrice: 1500,
-    annualPrice: 15000, // 2 months free
-    description: 'مثالية للمطاعم والكافيهات الناشئة الراغبة في تشغيل الخدمة الرقمية والـ QR فوراً.',
+    annualPrice: 15000,
+    description: 'مثالية للكافيهات والمطاعم الفردية الناشئة الباحثة عن السرعة والاحترافية.',
     features: [
-      'منيو تفاعلي بـ QR لا نهائي للأصناف',
-      'إرسال طلبات فوري للمطبخ والويترات',
-      'استدعاء الويتر وطلب الحساب',
-      'دعم حتى 30 طاولة ذكية',
-      'إضافة حتى 200 منتج بالمنيو',
-      'تقسيم المنيو حتى 15 أقسام/تصنيفات',
-      'تقارير مبيعات متقدمة ومؤشرات أداء',
+      'منيو رقمي سريع بتصميم فاخر',
+      'دعم حتى 25 طاولة ذكية بـ QR Code',
+      'إضافة حتى 100 صنف وتعديلها فوراً',
+      'تلقي وإدارة الطلبات عبر شاشة الكاشير والويتر',
+      'تقارير مبيعات وإحصائيات يومية وأسبوعية',
+      'إمكانية العمل بدون إنترنت عند الطوارئ',
+      'دعم فني وتحديثات مستمرة مجاناً',
     ],
   },
   pro: {
     id: 'pro',
     name: 'الباقة المتقدمة (Pro)',
-    badge: 'الأكثر طلباً',
+    badge: 'شاملة بالكامل',
     monthlyPrice: 3000,
-    annualPrice: 30000, // 2 months free
-    description: 'للإدارة والتحكم الكامل للفروع، الإيصالات المخصصة، الفواتير، ودعم الضريبة والخدمة.',
+    annualPrice: 30000,
+    description: 'الحل الشامل والكامل للمطاعم الكبرى، السلاسل، والبراندات الراقية.',
     features: [
       'كل مميزات الباقة الأساسية بلا استثناء',
       'دعم حتى 60 طاولة ذكية',
@@ -82,6 +90,7 @@ const DEFAULT_PLANS: Record<string, PlanDetails> = {
 export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const loginStore = useAuthStore((state) => state.login);
 
   const [plans, setPlans] = useState<Record<string, PlanDetails>>(DEFAULT_PLANS);
 
@@ -127,12 +136,28 @@ export default function CheckoutPage() {
   // Customer / Restaurant Form State
   const [formData, setFormData] = useState({
     restaurantName: '',
+    slug: '',
     ownerName: '',
     phone: '',
     email: '',
     city: 'الدقهلية',
     address: '',
+    username: '',
+    password: '',
     notes: '',
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<{
+    checked: boolean;
+    available: boolean;
+    checking: boolean;
+    message: string;
+  }>({
+    checked: false,
+    available: true,
+    checking: false,
+    message: '',
   });
 
   const [paymentMethod, setPaymentMethod] = useState<'fawaterk' | 'free_trial'>('fawaterk');
@@ -153,6 +178,43 @@ export default function CheckoutPage() {
   const price = isAnnual ? selectedPlan.annualPrice : selectedPlan.monthlyPrice;
   const originalAnnualPrice = selectedPlan.monthlyPrice * 12;
   const annualSavings = originalAnnualPrice - selectedPlan.annualPrice;
+
+  // Auto generate slug from restaurant name
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = e.target.value;
+    const generatedSlug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[\s_]+/g, '-')
+      .replace(/[^\w\u0621-\u064A-]+/g, '');
+
+    setFormData((prev) => ({
+      ...prev,
+      restaurantName: name,
+      slug: prev.slug === '' || prev.slug === prev.restaurantName.toLowerCase().trim().replace(/[\s_]+/g, '-') ? generatedSlug : prev.slug,
+    }));
+  };
+
+  // Check username availability on blur
+  const handleUsernameBlur = async () => {
+    const uname = formData.username.toLowerCase().trim();
+    if (!uname || uname.length < 3) return;
+
+    setUsernameStatus(prev => ({ ...prev, checking: true }));
+    try {
+      const res = await api.get(`/auth/check-username?username=${encodeURIComponent(uname)}`);
+      if (res.data?.data) {
+        setUsernameStatus({
+          checked: true,
+          available: res.data.data.available,
+          checking: false,
+          message: res.data.data.message,
+        });
+      }
+    } catch {
+      setUsernameStatus({ checked: false, available: true, checking: false, message: '' });
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -179,6 +241,22 @@ export default function CheckoutPage() {
       toast.error('يرجى إدخال بريد إلكتروني صالح.');
       return;
     }
+    if (!formData.username.trim() || formData.username.length < 3) {
+      toast.error('اسم المستخدم يجب أن يكون 3 أحرف أو أرقام على الأقل.');
+      return;
+    }
+    if (!/^[a-z0-9_.-]+$/.test(formData.username.toLowerCase().trim())) {
+      toast.error('اسم المستخدم يجب أن يحتوي على أحرف إنجليزية صغيرة وأرقام فقط.');
+      return;
+    }
+    if (usernameStatus.checked && !usernameStatus.available) {
+      toast.error('اسم المستخدم محجوز بالفعل، يرجى اختيار اسم مستخدم آخر.');
+      return;
+    }
+    if (!formData.password || formData.password.length < 6) {
+      toast.error('كلمة المرور يجب ألا تقل عن 6 أحرف أو أرقام.');
+      return;
+    }
     if (!agreedToTerms) {
       toast.error('يرجى الموافقة على الشروط والأحكام وسياسة الاسترجاع للمتابعة.');
       return;
@@ -187,23 +265,50 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
+      const cleanUsername = formData.username.toLowerCase().trim();
+      const cleanSlug = formData.slug.trim() || formData.restaurantName.toLowerCase().trim().replace(/[\s_]+/g, '-');
+      const deviceFingerprint = await getDeviceFingerprint();
+
+      // If Free Trial: Directly Register and Auto-login!
       if (selectedPlanId === 'trial') {
-        // Free trial registration direct navigation
-        toast.success('🎉 مرحباً بك في طاولة! تم تفعيل تجربتك المجانية لمدة 14 يوماً.');
-        setTimeout(() => {
-          navigate(`/register?plan=trial&restaurant=${encodeURIComponent(formData.restaurantName)}&email=${encodeURIComponent(formData.email)}`);
-        }, 800);
+        const response = await api.post('/auth/register-restaurant', {
+          name: formData.restaurantName.trim(),
+          slug: cleanSlug,
+          ownerName: formData.ownerName.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          address: formData.address.trim() || undefined,
+          username: cleanUsername,
+          password: formData.password,
+          plan: 'trial',
+          deviceFingerprint,
+        });
+
+        const data = response.data?.data;
+        if (data?.accessToken && data?.user && data?.restaurant) {
+          toast.success('🎉 مرحباً بك في طاولة! تم تفعيل تجربتك المجانية لمدة 14 يوماً بنجاح.');
+          loginStore(data.accessToken, data.user, data.restaurant, data.offlineLease);
+          setTimeout(() => {
+            navigate('/admin');
+          }, 800);
+        } else {
+          toast.success('تم تسجيل الحساب بنجاح، يمكنك تسجيل الدخول الآن.');
+          navigate('/login');
+        }
         return;
       }
 
       // Prepared API Request Payload for Fawaterk & Backend
       const payload = {
         restaurantName: formData.restaurantName,
+        slug: cleanSlug,
         ownerName: formData.ownerName,
         phone: formData.phone,
         email: formData.email,
         city: formData.city,
         address: formData.address,
+        username: cleanUsername,
+        password: formData.password,
         plan: selectedPlanId,
         billingCycle,
         amount: price,
@@ -225,7 +330,7 @@ export default function CheckoutPage() {
       }
     } catch (err: any) {
       const rawError = err.response?.data?.error || err.response?.data?.message;
-      let msg = 'تعذر إنشاء فاتورة الدفع عبر فواتيرك. يرجى المحاولة لاحقاً.';
+      let msg = 'تعذر إتمام العملية، يرجى مراجعة البيانات والمحاولة لاحقاً.';
       if (typeof rawError === 'string') {
         msg = rawError;
       } else if (typeof rawError === 'object' && rawError !== null) {
@@ -239,6 +344,8 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#1C1612] font-sans antialiased selection:bg-[#801B2C]/15 selection:text-[#801B2C]" dir="rtl">
+      <Toaster position="top-center" />
+
       {/* Top Header */}
       <header className="sticky top-0 z-40 bg-[#FAF8F5]/90 backdrop-blur-md border-b border-[#801B2C]/10">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -267,36 +374,33 @@ export default function CheckoutPage() {
 
       {/* Main Content Layout */}
       <main className="max-w-6xl mx-auto px-6 py-10 lg:py-14">
-
         {/* Title */}
         <div className="mb-10 text-center sm:text-right">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#801B2C]/10 text-[#801B2C] text-xs font-bold mb-2">
-            <CreditCard className="w-3.5 h-3.5" /> إتمام الاشتراك وتفعيل النظام
+          <span className="text-xs font-bold text-[#801B2C] uppercase tracking-wider bg-[#801B2C]/5 px-3 py-1 rounded-full border border-[#801B2C]/15">
+            إتمام الاشتراك الفوري
           </span>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#1C1612]" style={{ fontFamily: '"Tajawal", sans-serif' }}>
-            اختر باقتك وسجل مطعمك في دقائق
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1C1612] mt-3">
+            انضم لمنصة طاولة وارتقِ بتجربة ضيوفك
           </h1>
-          <p className="text-sm text-[#5C524C] mt-2">
-            انضم لمئات المطاعم والكافيهات التي تثق في طاولة لتقديم تجربة ضيافة رقمية استثنائية.
+          <p className="text-xs sm:text-sm text-[#5C524C] mt-1.5">
+            قم بتعبئة بياناتك للبدء الفوري أو الانتقال لبوابة الدفع الإلكتروني المعتمدة.
           </p>
         </div>
 
         <form onSubmit={handleCheckoutSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT/MAIN: Plan Selector & Customer Information Form (7 Cols) */}
-          <div className="lg:col-span-7 space-y-8">
-            
+          {/* Right Column: Checkout Steps Form (7 Cols) */}
+          <div className="lg:col-span-7 space-y-6">
             {/* Step 1: Choose Plan */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#801B2C]/10 shadow-[0_4px_25px_rgba(28,22,18,0.03)] space-y-6">
-              <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h2 className="text-lg font-bold text-[#1C1612] flex items-center gap-2">
                   <span className="w-7 h-7 rounded-xl bg-[#801B2C] text-white text-xs flex items-center justify-center font-bold">1</span>
-                  اختيار باقة الاشتراك
+                  اختر الباقة المناسبة لمطعمك
                 </h2>
 
-                {/* Monthly / Annual Toggle */}
+                {/* Billing Cycle Toggle */}
                 {selectedPlanId !== 'trial' && (
-                  <div className="flex items-center bg-[#FAF8F5] p-1 rounded-xl border border-[#801B2C]/10 text-xs">
+                  <div className="flex items-center bg-[#FAF8F5] p-1 rounded-xl border border-zinc-200 text-xs">
                     <button
                       type="button"
                       onClick={() => setBillingCycle('monthly')}
@@ -373,11 +477,11 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Step 2: Restaurant & Owner Details */}
+            {/* Step 2: Restaurant Details */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#801B2C]/10 shadow-[0_4px_25px_rgba(28,22,18,0.03)] space-y-6">
               <h2 className="text-lg font-bold text-[#1C1612] flex items-center gap-2">
                 <span className="w-7 h-7 rounded-xl bg-[#801B2C] text-white text-xs flex items-center justify-center font-bold">2</span>
-                بيانات المطعم والمسؤول
+                بيانات المطعم / الفرع
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -389,7 +493,7 @@ export default function CheckoutPage() {
                       type="text"
                       name="restaurantName"
                       value={formData.restaurantName}
-                      onChange={handleInputChange}
+                      onChange={handleNameChange}
                       required
                       placeholder="مثال: كافيه السلطان"
                       className="w-full pr-10 pl-3 py-2.5 rounded-xl border border-zinc-200 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/10 text-sm outline-none transition-all"
@@ -398,7 +502,24 @@ export default function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">اسم المدير أو صاحب النشاط *</label>
+                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">رابط المنيو (Slug) *</label>
+                  <div className="relative">
+                    <Globe className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      name="slug"
+                      value={formData.slug}
+                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
+                      required
+                      placeholder="sultan-cafe"
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-zinc-200 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/10 text-sm font-mono text-left outline-none transition-all"
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">اسم المسؤول / المالك *</label>
                   <div className="relative">
                     <User className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -430,8 +551,8 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">البريد الإلكتروني لتفعيل الحساب *</label>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">البريد الإلكتروني للتواصل والإشعارات *</label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -446,49 +567,82 @@ export default function CheckoutPage() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
 
+            {/* Step 3: Admin Credentials */}
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#801B2C]/10 shadow-[0_4px_25px_rgba(28,22,18,0.03)] space-y-6">
+              <h2 className="text-lg font-bold text-[#1C1612] flex items-center gap-2">
+                <span className="w-7 h-7 rounded-xl bg-[#801B2C] text-white text-xs flex items-center justify-center font-bold">3</span>
+                بيانات حساب تسجيل الدخول للمدير (Admin)
+              </h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Username */}
                 <div>
-                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">المحافظة / المدينة</label>
-                  <div className="relative">
-                    <MapPin className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                    <select
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className="w-full pr-10 pl-3 py-2.5 rounded-xl border border-zinc-200 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/10 text-sm outline-none transition-all bg-white"
-                    >
-                      <option value="الدقهلية">الدقهلية (بلقاس / المنصورة)</option>
-                      <option value="القاهرة">القاهرة</option>
-                      <option value="الجيزة">الجيزة</option>
-                      <option value="الإسكندرية">الإسكندرية</option>
-                      <option value="الشرقية">الشرقية</option>
-                      <option value="الغربية">الغربية (طنطا / المحلة)</option>
-                      <option value="دمياط">دمياط</option>
-                      <option value="بورسعيد">بورسعيد</option>
-                      <option value="أخرى">محافظة أخرى</option>
-                    </select>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-[#1C1612]">اسم المستخدم (Username) *</label>
+                    {usernameStatus.checking && <span className="text-[10px] text-zinc-500">جاري الفحص...</span>}
+                    {usernameStatus.checked && (
+                      <span className={`text-[10px] font-bold flex items-center gap-1 ${usernameStatus.available ? 'text-emerald-700' : 'text-rose-600'}`}>
+                        {usernameStatus.available ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                        {usernameStatus.message}
+                      </span>
+                    )}
                   </div>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={(e) => {
+                        const val = e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, '');
+                        setFormData(prev => ({ ...prev, username: val }));
+                        setUsernameStatus({ checked: false, available: true, checking: false, message: '' });
+                      }}
+                      onBlur={handleUsernameBlur}
+                      required
+                      placeholder="admin_sultan"
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-zinc-200 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/10 text-sm font-mono text-left outline-none transition-all"
+                      dir="ltr"
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#5C524C]/80 mt-1">حروف إنجليزية صغيرة وأرقام فقط (غير مكرر بالنظام).</p>
                 </div>
 
+                {/* Password */}
                 <div>
-                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">العنوان بالتفصيل (اختياري)</label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    placeholder="الشارع / المنطقة"
-                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/10 text-sm outline-none transition-all"
-                  />
+                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">كلمة المرور *</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="••••••••"
+                      className="w-full pr-10 pl-10 py-2.5 rounded-xl border border-zinc-200 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/10 text-sm outline-none transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[#5C524C]/80 mt-1">6 أحرف أو أرقام على الأقل.</p>
                 </div>
               </div>
             </div>
 
-            {/* Step 3: Payment Gateway Selector */}
+            {/* Step 4: Payment Gateway Selector */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#801B2C]/10 shadow-[0_4px_25px_rgba(28,22,18,0.03)] space-y-6">
               <h2 className="text-lg font-bold text-[#1C1612] flex items-center gap-2">
-                <span className="w-7 h-7 rounded-xl bg-[#801B2C] text-white text-xs flex items-center justify-center font-bold">3</span>
-                طريقة الدفع المعتمدة
+                <span className="w-7 h-7 rounded-xl bg-[#801B2C] text-white text-xs flex items-center justify-center font-bold">4</span>
+                طريقة الدفع والتفعيل
               </h2>
 
               {selectedPlanId === 'trial' ? (
@@ -496,14 +650,13 @@ export default function CheckoutPage() {
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-bold text-sm text-emerald-950">تجربة مجانية بالكامل (0 ج.م)</h4>
-                    <p className="text-xs text-emerald-850 mt-1 leading-relaxed">
+                    <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
                       لا يلزم إدخال أية بيانات دفع الآن. ستحصل على صلاحيات النظام لمدة 14 يوماً مجاناً، ويمكنك الترقية للباقات المدفوعة لاحقاً.
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {/* Fawaterk Gateway Option */}
                   <label className="relative flex flex-col p-4 rounded-2xl border-2 border-[#801B2C] bg-[#801B2C]/5 cursor-pointer transition-all">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
@@ -518,154 +671,128 @@ export default function CheckoutPage() {
                           <p className="text-xs text-[#5C524C]">فيزا، ماستركارد، ميزة، فودافون كاش والمحافظ، إنستاباي، وفوري</p>
                         </div>
                       </div>
-                      <div className="w-5 h-5 rounded-full bg-[#801B2C] text-white flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    {/* Logos of Supported Egyptian Payment Channels */}
-                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#801B2C]/10 text-[11px] text-[#5C524C]">
-                      <span className="px-2 py-1 bg-white rounded-md border border-zinc-200 font-semibold">💳 Visa / Mastercard</span>
-                      <span className="px-2 py-1 bg-white rounded-md border border-zinc-200 font-semibold">💳 Meeza ميزة</span>
-                      <span className="px-2 py-1 bg-white rounded-md border border-zinc-200 font-semibold text-rose-600">📱 فودافون كاش والمحافظ</span>
-                      <span className="px-2 py-1 bg-white rounded-md border border-zinc-200 font-semibold text-purple-700">⚡ إنستاباي InstaPay</span>
-                      <span className="px-2 py-1 bg-white rounded-md border border-zinc-200 font-semibold text-amber-700">🟡 أمان وفوري</span>
+                      <input
+                        type="radio"
+                        checked={paymentMethod === 'fawaterk'}
+                        onChange={() => setPaymentMethod('fawaterk')}
+                        className="accent-[#801B2C] w-4 h-4"
+                      />
                     </div>
                   </label>
                 </div>
               )}
-            </div>
 
+              {/* Terms Checkbox */}
+              <div className="pt-2 border-t border-zinc-100">
+                <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#5C524C] leading-relaxed select-none">
+                  <input
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    className="mt-0.5 accent-[#801B2C] w-4 h-4 rounded"
+                  />
+                  <span>
+                    أوافق على{' '}
+                    <Link to="/terms" target="_blank" className="text-[#801B2C] font-bold hover:underline">
+                      شروط وأحكام الاستخدام
+                    </Link>{' '}
+                    و{' '}
+                    <Link to="/refund" target="_blank" className="text-[#801B2C] font-bold hover:underline">
+                      سياسة الاسترجاع والترقية
+                    </Link>
+                    .
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
 
-          {/* RIGHT SIDEBAR: Order Summary (5 Cols) */}
+          {/* Left Column: Order Summary & Guarantee (5 Cols) */}
           <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-28">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#801B2C]/15 shadow-[0_6px_30px_rgba(128,27,44,0.06)] space-y-6">
-              <h3 className="text-lg font-bold text-[#1C1612] pb-3 border-b border-zinc-100 flex items-center justify-between">
-                <span>ملخص الاشتراك</span>
-                <span className="text-xs font-normal text-[#5C524C]">العملة: جنيه مصري (EGP)</span>
-              </h3>
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#801B2C]/10 shadow-[0_4px_25px_rgba(28,22,18,0.03)] space-y-6">
+              <h2 className="text-lg font-bold text-[#1C1612] pb-4 border-b border-zinc-100">
+                ملخص الاشتراك
+              </h2>
 
-              {/* Plan Box */}
-              <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#801B2C]/10 space-y-3">
-                <div className="flex items-center justify-between font-bold text-sm">
-                  <span className="text-[#1C1612]">{selectedPlan.name}</span>
-                  <span className="text-[#801B2C]">{isAnnual ? 'اشتراك سنوي' : 'اشتراك شهري'}</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-bold text-[#1C1612]">{selectedPlan.name}</span>
+                  <span className="font-bold font-mono text-[#1C1612]">
+                    {price === 0 ? '0 ج.م' : `${price.toLocaleString()} ج.م`}
+                  </span>
                 </div>
-                <ul className="space-y-1.5 text-xs text-[#5C524C]">
-                  {selectedPlan.features.slice(0, 4).map((feat, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+
+                <div className="flex items-center justify-between text-xs text-[#5C524C]">
+                  <span>دورة الفوترة</span>
+                  <span className="font-bold">
+                    {selectedPlanId === 'trial' ? '14 يوماً مجاناً' : isAnnual ? 'سنوي (مقدم)' : 'شهري'}
+                  </span>
+                </div>
+
+                {isAnnual && annualSavings > 0 && (
+                  <div className="flex items-center justify-between text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl">
+                    <span>خصم الدفع السنوي (شهرين مجاناً)</span>
+                    <span className="font-bold font-mono">-{annualSavings.toLocaleString()} ج.م</span>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-zinc-100 flex items-baseline justify-between">
+                  <span className="text-sm font-bold text-[#1C1612]">الإجمالي المستحق الآن</span>
+                  <div className="text-left" dir="ltr">
+                    <span className="text-2xl font-black text-[#801B2C] font-mono">
+                      {price === 0 ? '0.00' : price.toLocaleString()}
+                    </span>
+                    <span className="text-xs font-bold text-[#801B2C] mr-1"> EGP</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 bg-[#801B2C] hover:bg-[#5E1422] text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20 transition-all text-sm cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    <span>
+                      {selectedPlanId === 'trial' ? 'تأكيد التسجيل وبدء التجربة المجانية' : 'المتابعة للدفع الآمن عبر فواتيرك'}
+                    </span>
+                    <ChevronLeft className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+
+              {/* Features List in Selected Plan */}
+              <div className="pt-6 border-t border-zinc-100 space-y-3">
+                <h4 className="text-xs font-bold text-[#1C1612]">المميزات المضمنة في هذه الباقة:</h4>
+                <ul className="space-y-2 text-xs text-[#5C524C]">
+                  {selectedPlan.features.map((feat, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* Price Calculation */}
-              <div className="space-y-2 text-sm text-[#5C524C] pt-2">
-                <div className="flex items-center justify-between">
-                  <span>سعر الباقة الأساسي</span>
-                  <span className="font-mono font-bold text-[#1C1612]">
-                    {selectedPlanId === 'trial' ? '0 ج.م' : `${price.toLocaleString()} ج.م`}
-                  </span>
-                </div>
-
-                {isAnnual && annualSavings > 0 && (
-                  <div className="flex items-center justify-between text-emerald-700 font-semibold text-xs">
-                    <span>خصم الدفع السنوي (شهرين مجاناً)</span>
-                    <span className="font-mono">-{annualSavings.toLocaleString()} ج.م</span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between text-xs">
-                  <span>ضريبة القيمة المضافة / المصاريف</span>
-                  <span className="text-emerald-700 font-semibold">شاملة ومجانية</span>
-                </div>
-
-                <hr className="border-zinc-200 my-2" />
-
-                <div className="flex items-center justify-between text-base sm:text-lg font-bold text-[#1C1612] pt-1">
-                  <span>الإجمالي المستحق للدفع:</span>
-                  <div className="text-left">
-                    <div className="font-mono text-[#801B2C] text-xl">
-                      {selectedPlanId === 'trial' ? '0 ج.م' : `${price.toLocaleString()} ج.م`}
-                    </div>
-                    {selectedPlanId === 'trial' && (
-                      <span className="text-[11px] text-[#5C524C] font-normal block">تجدد بعد 14 يوم أو تلغى مجاناً</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Terms & Policies Checkbox */}
-              <div className="space-y-3 pt-2">
-                <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#5C524C] leading-relaxed">
-                  <input
-                    type="checkbox"
-                    checked={agreedToTerms}
-                    onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded text-[#801B2C] focus:ring-[#801B2C] border-zinc-300"
-                  />
-                  <span>
-                    أوافق على{' '}
-                    <Link to="/terms" target="_blank" className="text-[#801B2C] font-bold underline">الشروط والأحكام</Link>
-                    {' '}و{' '}
-                    <Link to="/refund" target="_blank" className="text-[#801B2C] font-bold underline">سياسة الاسترجاع (14 يوماً تجربة)</Link>
-                    {' '}و{' '}
-                    <Link to="/privacy" target="_blank" className="text-[#801B2C] font-bold underline">سياسة الخصوصية</Link>.
-                  </span>
-                </label>
-              </div>
-
-              {/* Submit CTA Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-[#801B2C] hover:bg-[#5E1422] text-white py-4 px-6 rounded-2xl font-bold text-sm sm:text-base shadow-[0_6px_25px_rgba(128,27,44,0.25)] hover:shadow-[0_8px_30px_rgba(128,27,44,0.35)] transition-all flex items-center justify-center gap-3 disabled:opacity-60 cursor-pointer"
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>جاري معالجة الطلب...</span>
-                  </div>
-                ) : selectedPlanId === 'trial' ? (
-                  <>
-                    <Zap className="w-5 h-5 text-amber-300" />
-                    <span>ابدأ تجربتك المجانية 14 يوماً</span>
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-4 h-4" />
-                    <span>إتمام الدفع الآمن عبر فواتيرك</span>
-                  </>
-                )}
-              </button>
-
-              {/* Guarantees Box */}
-              <div className="text-[11px] text-[#5C524C]/80 text-center space-y-1.5 pt-2">
-                <p className="flex items-center justify-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  معالجة مشفرة بالكامل ومعتمدة من البنك المركزي المصري
-                </p>
-                <p>الدعم الفني والتدريب متوفر مجاناً على مدار الساعة</p>
-              </div>
-            </div>
-
-            {/* Official Support Info Box */}
-            <div className="p-4 rounded-2xl bg-[#F4EFEB] border border-[#801B2C]/10 text-xs text-[#5C524C] space-y-2">
-              <div className="font-bold text-[#1C1612]">هل تحتاج لمساعدة في الدفع أو استفسار؟</div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-[#801B2C]" />
-                <span dir="ltr" className="font-mono text-[#801B2C]">support.tawla@gmail.com</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-[#801B2C]" />
-                <span>مركز بلقاس - الدقهلية - مصر</span>
+              {/* Security Seal */}
+              <div className="pt-4 border-t border-zinc-100 flex items-center justify-center gap-4 text-zinc-400 text-[11px] font-medium">
+                <span className="flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                  تشفير SSL آمن 256-bit
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#801B2C]" />
+                  بوابة معتمدة من البنك المركزي
+                </span>
               </div>
             </div>
           </div>
-
         </form>
       </main>
     </div>

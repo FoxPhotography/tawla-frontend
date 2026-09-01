@@ -389,12 +389,16 @@ export default function SubscriptionTab() {
 
           {/* Plan Change Policy Warning */}
           {restaurant?.subscription?.plan && restaurant.subscription.plan !== renewPlan && (
-            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-xs text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-500" />
-              <div className="space-y-1">
-                <span className="font-extrabold block">تنبيه ترقية / تغيير الخطة:</span>
-                <p className="leading-relaxed text-[11px]">
-                  عند تغيير الباقة من (<strong>{restaurant.subscription.plan === 'pro' ? 'المتقدمة Pro' : restaurant.subscription.plan === 'basic' ? 'الأساسية Basic' : 'التجريبية Trial'}</strong>) إلى (<strong>{renewPlan === 'pro' ? 'المتقدمة Pro' : 'الأساسية Basic'}</strong>)، سيبدأ احتساب الاشتراك الجديد فوراً لمدة ({renewCycle === 'annual' ? 'سنة كاملة' : 'شهر كامل'}) من تاريخ السداد، وسيتم إلغاء واستبدال أي فترة متبقية من باقتك الحالية تلقائياً دون استحقاق استرداد مالي.
+            <div className="p-4.5 bg-[#801B2C]/5 border-2 border-[#801B2C]/20 rounded-2xl flex items-start gap-3.5 text-xs shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-[#801B2C]/10 border border-[#801B2C]/15 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5 text-[#801B2C]" />
+              </div>
+              <div className="space-y-1.5 flex-1 text-right">
+                <span className="font-black text-[#801B2C] text-xs block">
+                  تنبيه ترقية / تغيير الخطة:
+                </span>
+                <p className="leading-relaxed text-xs text-[#1C1612] font-medium">
+                  عند تغيير الباقة من (<strong className="text-[#801B2C] font-black">{restaurant.subscription.plan === 'pro' ? 'المتقدمة Pro' : restaurant.subscription.plan === 'basic' ? 'الأساسية Basic' : 'التجريبية Trial'}</strong>) إلى (<strong className="text-[#801B2C] font-black">{renewPlan === 'pro' ? 'المتقدمة Pro' : 'الأساسية Basic'}</strong>)، سيبدأ احتساب الاشتراك الجديد فوراً لمدة (<span className="font-bold text-[#801B2C]">{renewCycle === 'annual' ? 'سنة كاملة' : 'شهر كامل'}</span>) من تاريخ السداد، وسيتم إلغاء واستبدال أي فترة متبقية من باقتك الحالية تلقائياً دون استحقاق استرداد مالي.
                 </p>
               </div>
             </div>
