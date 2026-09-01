@@ -237,6 +237,32 @@ export default function CheckoutPage() {
 
       {/* Main Content Layout */}
       <main className="max-w-6xl mx-auto px-6 py-10 lg:py-14">
+        {/* Status Banners (Return from Fawaterk) */}
+        {searchParams.get('status') === 'paid' && (
+          <div className="mb-8 p-6 rounded-3xl bg-emerald-50 border-2 border-emerald-300 text-emerald-950 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold text-xl">✓</div>
+              <div>
+                <h3 className="font-extrabold text-base text-emerald-900">تمت عملية الدفع بنجاح!</h3>
+                <p className="text-xs text-emerald-800 mt-0.5">شكراً لاشتراكك في منصة طاولة. يمكنك الآن إكمال تسجيل بيانات حساب المطعم للبدء فوراً.</p>
+              </div>
+            </div>
+            <Link to={`/register?plan=${selectedPlanId}`} className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold whitespace-nowrap shadow-sm">
+              إكمال تسجيل الحساب ←
+            </Link>
+          </div>
+        )}
+
+        {searchParams.get('status') === 'failed' && (
+          <div className="mb-8 p-6 rounded-3xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex items-center gap-4 shadow-sm">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-bold text-lg">✕</div>
+            <div>
+              <h3 className="font-extrabold text-sm text-rose-900">تعذر إتمام عملية الدفع</h3>
+              <p className="text-xs text-rose-800 mt-0.5">يرجى التأكد من رصيد البطاقة أو المحفظة الإلكترونية والمحاولة مجدداً، أو التواصل معنا للدعم.</p>
+            </div>
+          </div>
+        )}
+
         {/* Title */}
         <div className="mb-10 text-center sm:text-right">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#801B2C]/10 text-[#801B2C] text-xs font-bold mb-2">
