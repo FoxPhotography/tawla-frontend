@@ -24,6 +24,7 @@ const Register = lazyWithRetry(() => import('./apps/admin/Register.js'));
 const SuperAdminDashboard = lazyWithRetry(() => import('./apps/super-admin/SuperAdminDashboard.js'));
 const LandingPage = lazyWithRetry(() => import('./apps/landing/LandingPage.js'));
 const CheckoutPage = lazyWithRetry(() => import('./apps/checkout/CheckoutPage.js'));
+const PaymentConfirmationPage = lazyWithRetry(() => import('./apps/checkout/PaymentConfirmationPage.js'));
 const RefundPolicy = lazyWithRetry(() => import('./apps/legal/RefundPolicy.js'));
 const PrivacyPolicy = lazyWithRetry(() => import('./apps/legal/PrivacyPolicy.js'));
 const TermsAndConditions = lazyWithRetry(() => import('./apps/legal/TermsAndConditions.js'));
@@ -42,6 +43,7 @@ export default function App() {
 
           {/* Checkout & Legal Compliance Routes */}
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/payment/confirmation" element={<PaymentConfirmationPage />} />
           <Route path="/refund" element={<RefundPolicy />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsAndConditions />} />

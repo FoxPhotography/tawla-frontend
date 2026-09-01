@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { User as UserIcon, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
@@ -183,6 +183,14 @@ export default function StaffLogin() {
               )}
             </motion.button>
           </form>
+
+          {/* New Restaurant Onboarding Link */}
+          <div className="pt-4 mt-2 border-t border-zinc-100 text-center text-xs text-zinc-500 flex items-center justify-center gap-1.5 font-bold">
+            <span>مطعم جديد؟</span>
+            <Link to="/register" className="text-[#801B2C] hover:underline">
+              سجل حسابك الآن وابدأ مجاناً ←
+            </Link>
+          </div>
         </div>
       </motion.div>
 

@@ -27,7 +27,20 @@ export default function AdminDashboard() {
   const { user, restaurant, logout, updateRestaurant } = useAuthStore();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers' | 'discounts'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers' | 'discounts'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'subscription' || params.get('status') === 'renewed') return 'subscription';
+    if (tabParam === 'products') return 'products';
+    if (tabParam === 'tables') return 'tables';
+    if (tabParam === 'orders') return 'orders';
+    if (tabParam === 'analytics') return 'analytics';
+    if (tabParam === 'staff') return 'staff';
+    if (tabParam === 'audit') return 'audit';
+    if (tabParam === 'customers') return 'customers';
+    if (tabParam === 'discounts') return 'discounts';
+    return 'categories';
+  });
 
   const handleLogout = () => {
     logout();
