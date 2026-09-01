@@ -7,6 +7,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { useAuthStore } from '../../shared/store/authStore';
 import logoImg from '../../assets/TAWLA_Logo.png';
+import ForgotPasswordModal from '../staff/components/ForgotPasswordModal';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: async () => {
@@ -110,7 +112,16 @@ export default function AdminLogin() {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-zinc-400 font-body">كلمة المرور</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-zinc-400 font-body">كلمة المرور</label>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotOpen(true)}
+                  className="text-xs font-bold text-[#B8973E] hover:underline cursor-pointer"
+                >
+                  نسيت كلمة المرور؟
+                </button>
+              </div>
               <div className="relative group">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -176,6 +187,9 @@ export default function AdminLogin() {
           </Link>
         </motion.div>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal isOpen={isForgotOpen} onClose={() => setIsForgotOpen(false)} />
     </div>
   );
 }

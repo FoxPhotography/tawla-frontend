@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Crown, CreditCard } from 'lucide-react';
+import { Crown, CreditCard, ArrowLeft, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import { useAuthStore } from '../../../shared/store/authStore';
@@ -11,6 +11,11 @@ export default function SubscriptionTab() {
   const { restaurant, updateRestaurant } = useAuthStore();
 
   const [serialKey, setSerialKey] = useState('');
+  const [renewPlan, setRenewPlan] = useState<'basic' | 'pro'>((restaurant?.subscription?.plan as any) === 'basic' ? 'basic' : 'pro');
+  const [renewCycle, setRenewCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [showSerialInput, setShowSerialInput] = useState(false);
+
   const [menuTitle, setMenuTitle] = useState(restaurant?.settings?.menuTitle || '');
   const [menuDescription, setMenuDescription] = useState(restaurant?.settings?.menuDescription || '');
   const [isDeliveryEnabled, setIsDeliveryEnabled] = useState(restaurant?.settings?.isDeliveryEnabled !== false);
@@ -129,6 +134,27 @@ export default function SubscriptionTab() {
     activateMutation.mutate(serialKey);
   };
 
+  const handleRenewFawaterk = async () => {
+    setIsRenewing(true);
+    try {
+      const response = await api.post('/subscriptions/renew', {
+        plan: renewPlan,
+        billingCycle: renewCycle,
+      });
+
+      if (response.data?.data?.invoiceLink) {
+        toast.success('جاري توجيهك لبوابة الدفع الآمنة (فواتيرك)...');
+        window.location.href = response.data.data.invoiceLink;
+      } else {
+        toast.error('تعذر إنشاء رابط الفاتورة من فواتيرك.');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'فشلت معالجة طلب التجديد. يرجى المحاولة لاحقاً.');
+    } finally {
+      setIsRenewing(false);
+    }
+  };
+
   const handleSaveMenuSettings = (e: React.FormEvent) => {
     e.preventDefault();
     saveMenuSettingsMutation.mutate({ 
@@ -242,42 +268,153 @@ export default function SubscriptionTab() {
           </div>
         </div>
 
-        {/* Activate Serial Key Form */}
-        <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card flex flex-col justify-between col-span-1 lg:col-span-2">
-          <div className="space-y-2">
-            <h3 className="font-extrabold text-admin-text-primary text-sm flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-admin-accent" />
-              <span>تجديد أو ترقية الاشتراك</span>
-            </h3>
-            <p className="text-xs text-admin-text-secondary leading-relaxed font-medium">
-              أدخل كود السريال (Serial Key) الذي حصلت عليه لتمديد اشتراكك أو ترقية الباقة الحالية لتفعيل الميزات الإضافية.
-            </p>
+        {/* Fawaterk Direct Renewal & Plan Upgrade */}
+        <div className="bg-admin-bg-elevated border border-admin-border rounded-2xl p-6 shadow-admin-card flex flex-col justify-between col-span-1 lg:col-span-2 space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-admin-border/50 pb-4">
+            <div>
+              <h3 className="font-extrabold text-admin-text-primary text-base flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-admin-accent" />
+                <span>تجديد أو ترقية الاشتراك أونلاين</span>
+              </h3>
+              <p className="text-xs text-admin-text-secondary mt-1">
+                جدد اشتراكك مباشرة بالدفع الإلكتروني عبر بوابة فواتيرك (فيزا، ماستركارد، فودافون كاش، إنستاباي).
+              </p>
+            </div>
+
+            {/* Monthly / Annual Toggle */}
+            <div className="flex items-center bg-admin-bg-base p-1 rounded-xl border border-admin-border text-xs">
+              <button
+                type="button"
+                onClick={() => setRenewCycle('monthly')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  renewCycle === 'monthly'
+                    ? 'bg-admin-accent text-white shadow-sm'
+                    : 'text-admin-text-secondary hover:text-admin-text-primary'
+                }`}
+              >
+                شهري
+              </button>
+              <button
+                type="button"
+                onClick={() => setRenewCycle('annual')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${
+                  renewCycle === 'annual'
+                    ? 'bg-admin-accent text-white shadow-sm'
+                    : 'text-admin-text-secondary hover:text-admin-text-primary'
+                }`}
+              >
+                سنوي
+                <span className="bg-emerald-500 text-white text-[9px] px-1 py-0.2 rounded font-mono">وفر شهرين</span>
+              </button>
+            </div>
           </div>
 
-          <form onSubmit={handleActivateSubmit} className="mt-4">
-            <div className="flex flex-col sm:flex-row gap-2.5">
-              <input
-                type="text"
-                placeholder="أدخل كود التفعيل المكون من 24 رمزاً..."
-                value={serialKey}
-                onChange={(e) => setSerialKey(e.target.value)}
-                className="flex-1 bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none placeholder-admin-text-muted/40 font-mono text-left"
-                dir="ltr"
-              />
-              <motion.button
-                type="submit"
-                disabled={activateMutation.isPending}
-                whileTap={{ scale: 0.97 }}
-                className="py-3 px-6 bg-admin-accent text-white font-bold text-xs rounded-lg hover:opacity-95 transition-opacity flex items-center justify-center gap-2 shadow-admin-accent whitespace-nowrap cursor-pointer"
-              >
-                {activateMutation.isPending ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <span>تفعيل كود التجديد</span>
-                )}
-              </motion.button>
+          {/* Plan Selector Radios */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Basic Card */}
+            <div
+              onClick={() => setRenewPlan('basic')}
+              className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                renewPlan === 'basic'
+                  ? 'border-admin-accent bg-admin-accent/5 ring-1 ring-admin-accent shadow-sm'
+                  : 'border-admin-border bg-admin-bg-base hover:border-admin-border/80'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-xs text-admin-text-primary">الباقة الأساسية (Basic)</span>
+                <span className="font-extrabold text-sm text-admin-accent">
+                  {renewCycle === 'annual' ? '15,000 ج.م / سنة' : '1,500 ج.م / شهر'}
+                </span>
+              </div>
+              <p className="text-[11px] text-admin-text-secondary">حتى 30 طاولة، 200 صنف، منيو QR، ولوحة المطبخ والكاشير.</p>
             </div>
-          </form>
+
+            {/* Pro Card */}
+            <div
+              onClick={() => setRenewPlan('pro')}
+              className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                renewPlan === 'pro'
+                  ? 'border-admin-accent bg-admin-accent/5 ring-1 ring-admin-accent shadow-sm'
+                  : 'border-admin-border bg-admin-bg-base hover:border-admin-border/80'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-xs text-admin-text-primary">الباقة المتقدمة (Pro)</span>
+                  <span className="bg-admin-accent text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">شاملة</span>
+                </div>
+                <span className="font-extrabold text-sm text-admin-accent">
+                  {renewCycle === 'annual' ? '30,000 ج.م / سنة' : '3,000 ج.م / شهر'}
+                </span>
+              </div>
+              <p className="text-[11px] text-admin-text-secondary">طاولات وأصناف غير محدودة، برامج الولاء، وتخصيص الفواتير والضريبة.</p>
+            </div>
+          </div>
+
+          {/* Checkout Button & Fawaterk Badges */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <motion.button
+              type="button"
+              onClick={handleRenewFawaterk}
+              disabled={isRenewing}
+              whileTap={{ scale: 0.98 }}
+              className="w-full sm:w-auto py-3.5 px-8 bg-admin-accent hover:opacity-95 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-admin-accent cursor-pointer transition-all disabled:opacity-50"
+            >
+              {isRenewing ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4" />
+                  <span>تجديد / ترقية الباقة الآن بالدفع الإلكتروني (فواتيرك)</span>
+                  <ArrowLeft className="w-4 h-4" />
+                </>
+              )}
+            </motion.button>
+
+            <button
+              type="button"
+              onClick={() => setShowSerialInput(!showSerialInput)}
+              className="text-xs text-admin-text-secondary hover:text-admin-text-primary font-bold flex items-center gap-1.5 transition-colors"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>{showSerialInput ? 'إخفاء إدخال السيريال' : 'لديك كود سريال يدوي؟'}</span>
+            </button>
+          </div>
+
+          {/* Alternative: Manual Serial Key Input */}
+          {showSerialInput && (
+            <motion.form
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              onSubmit={handleActivateSubmit}
+              className="pt-4 border-t border-admin-border/50"
+            >
+              <label className="text-xs font-bold text-admin-text-secondary block mb-2">تفعيل عبر كود السريال (Serial Key):</label>
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <input
+                  type="text"
+                  placeholder="أدخل كود التفعيل المكون من 24 رمزاً..."
+                  value={serialKey}
+                  onChange={(e) => setSerialKey(e.target.value)}
+                  className="flex-1 bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none placeholder-admin-text-muted/40 font-mono text-left"
+                  dir="ltr"
+                />
+                <motion.button
+                  type="submit"
+                  disabled={activateMutation.isPending}
+                  whileTap={{ scale: 0.97 }}
+                  className="py-2.5 px-6 bg-admin-bg-subtle text-admin-text-primary border border-admin-border font-bold text-xs rounded-lg hover:bg-admin-border transition-colors flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+                >
+                  {activateMutation.isPending ? (
+                    <div className="w-4 h-4 border-2 border-admin-text-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <span>تفعيل الكود</span>
+                  )}
+                </motion.button>
+              </div>
+            </motion.form>
+          )}
         </div>
       </div>
 
