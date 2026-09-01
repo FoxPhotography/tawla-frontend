@@ -22,11 +22,13 @@ import logoImg from '../../assets/TAWLA_Logo.png';
 interface PaymentDetails {
   status: 'paid' | 'pending' | 'failed' | 'invalid';
   invoiceId: string;
+  referenceNumber?: string;
   plan?: 'trial' | 'basic' | 'pro';
   billingCycle?: 'monthly' | 'annual';
   amount?: number;
   restaurantName?: string;
   ownerName?: string;
+  phone?: string;
   expiresAt?: string;
   paidAt?: string;
   message?: string;
@@ -62,11 +64,13 @@ export default function PaymentConfirmationPage() {
         setPaymentData({
           status: 'paid',
           invoiceId,
+          referenceNumber: data.referenceNumber || `TWL-2026-${invoiceId}`,
           plan: data.plan || 'pro',
           billingCycle: data.billingCycle || 'monthly',
           amount: data.amount,
-          restaurantName: data.restaurantName || restaurant?.name,
-          ownerName: data.ownerName || user?.name,
+          restaurantName: data.restaurantName || restaurant?.name || 'مطعمنا العزيز',
+          ownerName: data.ownerName || user?.name || 'إدارة المطعم',
+          phone: data.phone || restaurant?.phone,
           expiresAt: data.expiresAt,
           paidAt: data.paidAt || new Date().toISOString(),
           message: 'تم التحقق من الفاتورة وسدادها بنجاح عبر بوابة فواتيرك.'
@@ -124,11 +128,21 @@ export default function PaymentConfirmationPage() {
       })
     : null;
 
+  const formattedPaidAt = paymentData?.paidAt 
+    ? new Date(paymentData.paidAt).toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : new Date().toLocaleDateString('ar-EG');
+
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#1C1612] font-sans antialiased selection:bg-[#801B2C]/20" dir="rtl">
       <Toaster position="top-center" />
 
-      {/* Top Simple Header */}
+      {/* Top Header */}
       <header className="bg-white border-b border-[#801B2C]/10 py-4 px-6 print:hidden">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
@@ -136,18 +150,18 @@ export default function PaymentConfirmationPage() {
           </Link>
           <div className="flex items-center gap-2 text-xs text-[#5C524C] font-bold">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>نظام التحقق الآمن من الفواتير (Fawaterk Verified)</span>
+            <span>نظام التحقق المشفر من الفواتير (Tawla Verified)</span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-12 print:p-0 print:max-w-full">
+      <main className="max-w-2xl mx-auto px-4 py-10 print:p-0 print:max-w-full">
         {/* Loading State */}
         {loading && (
           <div className="bg-white border border-[#801B2C]/15 rounded-3xl p-12 text-center shadow-xl space-y-4">
             <div className="w-14 h-14 border-4 border-[#801B2C]/20 border-t-[#801B2C] rounded-full animate-spin mx-auto" />
-            <h2 className="text-lg font-bold text-[#1C1612]">جاري التحقق من حالة المعاملة...</h2>
-            <p className="text-xs text-[#5C524C]">يتم مطابقة رقم الفاتورة والتحقق الحي من خوادم بوابة فواتيرك وتحديث بيانات الاشتراك.</p>
+            <h2 className="text-lg font-bold text-[#1C1612]">جاري التحقق الأمني من حالة المعاملة...</h2>
+            <p className="text-xs text-[#5C524C]">يتم مطابقة التوقيع المشفر وتأكيد السداد من خوادم بوابة فواتيرك وتحديث بيانات الاشتراك.</p>
           </div>
         )}
 
@@ -217,73 +231,120 @@ export default function PaymentConfirmationPage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.98, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white border-2 border-emerald-500/30 rounded-3xl p-8 sm:p-10 shadow-2xl space-y-8 relative overflow-hidden"
+            className="bg-white border-2 border-emerald-500/30 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-7 relative overflow-hidden print:border-none print:shadow-none print:p-0"
           >
-            {/* Emerald Top Glow */}
+            {/* Top Glow Bar */}
             <div className="absolute top-0 right-0 left-0 h-2 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500" />
 
             {/* Header Badge */}
-            <div className="text-center space-y-3">
-              <div className="w-16 h-16 bg-emerald-50 border-2 border-emerald-200 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-md">
+            <div className="text-center space-y-3 pt-2">
+              <div className="w-16 h-16 bg-emerald-50 border-2 border-emerald-300 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-md">
                 <CheckCircle2 className="w-9 h-9" />
               </div>
               <div className="space-y-1">
-                <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-100/70 text-emerald-800 font-bold px-3 py-1 rounded-full font-mono">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-100/80 text-emerald-900 font-extrabold px-3.5 py-1 rounded-full font-mono">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
                   معاملة مسددة ومحققة 100%
                 </span>
-                <h1 className="text-2xl font-black text-[#1C1612]">تم تأكيد وتجديد الاشتراك بنجاح!</h1>
-                <p className="text-xs text-[#5C524C]">شكراً لثقتكم بمنصة طاولة. تم تفعيل الصلاحيات وتحديث قاعدة البيانات فوراً.</p>
+                <h1 className="text-2xl font-black text-[#1C1612]">إيصال سداد وتجديد اشتراك رسمي</h1>
+                <p className="text-xs text-[#5C524C]">شكراً لثقتكم بمنصة طاولة • تم تفعيل وتمديد الصلاحيات في النظام تلقائياً.</p>
               </div>
             </div>
 
-            {/* Official Invoice Card */}
-            <div className="bg-[#FAF8F5] border border-[#801B2C]/10 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#801B2C]/10 pb-3">
-                <span className="text-xs font-bold text-[#5C524C]">رقم الفاتورة المرجعي:</span>
-                <span className="font-mono font-bold text-sm text-[#801B2C] bg-white px-3 py-1 rounded-lg border border-[#801B2C]/15">
-                  #{paymentData.invoiceId}
-                </span>
+            {/* Official Tax / Subscription Receipt Card */}
+            <div className="bg-[#FAF8F5] border border-[#801B2C]/15 rounded-2xl p-6 space-y-4 text-right">
+              {/* Reference Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#801B2C]/10 pb-4">
+                <div>
+                  <span className="text-[11px] font-bold text-[#73675F] block">الرقم المرجعي المعتمد (Reference No):</span>
+                  <span className="font-mono font-black text-sm text-[#801B2C] select-all">
+                    {paymentData.referenceNumber || `TWL-2026-${paymentData.invoiceId}`}
+                  </span>
+                </div>
+                <div className="text-left" dir="ltr">
+                  <span className="text-[11px] font-bold text-[#73675F] block text-right sm:text-left">Invoice ID:</span>
+                  <span className="font-mono font-bold text-xs text-zinc-700 bg-white px-2.5 py-1 rounded-md border border-zinc-200 inline-block">
+                    #{paymentData.invoiceId}
+                  </span>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-[#5C524C] block mb-1">نوع الباقة:</span>
-                  <span className="font-bold text-[#1C1612] text-sm flex items-center gap-1.5">
-                    <Crown className="w-4 h-4 text-amber-500" />
+              {/* Data Rows */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3.5 gap-x-6 text-xs pt-1">
+                <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
+                  <span className="text-[#73675F]">اسم المطعم / المنشأة:</span>
+                  <span className="font-extrabold text-[#1C1612] text-sm flex items-center gap-1">
+                    <Building2 className="w-3.5 h-3.5 text-[#801B2C]" />
+                    {paymentData.restaurantName}
+                  </span>
+                </div>
+
+                <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
+                  <span className="text-[#73675F]">اسم المسؤول / المالك:</span>
+                  <span className="font-bold text-[#1C1612] text-sm">
+                    {paymentData.ownerName}
+                  </span>
+                </div>
+
+                <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
+                  <span className="text-[#73675F]">الباقة المفعلة:</span>
+                  <span className="font-extrabold text-[#801B2C] text-sm flex items-center gap-1.5">
+                    <Crown className="w-3.5 h-3.5 text-amber-500" />
                     {planTitle}
                   </span>
                 </div>
 
-                <div>
-                  <span className="text-[#5C524C] block mb-1">دورة الفوترة:</span>
+                <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
+                  <span className="text-[#73675F]">دورة الفوترة:</span>
                   <span className="font-bold text-[#1C1612] text-sm">
                     {paymentData.billingCycle === 'annual' ? 'سنوي (12 شهر)' : 'شهري (30 يوماً)'}
                   </span>
                 </div>
 
+                <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
+                  <span className="text-[#73675F]">المبلغ المسدد:</span>
+                  <span className="font-black text-[#1C1612] text-sm">
+                    {paymentData.amount ? `${paymentData.amount} ج.م (EGP)` : 'مسدد'}
+                  </span>
+                </div>
+
                 {formattedExpiry && (
-                  <div>
-                    <span className="text-[#5C524C] block mb-1">تاريخ انتهاء الصلاحية الجديد:</span>
-                    <span className="font-bold text-emerald-700 text-sm flex items-center gap-1">
+                  <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
+                    <span className="text-[#73675F]">تاريخ انتهاء الصلاحية الجديد:</span>
+                    <span className="font-extrabold text-emerald-700 text-sm flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-emerald-600" />
                       {formattedExpiry}
                     </span>
                   </div>
                 )}
 
-                <div>
-                  <span className="text-[#5C524C] block mb-1">بوابة السداد:</span>
-                  <span className="font-bold text-[#1C1612] text-sm flex items-center gap-1">
+                <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
+                  <span className="text-[#73675F]">بوابة الدفع والتحقق:</span>
+                  <span className="font-bold text-[#1C1612] text-xs flex items-center gap-1">
                     <CreditCard className="w-3.5 h-3.5 text-[#801B2C]" />
                     فواتيرك (Fawaterk Hosted Gateway)
                   </span>
                 </div>
+
+                <div className="flex justify-between sm:flex-col sm:justify-start gap-1">
+                  <span className="text-[#73675F]">تاريخ ووقت السداد:</span>
+                  <span className="font-bold text-zinc-700 text-xs">
+                    {formattedPaidAt}
+                  </span>
+                </div>
+              </div>
+
+              {/* Security Seal Note */}
+              <div className="pt-3 border-t border-[#801B2C]/10 text-center">
+                <p className="text-[10px] text-[#73675F] flex items-center justify-center gap-1.5 font-medium">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span>معاملة مشفرة وموثقة إلكترونياً بسجلات منصة طاولة لتقنية نظم الضيافة.</span>
+                </p>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="space-y-3 pt-2 print:hidden">
+            <div className="space-y-3 pt-1 print:hidden">
               {user?.role === 'admin' ? (
                 <Link 
                   to="/admin?tab=subscription" 
