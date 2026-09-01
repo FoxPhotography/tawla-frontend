@@ -42,7 +42,7 @@ export default function PaymentConfirmationPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [paymentData, setPaymentData] = useState<PaymentDetails | null>(null);
 
-  const verifyInvoice = async () => {
+  const verifyInvoice = async (retryCount = 0) => {
     if (!invoiceId) {
       setLoading(false);
       setPaymentData({
@@ -71,22 +71,34 @@ export default function PaymentConfirmationPage() {
           paidAt: data.paidAt || new Date().toISOString(),
           message: 'تم التحقق من الفاتورة وسدادها بنجاح عبر بوابة فواتيرك.'
         });
+        setLoading(false);
+      } else if (data?.status === 'pending' && retryCount < 3) {
+        // Auto-retry in 2 seconds to allow Fawaterk gateway and webhook to finalize
+        setTimeout(() => {
+          verifyInvoice(retryCount + 1);
+        }, 2000);
       } else {
         setPaymentData({
           status: 'failed',
           invoiceId,
           message: 'لم يتم تأكيد السداد لهذه الفاتورة حتى الآن أو تم إلغاء العملية.'
         });
+        setLoading(false);
       }
     } catch (error: any) {
-      console.error('[Verify Payment Page Error]:', error);
-      setPaymentData({
-        status: 'failed',
-        invoiceId,
-        message: error.response?.data?.message || 'تعذر التحقق من الفاتورة من خوادم الدفع.'
-      });
-    } finally {
-      setLoading(false);
+      if (retryCount < 2) {
+        setTimeout(() => {
+          verifyInvoice(retryCount + 1);
+        }, 2000);
+      } else {
+        console.error('[Verify Payment Page Error]:', error);
+        setPaymentData({
+          status: 'failed',
+          invoiceId,
+          message: error.response?.data?.message || 'تعذر التحقق من الفاتورة من خوادم الدفع.'
+        });
+        setLoading(false);
+      }
     }
   };
 
@@ -187,7 +199,7 @@ export default function PaymentConfirmationPage() {
             </div>
             <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
               <button 
-                onClick={verifyInvoice} 
+                onClick={() => verifyInvoice(0)} 
                 className="px-6 py-3 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
