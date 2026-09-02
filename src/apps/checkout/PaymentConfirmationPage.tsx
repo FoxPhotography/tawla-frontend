@@ -12,10 +12,12 @@ import {
   ShieldCheck, 
   Calendar,
   Building2,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api.js';
+import { socket } from '../../shared/services/socket.js';
 import { useAuthStore } from '../../shared/store/authStore.js';
 import logoImg from '../../assets/TAWLA_Logo.png';
 
@@ -44,6 +46,48 @@ export default function PaymentConfirmationPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [paymentData, setPaymentData] = useState<PaymentDetails | null>(null);
 
+  // 1. Real-time Live Socket.io Confirmation Listener
+  useEffect(() => {
+    if (!invoiceId) return;
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    socket.emit('join_payment_invoice', String(invoiceId).trim());
+
+    const handlePaymentReceived = (data: any) => {
+      if (data && String(data.invoiceId || '').trim() === String(invoiceId).trim()) {
+        console.log('[Socket.io]: Live payment confirmed event received in UI!', data);
+        setPaymentData({
+          status: 'paid',
+          invoiceId,
+          referenceNumber: data.referenceNumber || `TWL-2026-${invoiceId}`,
+          plan: data.plan || 'pro',
+          billingCycle: data.billingCycle || 'monthly',
+          amount: data.amount,
+          restaurantName: data.restaurantName || restaurant?.name || 'مطعمنا العزيز',
+          ownerName: data.ownerName || user?.name || 'إدارة المطعم',
+          phone: data.phone || restaurant?.phone,
+          expiresAt: data.expiresAt,
+          paidAt: data.paidAt || new Date().toISOString(),
+          message: 'تم تأكيد السداد فوراً عبر السوكيت وخوادم فواتيرك.'
+        });
+        setLoading(false);
+        toast.success('🎉 تم تأكيد واستلام عملية الدفع بنجاح وتحديث الصلاحيات فوراً!');
+      }
+    };
+
+    socket.on('payment_confirmed', handlePaymentReceived);
+    socket.on('payment_received', handlePaymentReceived);
+
+    return () => {
+      socket.off('payment_confirmed', handlePaymentReceived);
+      socket.off('payment_received', handlePaymentReceived);
+    };
+  }, [invoiceId, restaurant, user]);
+
+  // 2. HTTP Polling and API Verification Fallback
   const verifyInvoice = async (retryCount = 0) => {
     if (!invoiceId) {
       setLoading(false);
@@ -55,7 +99,10 @@ export default function PaymentConfirmationPage() {
       return;
     }
 
-    setLoading(true);
+    if (retryCount === 0) {
+      setLoading(true);
+    }
+
     try {
       const response = await api.get(`/subscriptions/verify-payment?invoiceId=${encodeURIComponent(invoiceId)}`);
       const data = response.data?.data;
@@ -76,24 +123,26 @@ export default function PaymentConfirmationPage() {
           message: 'تم التحقق من الفاتورة وسدادها بنجاح عبر بوابة فواتيرك.'
         });
         setLoading(false);
-      } else if (data?.status === 'pending' && retryCount < 3) {
-        // Auto-retry in 2 seconds to allow Fawaterk gateway and webhook to finalize
+      } else if (data?.status === 'pending' && retryCount < 4) {
+        // Auto-retry in 2.5 seconds while waiting for Webhook / Fawaterk confirmation
         setTimeout(() => {
           verifyInvoice(retryCount + 1);
-        }, 2000);
+        }, 2500);
       } else {
         setPaymentData({
-          status: 'failed',
+          status: data?.status === 'pending' ? 'pending' : 'failed',
           invoiceId,
-          message: 'لم يتم تأكيد السداد لهذه الفاتورة حتى الآن أو تم إلغاء العملية.'
+          message: data?.status === 'pending'
+            ? 'المعاملة قيد المعالجة من البنك. يتم الاستماع الفوري لتأكيد السداد عبر السوكيت المباشر.'
+            : 'لم يتم تأكيد السداد لهذه الفاتورة حتى الآن أو تم إلغاء العملية.'
         });
         setLoading(false);
       }
     } catch (error: any) {
-      if (retryCount < 2) {
+      if (retryCount < 3) {
         setTimeout(() => {
           verifyInvoice(retryCount + 1);
-        }, 2000);
+        }, 2500);
       } else {
         console.error('[Verify Payment Page Error]:', error);
         setPaymentData({
@@ -150,7 +199,7 @@ export default function PaymentConfirmationPage() {
           </Link>
           <div className="flex items-center gap-2 text-xs text-[#5C524C] font-bold">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>نظام التحقق المشفر من الفواتير (Tawla Verified)</span>
+            <span>نظام التحقق المباشر من الفواتير (Tawla Real-time Verified)</span>
           </div>
         </div>
       </header>
@@ -160,8 +209,8 @@ export default function PaymentConfirmationPage() {
         {loading && (
           <div className="bg-white border border-[#801B2C]/15 rounded-3xl p-12 text-center shadow-xl space-y-4">
             <div className="w-14 h-14 border-4 border-[#801B2C]/20 border-t-[#801B2C] rounded-full animate-spin mx-auto" />
-            <h2 className="text-lg font-bold text-[#1C1612]">جاري التحقق الأمني من حالة المعاملة...</h2>
-            <p className="text-xs text-[#5C524C]">يتم مطابقة التوقيع المشفر وتأكيد السداد من خوادم بوابة فواتيرك وتحديث بيانات الاشتراك.</p>
+            <h2 className="text-lg font-bold text-[#1C1612]">جاري التحقق اللحظي من حالة المعاملة...</h2>
+            <p className="text-xs text-[#5C524C]">يتم مطابقة التأكيد الحي عبر السوكيت وخوادم فواتيرك وتحديث بيانات الاشتراك فوراً.</p>
           </div>
         )}
 
@@ -187,6 +236,44 @@ export default function PaymentConfirmationPage() {
               </Link>
               <Link to="/" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">
                 العودة للرئيسية
+              </Link>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Pending State with Live Socket Listening Indicator */}
+        {!loading && paymentData?.status === 'pending' && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white border-2 border-amber-400/40 rounded-3xl p-8 sm:p-10 text-center shadow-xl space-y-6"
+          >
+            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mx-auto border border-amber-200">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold font-mono">
+                <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
+                <span>قيد انتظار التأكيد النهائي من البنك</span>
+              </div>
+              <h2 className="text-xl font-extrabold text-[#1C1612]">جاري معالجة عملية الدفع</h2>
+              <p className="text-xs text-[#5C524C] leading-relaxed max-w-md mx-auto">
+                {paymentData.message || 'المعاملة قيد المعالجة. يتم الاستماع الفوري لتأكيد فواتيرك عبر السوكيت، وستتحول الصفحة تلقائياً فور وصول الإشعار.'}
+              </p>
+              <div className="p-3 bg-amber-50 rounded-xl font-mono text-xs text-amber-900 inline-block mt-2 border border-amber-100">
+                رقم الفاتورة: #{paymentData.invoiceId}
+              </div>
+            </div>
+            <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
+              <button 
+                onClick={() => verifyInvoice(0)} 
+                className="px-6 py-3 bg-[#801B2C] text-white rounded-xl text-xs font-bold hover:bg-[#5E1422] transition-colors flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/20"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>إعادة التحقق اليدوي الآن</span>
+              </button>
+              <Link to="/admin?tab=subscription" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">
+                العودة للوحة التحكم
               </Link>
             </div>
           </motion.div>

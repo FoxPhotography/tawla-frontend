@@ -101,30 +101,80 @@ export default function CheckoutPage() {
   );
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
-  // Load live system settings pricing if available
+  // Load live system settings pricing and limits if available
   useEffect(() => {
     async function loadLivePricing() {
       try {
         const res = await api.get('/system-settings');
         if (res.data?.data) {
           const sys = res.data.data;
-          setPlans((prev) => {
-            const basicMonthly = sys.offer?.active && sys.offer?.basicPrice ? sys.offer.basicPrice : (sys.pricing?.basic || 1500);
-            const proMonthly = sys.offer?.active && sys.offer?.proPrice ? sys.offer.proPrice : (sys.pricing?.pro || 3000);
-            return {
-              ...prev,
-              basic: {
-                ...prev.basic,
-                monthlyPrice: basicMonthly,
-                annualPrice: basicMonthly * 10,
-              },
-              pro: {
-                ...prev.pro,
-                monthlyPrice: proMonthly,
-                annualPrice: proMonthly * 10,
-              },
-            };
-          });
+          const isOfferActive = Boolean(
+            sys.offer?.active &&
+            (!sys.offer.endsAt || new Date(sys.offer.endsAt) > new Date())
+          );
+
+          const basicMonthly = isOfferActive && sys.offer?.basicPrice ? sys.offer.basicPrice : (sys.pricing?.basic || 1500);
+          const basicAnnual = isOfferActive && sys.offer?.annualBasicPrice ? sys.offer.annualBasicPrice : (sys.pricing?.annualBasic || (sys.pricing?.basic ? sys.pricing.basic * 10 : 15000));
+
+          const proMonthly = isOfferActive && sys.offer?.proPrice ? sys.offer.proPrice : (sys.pricing?.pro || 3000);
+          const proAnnual = isOfferActive && sys.offer?.annualProPrice ? sys.offer.annualProPrice : (sys.pricing?.annualPro || (sys.pricing?.pro ? sys.pricing.pro * 10 : 30000));
+
+          const trialTables = sys.limits?.tables?.trial ?? sys.limits?.trial ?? 5;
+          const basicTables = sys.limits?.tables?.basic ?? sys.limits?.basic ?? 10;
+          const proTables = sys.limits?.tables?.pro ?? sys.limits?.pro ?? 20;
+
+          const trialProducts = sys.limits?.products?.trial ?? 15;
+          const basicProducts = sys.limits?.products?.basic ?? 50;
+          const proProducts = sys.limits?.products?.pro ?? 9999;
+
+          const trialCategories = sys.limits?.categories?.trial ?? 5;
+          const basicCategories = sys.limits?.categories?.basic ?? 15;
+          const proCategories = sys.limits?.categories?.pro ?? 9999;
+
+          setPlans((prev) => ({
+            ...prev,
+            trial: {
+              ...prev.trial,
+              features: [
+                '14 يوماً تجربة مجانية بالكامل',
+                'تجربة منيو تفاعلي بـ QR سريع',
+                'لوحة تحكم كاملة للمدير والموظفين',
+                `إدارة حتى ${trialTables} طاولات ذكية`,
+                `إضافة حتى ${trialProducts} صنف بالمنيو`,
+                `تقسيم المنيو حتى ${trialCategories} أقسام`,
+                'دعم واستقبال طلبات الزبائن لحظياً',
+              ],
+            },
+            basic: {
+              ...prev.basic,
+              monthlyPrice: basicMonthly,
+              annualPrice: basicAnnual,
+              features: [
+                'منيو رقمي سريع بتصميم فاخر',
+                `دعم حتى ${basicTables} طاولة ذكية بـ QR Code`,
+                `إضافة حتى ${basicProducts} صنف وتعديلها فوراً`,
+                `تقسيم المنيو حتى ${basicCategories} قسم/تصنيف`,
+                'تلقي وإدارة الطلبات عبر شاشة الكاشير والويتر',
+                'تقارير مبيعات وإحصائيات يومية وأسبوعية',
+                'إمكانية العمل بدون إنترنت عند الطوارئ',
+              ],
+            },
+            pro: {
+              ...prev.pro,
+              monthlyPrice: proMonthly,
+              annualPrice: proAnnual,
+              features: [
+                'كل مميزات الباقة الأساسية بلا استثناء',
+                proTables >= 9999 ? 'دعم طاولات ذكية غير محدود' : `دعم حتى ${proTables} طاولة ذكية`,
+                proProducts >= 9999 ? 'إضافة منتجات غير محدودة بالمنيو' : `إضافة حتى ${proProducts} منتج بالمنيو`,
+                proCategories >= 9999 ? 'تقسيم أقسام وتصنيفات غير محدود' : `تقسيم المنيو حتى ${proCategories} قسم/تصنيف`,
+                'تصميم وضبط إيصالات الدفع ولوجو المطعم',
+                'تفعيل الضرائب ورسوم الخدمة للفواتير',
+                'تلقي طلبات التوصيل / الدليفري الخارجية',
+                'سجلات العمليات لتتبع الكاشير والمشرفين',
+              ],
+            },
+          }));
         }
       } catch (e) {
         console.warn('Using default pricing in checkout');

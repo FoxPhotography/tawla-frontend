@@ -14,12 +14,17 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   const queryClient = useQueryClient();
 
   // Local Form states
-  const [basicPrice, setBasicPrice] = useState(1000);
-  const [proPrice, setProPrice] = useState(1500);
+  const [basicPrice, setBasicPrice] = useState(1500);
+  const [proPrice, setProPrice] = useState(3000);
+  const [annualBasicPrice, setAnnualBasicPrice] = useState(15000);
+  const [annualProPrice, setAnnualProPrice] = useState(30000);
+
   const [offerActive, setOfferActive] = useState(false);
   const [offerTitle, setOfferTitle] = useState('');
-  const [offerBasicPrice, setOfferBasicPrice] = useState(800);
-  const [offerProPrice, setOfferProPrice] = useState(1200);
+  const [offerBasicPrice, setOfferBasicPrice] = useState(1200);
+  const [offerProPrice, setOfferProPrice] = useState(2400);
+  const [offerAnnualBasicPrice, setOfferAnnualBasicPrice] = useState(12000);
+  const [offerAnnualProPrice, setOfferAnnualProPrice] = useState(24000);
   const [offerEndsAt, setOfferEndsAt] = useState('');
   
   // Tables limits states
@@ -49,12 +54,17 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   // Sync settings
   useEffect(() => {
     if (systemSettings) {
-      setBasicPrice(systemSettings.pricing?.basic || 1000);
-      setProPrice(systemSettings.pricing?.pro || 1500);
+      setBasicPrice(systemSettings.pricing?.basic || 1500);
+      setProPrice(systemSettings.pricing?.pro || 3000);
+      setAnnualBasicPrice(systemSettings.pricing?.annualBasic || (systemSettings.pricing?.basic ? systemSettings.pricing.basic * 10 : 15000));
+      setAnnualProPrice(systemSettings.pricing?.annualPro || (systemSettings.pricing?.pro ? systemSettings.pricing.pro * 10 : 30000));
+
       setOfferActive(systemSettings.offer?.active || false);
       setOfferTitle(systemSettings.offer?.title || '');
       setOfferBasicPrice(systemSettings.offer?.basicPrice || 0);
       setOfferProPrice(systemSettings.offer?.proPrice || 0);
+      setOfferAnnualBasicPrice(systemSettings.offer?.annualBasicPrice || 0);
+      setOfferAnnualProPrice(systemSettings.offer?.annualProPrice || 0);
       
       if (systemSettings.offer?.endsAt) {
         const d = new Date(systemSettings.offer.endsAt);
@@ -112,12 +122,16 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
         pricing: {
           basic: Number(basicPrice),
           pro: Number(proPrice),
+          annualBasic: Number(annualBasicPrice),
+          annualPro: Number(annualProPrice),
         },
         offer: {
           active: offerActive,
           title: offerTitle,
           basicPrice: Number(offerBasicPrice),
           proPrice: Number(offerProPrice),
+          annualBasicPrice: Number(offerAnnualBasicPrice),
+          annualProPrice: Number(offerAnnualProPrice),
           endsAt: offerEndsAt ? new Date(offerEndsAt).toISOString() : undefined,
         },
         limits: {
@@ -177,31 +191,65 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6 outline-none">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Basic Plan price */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-admin-text-secondary">سعر الباقة الأساسية (BASIC) بالجنيه *</label>
-            <input
-              type="number"
-              required
-              min="0"
-              value={basicPrice}
-              onChange={(e) => setBasicPrice(Number(e.target.value))}
-              className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
-            />
-          </div>
+        <div className="space-y-3">
+          <h3 className="text-sm font-extrabold text-admin-accent flex items-center gap-1.5">
+            <Sliders className="w-4 h-4" />
+            <span>الأسعار الرسمية للاشتراكات (الشهري والسنوي)</span>
+          </h3>
+          <p className="text-xs text-admin-text-muted font-bold">حدد الأسعار الأساسية المعتمدة للباقات الشهرية والسنوية بالجنيه المصري.</p>
 
-          {/* Pro Plan price */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-admin-text-secondary">سعر الباقة الاحترافية (PRO) بالجنيه *</label>
-            <input
-              type="number"
-              required
-              min="0"
-              value={proPrice}
-              onChange={(e) => setProPrice(Number(e.target.value))}
-              className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Basic Monthly price */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-admin-text-secondary">سعر BASIC شهرياً (ج.م) *</label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={basicPrice}
+                onChange={(e) => setBasicPrice(Number(e.target.value))}
+                className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+              />
+            </div>
+
+            {/* Basic Annual price */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-admin-text-secondary">سعر BASIC سنوياً (ج.م) *</label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={annualBasicPrice}
+                onChange={(e) => setAnnualBasicPrice(Number(e.target.value))}
+                className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+              />
+            </div>
+
+            {/* Pro Monthly price */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-admin-text-secondary">سعر PRO شهرياً (ج.م) *</label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={proPrice}
+                onChange={(e) => setProPrice(Number(e.target.value))}
+                className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+              />
+            </div>
+
+            {/* Pro Annual price */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-admin-text-secondary">سعر PRO سنوياً (ج.م) *</label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={annualProPrice}
+                onChange={(e) => setAnnualProPrice(Number(e.target.value))}
+                className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+              />
+            </div>
           </div>
         </div>
 
@@ -397,10 +445,10 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Basic price during offer */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Basic monthly price during offer */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-bold text-admin-text-secondary">سعر باقة BASIC خلال العرض *</label>
+                  <label className="block text-xs font-bold text-admin-text-secondary">عرض BASIC شهري (ج.م) *</label>
                   <input
                     type="number"
                     required={offerActive}
@@ -411,15 +459,41 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
                   />
                 </div>
 
-                {/* Pro price during offer */}
+                {/* Basic annual price during offer */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-bold text-admin-text-secondary">سعر باقة PRO خلال العرض *</label>
+                  <label className="block text-xs font-bold text-admin-text-secondary">عرض BASIC سنوي (ج.م) *</label>
+                  <input
+                    type="number"
+                    required={offerActive}
+                    min="0"
+                    value={offerAnnualBasicPrice}
+                    onChange={(e) => setOfferAnnualBasicPrice(Number(e.target.value))}
+                    className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+                  />
+                </div>
+
+                {/* Pro monthly price during offer */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-admin-text-secondary">عرض PRO شهري (ج.م) *</label>
                   <input
                     type="number"
                     required={offerActive}
                     min="0"
                     value={offerProPrice}
                     onChange={(e) => setOfferProPrice(Number(e.target.value))}
+                    className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+                  />
+                </div>
+
+                {/* Pro annual price during offer */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-admin-text-secondary">عرض PRO سنوي (ج.م) *</label>
+                  <input
+                    type="number"
+                    required={offerActive}
+                    min="0"
+                    value={offerAnnualProPrice}
+                    onChange={(e) => setOfferAnnualProPrice(Number(e.target.value))}
                     className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
                   />
                 </div>

@@ -18,12 +18,16 @@ interface SystemSettings {
   pricing: {
     basic: number;
     pro: number;
+    annualBasic?: number;
+    annualPro?: number;
   };
   offer: {
     active: boolean;
     title: string;
     basicPrice: number;
     proPrice: number;
+    annualBasicPrice?: number;
+    annualProPrice?: number;
     endsAt?: string;
   };
   limits: {
@@ -71,10 +75,11 @@ function CountUp({ target, suffix = "", duration = 2000 }: { target: number; suf
 export default function LandingPage() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState<SystemSettings>({
-    pricing: { basic: 1000, pro: 1500 },
-    offer: { active: false, title: '', basicPrice: 0, proPrice: 0 },
+    pricing: { basic: 1500, pro: 3000, annualBasic: 15000, annualPro: 30000 },
+    offer: { active: false, title: '', basicPrice: 0, proPrice: 0, annualBasicPrice: 0, annualProPrice: 0 },
     limits: { trial: 5, basic: 10, pro: 20 }
   });
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [pulsePricing, setPulsePricing] = useState(false);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -1112,143 +1117,205 @@ export default function LandingPage() {
             )}
           </AnimatePresence>
 
+          {/* Monthly / Annual Billing Toggle */}
+          <div className="flex justify-center mb-10">
+            <div className="bg-white p-1.5 rounded-2xl border border-[#801B2C]/20 shadow-sm inline-flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                  billingCycle === 'monthly'
+                    ? 'bg-[#801B2C] text-white shadow-sm'
+                    : 'text-[#5C524C] hover:text-[#1C1612]'
+                }`}
+              >
+                اشتراك شهري
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle('annual')}
+                className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  billingCycle === 'annual'
+                    ? 'bg-[#801B2C] text-white shadow-sm'
+                    : 'text-[#5C524C] hover:text-[#1C1612]'
+                }`}
+              >
+                <span>اشتراك سنوي</span>
+                <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono">وفر شهرين</span>
+              </button>
+            </div>
+          </div>
+
           {/* Pricing Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             
             {/* Basic Card */}
-            <div className="bg-white border border-[#801B2C]/12 rounded-3xl p-8 lg:p-10 flex flex-col justify-between text-right relative overflow-hidden shadow-lg transition-all duration-300 hover:border-[#801B2C]/25">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] bg-[#801B2C]/10 border border-[#801B2C]/20 text-[#5E1422] px-3 py-1 rounded-lg font-mono font-semibold">
-                    BASIC PLAN
-                  </span>
-                  <h3 className="text-[18px] font-bold text-[#1C1612]">الباقة الأساسية</h3>
-                </div>
+            {(() => {
+              const isAnnual = billingCycle === 'annual';
+              const isOffer = Boolean(settings.offer.active && (!settings.offer.endsAt || new Date(settings.offer.endsAt) > new Date()));
 
-                <p className="text-[13px] text-[#5C524C] leading-relaxed">
-                  مثالية للمطاعم والكافيهات الناشئة الراغبة في تشغيل الخدمة الرقمية والـ QR فوراً.
-                </p>
+              const regularPrice = isAnnual 
+                ? (settings.pricing.annualBasic || (settings.pricing.basic ? settings.pricing.basic * 10 : 15000))
+                : (settings.pricing.basic || 1500);
 
-                {/* Price Display */}
-                <div className={`py-2 border-y border-[#801B2C]/10 flex items-center justify-start gap-4 transition-all duration-500 ${pulsePricing ? 'scale-105 border-[#801B2C]/40' : ''}`}>
-                  {settings.offer.active ? (
-                    <div>
-                      <div className="flex items-baseline gap-1.5 text-[#1C1612]" dir="ltr">
-                        <span className="text-[40px] font-medium tracking-tight font-mono">{settings.offer.basicPrice}</span>
-                        <span className="text-[12px] opacity-60">ج.م / شهرياً</span>
-                      </div>
-                      <p className="text-[11px] text-[#5C524C]/50 line-through mt-0.5 text-right">
-                        السعر الأصلي: {settings.pricing.basic} جنيه
-                      </p>
+              const offerPrice = isAnnual
+                ? (settings.offer.annualBasicPrice && settings.offer.annualBasicPrice > 0 ? settings.offer.annualBasicPrice : (settings.offer.basicPrice ? settings.offer.basicPrice * 10 : 0))
+                : (settings.offer.basicPrice || 0);
+
+              const hasOffer = isOffer && offerPrice > 0;
+
+              return (
+                <div className="bg-white border border-[#801B2C]/12 rounded-3xl p-8 lg:p-10 flex flex-col justify-between text-right relative overflow-hidden shadow-lg transition-all duration-300 hover:border-[#801B2C]/25">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] bg-[#801B2C]/10 border border-[#801B2C]/20 text-[#5E1422] px-3 py-1 rounded-lg font-mono font-semibold">
+                        BASIC PLAN
+                      </span>
+                      <h3 className="text-[18px] font-bold text-[#1C1612]">الباقة الأساسية</h3>
                     </div>
-                  ) : (
-                    <div className="flex items-baseline gap-1.5 text-[#1C1612]" dir="ltr">
-                      <span className="text-[40px] font-medium tracking-tight font-mono">{settings.pricing.basic}</span>
-                      <span className="text-[12px] opacity-60">ج.م / شهرياً</span>
+
+                    <p className="text-[13px] text-[#5C524C] leading-relaxed">
+                      مثالية للمطاعم والكافيهات الناشئة الراغبة في تشغيل الخدمة الرقمية والـ QR فوراً.
+                    </p>
+
+                    {/* Price Display */}
+                    <div className={`py-2 border-y border-[#801B2C]/10 flex items-center justify-start gap-4 transition-all duration-500 ${pulsePricing ? 'scale-105 border-[#801B2C]/40' : ''}`}>
+                      {hasOffer ? (
+                        <div>
+                          <div className="flex items-baseline gap-1.5 text-[#1C1612]" dir="ltr">
+                            <span className="text-[40px] font-medium tracking-tight font-mono">{offerPrice.toLocaleString()}</span>
+                            <span className="text-[12px] opacity-60">ج.م / {isAnnual ? 'سنوياً' : 'شهرياً'}</span>
+                          </div>
+                          <p className="text-[11px] text-[#5C524C]/50 line-through mt-0.5 text-right font-mono">
+                            السعر الأصلي: {regularPrice.toLocaleString()} جنيه
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-baseline gap-1.5 text-[#1C1612]" dir="ltr">
+                          <span className="text-[40px] font-medium tracking-tight font-mono">{regularPrice.toLocaleString()}</span>
+                          <span className="text-[12px] opacity-60">ج.م / {isAnnual ? 'سنوياً' : 'شهرياً'}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Limits & Features list */}
+                    <ul className="space-y-4 pt-2">
+                      {pricingFeaturesBasic.map((feat, idx) => (
+                        <li key={idx} className="flex items-start gap-3 text-[13px] text-[#5C524C] leading-relaxed">
+                          <Check className="w-4 h-4 text-[#801B2C] mt-[3px] shrink-0" />
+                          <span>{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 mt-10">
+                    <button 
+                      onClick={() => navigate(`/checkout?plan=basic&billing=${billingCycle}`)}
+                      className="flex-1 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-[13px] font-bold shadow-md transition-all duration-300 cursor-pointer text-center flex items-center justify-center gap-2"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>اشتراك أونلاين</span>
+                    </button>
+                    <button 
+                      onClick={handleWhatsappContact}
+                      className="py-3.5 px-4 bg-[#FAF8F5] border border-[#801B2C]/20 hover:border-[#801B2C] hover:text-[#801B2C] rounded-xl text-[12px] font-semibold text-[#5C524C] transition-all duration-300 cursor-pointer text-center"
+                    >
+                      طلب عبر واتساب
+                    </button>
+                  </div>
                 </div>
-
-                {/* Limits & Features list */}
-                <ul className="space-y-4 pt-2">
-                  {pricingFeaturesBasic.map((feat, idx) => (
-                    <li key={idx} className="flex items-start gap-3 text-[13px] text-[#5C524C] leading-relaxed">
-                      <Check className="w-4 h-4 text-[#801B2C] mt-[3px] shrink-0" />
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 mt-10">
-                <button 
-                  onClick={() => navigate('/checkout?plan=basic')}
-                  className="flex-1 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-[13px] font-bold shadow-md transition-all duration-300 cursor-pointer text-center flex items-center justify-center gap-2"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>اشتراك أونلاين</span>
-                </button>
-                <button 
-                  onClick={handleWhatsappContact}
-                  className="py-3.5 px-4 bg-[#FAF8F5] border border-[#801B2C]/20 hover:border-[#801B2C] hover:text-[#801B2C] rounded-xl text-[12px] font-semibold text-[#5C524C] transition-all duration-300 cursor-pointer text-center"
-                >
-                  طلب عبر واتساب
-                </button>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Pro Card (Recommended) */}
-            <div className="bg-white border-2 border-[#801B2C] rounded-3xl p-8 lg:p-10 flex flex-col justify-between text-right relative overflow-hidden shadow-xl">
-              {/* Gold light leak effect */}
-              <div className="absolute -top-[30%] -left-[30%] w-[160%] h-[160%] opacity-[0.04] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, #801B2C 0%, transparent 60%)' }} />
+            {(() => {
+              const isAnnual = billingCycle === 'annual';
+              const isOffer = Boolean(settings.offer.active && (!settings.offer.endsAt || new Date(settings.offer.endsAt) > new Date()));
 
-              {/* Recommended Top Badge */}
-              <div className="absolute top-5 left-5">
-                <span className="text-[9px] bg-[#801B2C] text-white px-3.5 py-1 rounded-full font-bold tracking-wider">
-                  الباقة الموصى بها
-                </span>
-              </div>
+              const regularPrice = isAnnual 
+                ? (settings.pricing.annualPro || (settings.pricing.pro ? settings.pricing.pro * 10 : 30000))
+                : (settings.pricing.pro || 3000);
 
-              <div className="space-y-6 relative z-10">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] bg-[#801B2C]/10 border border-[#801B2C]/20 text-[#5E1422] px-3 py-1 rounded-lg font-mono font-semibold">
-                    PRO PLAN
-                  </span>
-                  <h3 className="text-[18px] font-bold text-[#801B2C]">الباقة المتقدمة</h3>
-                </div>
+              const offerPrice = isAnnual
+                ? (settings.offer.annualProPrice && settings.offer.annualProPrice > 0 ? settings.offer.annualProPrice : (settings.offer.proPrice ? settings.offer.proPrice * 10 : 0))
+                : (settings.offer.proPrice || 0);
 
-                <p className="text-[13px] text-[#5C524C] leading-relaxed">
-                  للإدارة والتحكم الكامل للفروع، الإيصالات المخصصة، الفواتير، ودعم الضريبة والخدمة.
-                </p>
+              const hasOffer = isOffer && offerPrice > 0;
 
-                {/* Price Display */}
-                <div className={`py-2 border-y border-[#801B2C]/10 flex items-center justify-start gap-4 transition-all duration-500 ${pulsePricing ? 'scale-105 border-[#801B2C]/40' : ''}`}>
-                  {settings.offer.active ? (
-                    <div>
-                      <div className="flex items-baseline gap-1.5 text-[#801B2C]" dir="ltr">
-                        <span className="text-[40px] font-medium tracking-tight font-mono">{settings.offer.proPrice}</span>
-                        <span className="text-[12px] opacity-60">ج.م / شهرياً</span>
-                      </div>
-                      <p className="text-[11px] text-[#5C524C]/50 line-through mt-0.5 text-right">
-                        السعر الأصلي: {settings.pricing.pro} جنيه
-                      </p>
+              return (
+                <div className="bg-white border-2 border-[#801B2C] rounded-3xl p-8 lg:p-10 flex flex-col justify-between text-right relative overflow-hidden shadow-xl">
+                  {/* Gold light leak effect */}
+                  <div className="absolute -top-[30%] -left-[30%] w-[160%] h-[160%] opacity-[0.04] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, #801B2C 0%, transparent 60%)' }} />
+
+                  {/* Recommended Top Badge */}
+                  <div className="absolute top-5 left-5">
+                    <span className="text-[9px] bg-[#801B2C] text-white px-3.5 py-1 rounded-full font-bold tracking-wider">
+                      الباقة الموصى بها
+                    </span>
+                  </div>
+
+                  <div className="space-y-6 relative z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] bg-[#801B2C]/10 border border-[#801B2C]/20 text-[#5E1422] px-3 py-1 rounded-lg font-mono font-semibold">
+                        PRO PLAN
+                      </span>
+                      <h3 className="text-[18px] font-bold text-[#801B2C]">الباقة المتقدمة</h3>
                     </div>
-                  ) : (
-                    <div className="flex items-baseline gap-1.5 text-[#801B2C]" dir="ltr">
-                      <span className="text-[40px] font-medium tracking-tight font-mono">{settings.pricing.pro}</span>
-                      <span className="text-[12px] opacity-60">ج.م / شهرياً</span>
+
+                    <p className="text-[13px] text-[#5C524C] leading-relaxed">
+                      للإدارة والتحكم الكامل للفروع، الإيصالات المخصصة، الفواتير، ودعم الضريبة والخدمة.
+                    </p>
+
+                    {/* Price Display */}
+                    <div className={`py-2 border-y border-[#801B2C]/10 flex items-center justify-start gap-4 transition-all duration-500 ${pulsePricing ? 'scale-105 border-[#801B2C]/40' : ''}`}>
+                      {hasOffer ? (
+                        <div>
+                          <div className="flex items-baseline gap-1.5 text-[#801B2C]" dir="ltr">
+                            <span className="text-[40px] font-medium tracking-tight font-mono">{offerPrice.toLocaleString()}</span>
+                            <span className="text-[12px] opacity-60">ج.م / {isAnnual ? 'سنوياً' : 'شهرياً'}</span>
+                          </div>
+                          <p className="text-[11px] text-[#5C524C]/50 line-through mt-0.5 text-right font-mono">
+                            السعر الأصلي: {regularPrice.toLocaleString()} جنيه
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-baseline gap-1.5 text-[#801B2C]" dir="ltr">
+                          <span className="text-[40px] font-medium tracking-tight font-mono">{regularPrice.toLocaleString()}</span>
+                          <span className="text-[12px] opacity-60">ج.م / {isAnnual ? 'سنوياً' : 'شهرياً'}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Features list */}
+                    <ul className="space-y-4 pt-2">
+                      {pricingFeaturesPro.map((feat, idx) => (
+                        <li key={idx} className="flex items-start gap-3 text-[13px] text-[#5C524C] leading-relaxed">
+                          <Check className="w-4 h-4 text-[#801B2C] mt-[3px] shrink-0" />
+                          <span className="font-semibold">{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 mt-10 relative z-10">
+                    <button 
+                      onClick={() => navigate(`/checkout?plan=pro&billing=${billingCycle}`)}
+                      className="flex-1 py-3.5 luxury-btn-gold rounded-xl text-[13px] font-bold transition-all duration-300 cursor-pointer text-center shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>اشترك بالباقة الآن</span>
+                    </button>
+                    <button 
+                      onClick={handleWhatsappContact}
+                      className="py-3.5 px-4 bg-white/80 border border-[#801B2C]/30 hover:bg-white rounded-xl text-[12px] font-semibold text-[#801B2C] transition-all duration-300 cursor-pointer text-center"
+                    >
+                      استفسار واتساب
+                    </button>
+                  </div>
                 </div>
-
-                {/* Features list */}
-                <ul className="space-y-4 pt-2">
-                  {pricingFeaturesPro.map((feat, idx) => (
-                    <li key={idx} className="flex items-start gap-3 text-[13px] text-[#5C524C] leading-relaxed">
-                      <Check className="w-4 h-4 text-[#801B2C] mt-[3px] shrink-0" />
-                      <span className="font-semibold">{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 mt-10 relative z-10">
-                <button 
-                  onClick={() => navigate('/checkout?plan=pro')}
-                  className="flex-1 py-3.5 luxury-btn-gold rounded-xl text-[13px] font-bold transition-all duration-300 cursor-pointer text-center shadow-lg flex items-center justify-center gap-2"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>اشترك بالباقة الآن</span>
-                </button>
-                <button 
-                  onClick={handleWhatsappContact}
-                  className="py-3.5 px-4 bg-white/80 border border-[#801B2C]/30 hover:bg-white rounded-xl text-[12px] font-semibold text-[#801B2C] transition-all duration-300 cursor-pointer text-center"
-                >
-                  استفسار واتساب
-                </button>
-              </div>
-            </div>
-
+              );
+            })()}
           </div>
         </div>
       </section>

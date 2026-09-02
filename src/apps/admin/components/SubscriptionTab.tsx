@@ -312,15 +312,33 @@ export default function SubscriptionTab() {
           </div>
           <div className="p-3.5 bg-admin-bg-subtle rounded-xl text-xs space-y-3 font-semibold text-admin-text-secondary">
             <div className="flex justify-between">
+              <span>الطاولات المسموحة:</span>
+              <span className="text-admin-text-primary font-bold">
+                {(() => {
+                  const plan = (currentSub?.plan || 'trial') as 'trial' | 'basic' | 'pro';
+                  const lim = systemSettings?.limits?.tables?.[plan] ?? systemSettings?.limits?.[plan] ?? (plan === 'trial' ? 5 : plan === 'basic' ? 10 : 20);
+                  return lim >= 9999 ? 'غير محدود' : `${lim} طاولات`;
+                })()}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span>المنتجات المسموحة:</span>
               <span className="text-admin-text-primary font-bold">
-                {currentSub?.plan === 'trial' ? '15 منتج' : currentSub?.plan === 'basic' ? '50 منتج' : 'غير محدود'}
+                {(() => {
+                  const plan = (currentSub?.plan || 'trial') as 'trial' | 'basic' | 'pro';
+                  const lim = systemSettings?.limits?.products?.[plan] ?? (plan === 'trial' ? 15 : plan === 'basic' ? 50 : 9999);
+                  return lim >= 9999 ? 'غير محدود' : `${lim} منتج`;
+                })()}
               </span>
             </div>
             <div className="flex justify-between">
               <span>التصنيفات المسموحة:</span>
               <span className="text-admin-text-primary font-bold">
-                {currentSub?.plan === 'trial' ? '5 أقسام' : currentSub?.plan === 'basic' ? '15 قسم' : 'غير محدود'}
+                {(() => {
+                  const plan = (currentSub?.plan || 'trial') as 'trial' | 'basic' | 'pro';
+                  const lim = systemSettings?.limits?.categories?.[plan] ?? (plan === 'trial' ? 5 : plan === 'basic' ? 15 : 9999);
+                  return lim >= 9999 ? 'غير محدود' : `${lim} أقسام`;
+                })()}
               </span>
             </div>
             <div className="flex justify-between">
@@ -368,7 +386,7 @@ export default function SubscriptionTab() {
                 }`}
               >
                 سنوي
-                <span className="bg-emerald-500 text-white text-[9px] px-1 py-0.2 rounded font-mono">وفر شهرين</span>
+                <span className="bg-emerald-500 text-white text-[9px] px-1 py-0.2 rounded font-mono">خصم سنوي</span>
               </button>
             </div>
           </div>
@@ -376,43 +394,67 @@ export default function SubscriptionTab() {
           {/* Plan Selector Radios */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Basic Card */}
-            <div
-              onClick={() => setRenewPlan('basic')}
-              className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
-                renewPlan === 'basic'
-                  ? 'border-admin-accent bg-admin-accent/5 ring-1 ring-admin-accent shadow-sm'
-                  : 'border-admin-border bg-admin-bg-base hover:border-admin-border/80'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-xs text-admin-text-primary">الباقة الأساسية (Basic)</span>
-                <span className="font-extrabold text-sm text-admin-accent">
-                  {renewCycle === 'annual' ? '15,000 ج.م / سنة' : '1,500 ج.م / شهر'}
-                </span>
-              </div>
-              <p className="text-[11px] text-admin-text-secondary">حتى 30 طاولة، 200 صنف، منيو QR، ولوحة المطبخ والكاشير.</p>
-            </div>
+            {(() => {
+              const isOffer = Boolean(systemSettings?.offer?.active && (!systemSettings.offer.endsAt || new Date(systemSettings.offer.endsAt) > new Date()));
+              const basicMonthly = isOffer && systemSettings?.offer?.basicPrice ? systemSettings.offer.basicPrice : (systemSettings?.pricing?.basic || 1500);
+              const basicAnnual = isOffer && systemSettings?.offer?.annualBasicPrice ? systemSettings.offer.annualBasicPrice : (systemSettings?.pricing?.annualBasic || (systemSettings?.pricing?.basic ? systemSettings.pricing.basic * 10 : 15000));
+              const bTables = systemSettings?.limits?.tables?.basic ?? systemSettings?.limits?.basic ?? 10;
+              const bProducts = systemSettings?.limits?.products?.basic ?? 50;
+
+              return (
+                <div
+                  onClick={() => setRenewPlan('basic')}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                    renewPlan === 'basic'
+                      ? 'border-admin-accent bg-admin-accent/5 ring-1 ring-admin-accent shadow-sm'
+                      : 'border-admin-border bg-admin-bg-base hover:border-admin-border/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-xs text-admin-text-primary">الباقة الأساسية (Basic)</span>
+                    <span className="font-extrabold text-sm text-admin-accent font-mono">
+                      {renewCycle === 'annual' ? `${basicAnnual.toLocaleString()} ج.م / سنة` : `${basicMonthly.toLocaleString()} ج.م / شهر`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-admin-text-secondary">
+                    {`حتى ${bTables} طاولات، ${bProducts} صنف، منيو QR، ولوحة المطبخ والكاشير.`}
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Pro Card */}
-            <div
-              onClick={() => setRenewPlan('pro')}
-              className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
-                renewPlan === 'pro'
-                  ? 'border-admin-accent bg-admin-accent/5 ring-1 ring-admin-accent shadow-sm'
-                  : 'border-admin-border bg-admin-bg-base hover:border-admin-border/80'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-xs text-admin-text-primary">الباقة المتقدمة (Pro)</span>
-                  <span className="bg-admin-accent text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">شاملة</span>
+            {(() => {
+              const isOffer = Boolean(systemSettings?.offer?.active && (!systemSettings.offer.endsAt || new Date(systemSettings.offer.endsAt) > new Date()));
+              const proMonthly = isOffer && systemSettings?.offer?.proPrice ? systemSettings.offer.proPrice : (systemSettings?.pricing?.pro || 3000);
+              const proAnnual = isOffer && systemSettings?.offer?.annualProPrice ? systemSettings.offer.annualProPrice : (systemSettings?.pricing?.annualPro || (systemSettings?.pricing?.pro ? systemSettings.pricing.pro * 10 : 30000));
+              const pTables = systemSettings?.limits?.tables?.pro ?? systemSettings?.limits?.pro ?? 20;
+              const pProducts = systemSettings?.limits?.products?.pro ?? 9999;
+
+              return (
+                <div
+                  onClick={() => setRenewPlan('pro')}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                    renewPlan === 'pro'
+                      ? 'border-admin-accent bg-admin-accent/5 ring-1 ring-admin-accent shadow-sm'
+                      : 'border-admin-border bg-admin-bg-base hover:border-admin-border/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-xs text-admin-text-primary">الباقة المتقدمة (Pro)</span>
+                      <span className="bg-admin-accent text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">شاملة</span>
+                    </div>
+                    <span className="font-extrabold text-sm text-admin-accent font-mono">
+                      {renewCycle === 'annual' ? `${proAnnual.toLocaleString()} ج.م / سنة` : `${proMonthly.toLocaleString()} ج.م / شهر`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-admin-text-secondary">
+                    {`${pTables >= 9999 ? 'طاولات غير محدودة' : `حتى ${pTables} طاولة`}، ${pProducts >= 9999 ? 'أصناف غير محدودة' : `حتى ${pProducts} صنف`}، برامج الولاء، وتخصيص الفواتير والضريبة.`}
+                  </p>
                 </div>
-                <span className="font-extrabold text-sm text-admin-accent">
-                  {renewCycle === 'annual' ? '30,000 ج.م / سنة' : '3,000 ج.م / شهر'}
-                </span>
-              </div>
-              <p className="text-[11px] text-admin-text-secondary">طاولات وأصناف غير محدودة، برامج الولاء، وتخصيص الفواتير والضريبة.</p>
-            </div>
+              );
+            })()}
           </div>
 
           {/* Plan Change Policy Warning */}

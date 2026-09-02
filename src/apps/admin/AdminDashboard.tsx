@@ -71,13 +71,18 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!restaurant) return;
 
+    const currentToken = useAuthStore.getState().token;
+    if (currentToken) {
+      socket.auth = { token: currentToken };
+    }
+
     if (!socket.connected) {
       socket.connect();
     }
 
-    socket.emit('join_restaurant', restaurant.id, (res: any) => {
+    socket.emit('join_restaurant', { restaurantId: restaurant.id, token: currentToken }, (res: any) => {
       if (res && !res.success) {
-        console.error('[Socket.io]: Failed to join restaurant room:', res.error);
+        console.warn('[Socket.io]: Failed to join restaurant room:', res.error);
       } else {
         console.log('[Socket.io]: Admin successfully joined restaurant room:', restaurant.id);
       }

@@ -318,10 +318,15 @@ export default function StaffDashboard() {
       console.log('Socket connected, joining restaurant room:', restId);
       setIsOnline(true);
 
+      const currentToken = useAuthStore.getState().token;
+      if (currentToken) {
+        socket.auth = { token: currentToken };
+      }
+
       if (restId) {
-        socket.emit('join_restaurant', restId, (res: any) => {
+        socket.emit('join_restaurant', { restaurantId: restId, token: currentToken }, (res: any) => {
           if (res && !res.success) {
-            console.error('[Socket.io]: Failed to join restaurant room:', res.error);
+            console.warn('[Socket.io]: Failed to join restaurant room:', res.error);
           } else {
             console.log('[Socket.io]: Successfully joined restaurant room:', restId);
             queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
