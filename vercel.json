@@ -5,7 +5,11 @@
       "destination": "http://51.255.163.82/api/:path*"
     },
     {
-      "source": "/((?!api).*)",
+      "source": "/socket.io/:path*",
+      "destination": "http://51.255.163.82/socket.io/:path*"
+    },
+    {
+      "source": "/((?!api|socket.io).*)",
       "destination": "/index.html"
     }
   ]
