@@ -46,7 +46,7 @@ export default function PaymentConfirmationPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [paymentData, setPaymentData] = useState<PaymentDetails | null>(null);
 
-  // 1. Real-time Live Socket.io Confirmation Listener
+  // 1. Live Instant Confirmation Listener
   useEffect(() => {
     if (!invoiceId) return;
 
@@ -58,7 +58,6 @@ export default function PaymentConfirmationPage() {
 
     const handlePaymentReceived = (data: any) => {
       if (data && String(data.invoiceId || '').trim() === String(invoiceId).trim()) {
-        console.log('[Socket.io]: Live payment confirmed event received in UI!', data);
         setPaymentData({
           status: 'paid',
           invoiceId,
@@ -71,10 +70,10 @@ export default function PaymentConfirmationPage() {
           phone: data.phone || restaurant?.phone,
           expiresAt: data.expiresAt,
           paidAt: data.paidAt || new Date().toISOString(),
-          message: 'تم تأكيد السداد فوراً عبر السوكيت وخوادم فواتيرك.'
+          message: 'تم تأكيد عملية الدفع بنجاح وتفعيل اشتراكك!'
         });
         setLoading(false);
-        toast.success('🎉 تم تأكيد واستلام عملية الدفع بنجاح وتحديث الصلاحيات فوراً!');
+        toast.success('تم تأكيد عملية الدفع بنجاح وتفعيل الاشتراك!');
       }
     };
 
@@ -94,7 +93,7 @@ export default function PaymentConfirmationPage() {
       setPaymentData({
         status: 'invalid',
         invoiceId: '',
-        message: 'لم يتم تزويد رقم فاتورة صالح. لا يمكن استعراض هذه الصفحة مباشرة منعاً للتلاعب.'
+        message: 'لم يتم العثور على رقم فاتورة صالح للتحقق منها.'
       });
       return;
     }
@@ -120,35 +119,35 @@ export default function PaymentConfirmationPage() {
           phone: data.phone || restaurant?.phone,
           expiresAt: data.expiresAt,
           paidAt: data.paidAt || new Date().toISOString(),
-          message: 'تم التحقق من الفاتورة وسدادها بنجاح عبر بوابة فواتيرك.'
+          message: 'تم تأكيد عملية الدفع بنجاح وتفعيل اشتراكك!'
         });
         setLoading(false);
-      } else if (data?.status === 'pending' && retryCount < 4) {
-        // Auto-retry in 2.5 seconds while waiting for Webhook / Fawaterk confirmation
+      } else if ((!data || data.status === 'pending') && retryCount < 25) {
+        // Continuous smooth auto-retry every 3s while waiting for bank confirmation
         setTimeout(() => {
           verifyInvoice(retryCount + 1);
-        }, 2500);
+        }, 3000);
       } else {
         setPaymentData({
           status: data?.status === 'pending' ? 'pending' : 'failed',
           invoiceId,
           message: data?.status === 'pending'
-            ? 'المعاملة قيد المعالجة من البنك. يتم الاستماع الفوري لتأكيد السداد عبر السوكيت المباشر.'
+            ? 'المعاملة ما زالت قيد المعالجة لدى البنك. إذا تم خصم المبلغ من حسابك، اضغط على زر "تحديث حالة الدفع" أدناه.'
             : 'لم يتم تأكيد السداد لهذه الفاتورة حتى الآن أو تم إلغاء العملية.'
         });
         setLoading(false);
       }
     } catch (error: any) {
-      if (retryCount < 3) {
+      if (retryCount < 25) {
         setTimeout(() => {
           verifyInvoice(retryCount + 1);
-        }, 2500);
+        }, 3000);
       } else {
         console.error('[Verify Payment Page Error]:', error);
         setPaymentData({
           status: 'failed',
           invoiceId,
-          message: error.response?.data?.message || 'تعذر التحقق من الفاتورة من خوادم الدفع.'
+          message: error.response?.data?.error || 'تعذر التحقق من حالة الفاتورة حالياً، يرجى إعادة المحاولة بعد قليل.'
         });
         setLoading(false);
       }
@@ -163,12 +162,8 @@ export default function PaymentConfirmationPage() {
     window.print();
   };
 
-  const planTitle = paymentData?.plan === 'pro' 
-    ? 'الباقة المتقدمة (Pro)' 
-    : paymentData?.plan === 'basic' 
-      ? 'الباقة الأساسية (Basic)' 
-      : 'الباقة التجريبية (Trial)';
-
+  const planTitle = paymentData?.plan === 'pro' ? 'الباقة المتقدمة (Pro)' : 'الباقة الأساسية (Basic)';
+  
   const formattedExpiry = paymentData?.expiresAt 
     ? new Date(paymentData.expiresAt).toLocaleDateString('ar-EG', {
         year: 'numeric',
@@ -199,7 +194,7 @@ export default function PaymentConfirmationPage() {
           </Link>
           <div className="flex items-center gap-2 text-xs text-[#5C524C] font-bold">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>نظام التحقق المباشر من الفواتير (Tawla Real-time Verified)</span>
+            <span>الدفع الإلكتروني الآمن | منصة طاولة</span>
           </div>
         </div>
       </header>
@@ -209,12 +204,12 @@ export default function PaymentConfirmationPage() {
         {loading && (
           <div className="bg-white border border-[#801B2C]/15 rounded-3xl p-12 text-center shadow-xl space-y-4">
             <div className="w-14 h-14 border-4 border-[#801B2C]/20 border-t-[#801B2C] rounded-full animate-spin mx-auto" />
-            <h2 className="text-lg font-bold text-[#1C1612]">جاري التحقق اللحظي من حالة المعاملة...</h2>
-            <p className="text-xs text-[#5C524C]">يتم مطابقة التأكيد الحي عبر السوكيت وخوادم فواتيرك وتحديث بيانات الاشتراك فوراً.</p>
+            <h2 className="text-lg font-bold text-[#1C1612]">جاري التحقق من عملية الدفع...</h2>
+            <p className="text-xs text-[#5C524C]">يرجى الانتظار بضع ثوانٍ بينما نؤكد إتمام المعاملة مع البنك.</p>
           </div>
         )}
 
-        {/* Invalid Access / Tamper Prevention */}
+        {/* Invalid Access */}
         {!loading && paymentData?.status === 'invalid' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -225,14 +220,14 @@ export default function PaymentConfirmationPage() {
               <AlertTriangle className="w-8 h-8" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl font-extrabold text-[#1C1612]">معاملة غير معتمدة أو مفقودة</h2>
+              <h2 className="text-xl font-extrabold text-[#1C1612]">رقم الفاتورة غير صحيح</h2>
               <p className="text-xs text-[#5C524C] leading-relaxed max-w-md mx-auto">
                 {paymentData.message}
               </p>
             </div>
             <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
               <Link to="/checkout" className="px-6 py-3 bg-[#801B2C] text-white rounded-xl text-xs font-bold hover:bg-[#5E1422] transition-colors">
-                الانتقال لصفحة الاشتراك والدفع
+                الانتقال لصفحة الاشتراك
               </Link>
               <Link to="/" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">
                 العودة للرئيسية
@@ -241,7 +236,7 @@ export default function PaymentConfirmationPage() {
           </motion.div>
         )}
 
-        {/* Pending State with Live Socket Listening Indicator */}
+        {/* Pending State */}
         {!loading && paymentData?.status === 'pending' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -252,68 +247,75 @@ export default function PaymentConfirmationPage() {
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold font-mono">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-100 text-amber-900 rounded-full text-xs font-bold">
                 <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
-                <span>قيد انتظار التأكيد النهائي من البنك</span>
+                <span>بانتظار تأكيد البنك</span>
               </div>
               <h2 className="text-xl font-extrabold text-[#1C1612]">جاري معالجة عملية الدفع</h2>
               <p className="text-xs text-[#5C524C] leading-relaxed max-w-md mx-auto">
-                {paymentData.message || 'المعاملة قيد المعالجة. يتم الاستماع الفوري لتأكيد فواتيرك عبر السوكيت، وستتحول الصفحة تلقائياً فور وصول الإشعار.'}
+                {paymentData.message || 'تم إرسال طلب السداد وبانتظار التأكيد النهائي من البنك. سيتم تحديث الصفحة وتفعيل اشتراكك تلقائياً فور الاعتماد.'}
               </p>
               <div className="p-3 bg-amber-50 rounded-xl font-mono text-xs text-amber-900 inline-block mt-2 border border-amber-100">
                 رقم الفاتورة: #{paymentData.invoiceId}
               </div>
             </div>
+
             <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
               <button 
                 onClick={() => verifyInvoice(0)} 
                 className="px-6 py-3 bg-[#801B2C] text-white rounded-xl text-xs font-bold hover:bg-[#5E1422] transition-colors flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/20"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>إعادة التحقق اليدوي الآن</span>
+                <span>تحديث حالة الدفع</span>
               </button>
-              <Link to="/admin?tab=subscription" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">
+              <Link to="/admin" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">
                 العودة للوحة التحكم
               </Link>
             </div>
           </motion.div>
         )}
 
-        {/* Failed Payment State */}
+        {/* Failed State */}
         {!loading && paymentData?.status === 'failed' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white border border-rose-200 rounded-3xl p-8 sm:p-10 text-center shadow-xl space-y-6"
+            className="bg-white border border-rose-300 rounded-3xl p-8 sm:p-10 text-center shadow-xl space-y-6"
           >
-            <div className="w-16 h-16 bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600 mx-auto">
+            <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-200">
               <XCircle className="w-8 h-8" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl font-extrabold text-rose-950">تعذر تأكيد عملية الدفع</h2>
-              <p className="text-xs text-rose-800 leading-relaxed max-w-md mx-auto">
-                {paymentData.message || 'لم يتم تأكيد السداد من جهة البنك أو تم إلغاء المعاملة من فواتيرك.'}
-              </p>
-              <div className="p-3 bg-rose-50 rounded-xl font-mono text-xs text-rose-900 inline-block mt-2">
-                رقم الفاتورة: #{paymentData.invoiceId}
+              <div className="inline-flex items-center gap-1.5 text-xs bg-rose-100 text-rose-800 font-bold px-3 py-1 rounded-full">
+                لم يتم إتمام الدفع
               </div>
+              <h2 className="text-xl font-extrabold text-[#1C1612]">تعذر تأكيد عملية السداد</h2>
+              <p className="text-xs text-[#5C524C] leading-relaxed max-w-md mx-auto">
+                {paymentData.message || 'لم نتمكن من تأكيد عملية الدفع من البنك. إذا تم خصم المبلغ أو واجهت مشكلة، يرجى التواصل مع فريق الدعم.'}
+              </p>
+              {paymentData.invoiceId && (
+                <div className="p-2.5 bg-zinc-50 rounded-lg text-xs font-mono text-zinc-600 inline-block">
+                  رقم المعاملة: #{paymentData.invoiceId}
+                </div>
+              )}
             </div>
+
             <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
               <button 
                 onClick={() => verifyInvoice(0)} 
                 className="px-6 py-3 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>إعادة التحقق من الحالة</span>
+                <span>إعادة المحاولة</span>
               </button>
               <Link to="/checkout" className="px-6 py-3 bg-[#801B2C] text-white rounded-xl text-xs font-bold hover:bg-[#5E1422] transition-colors">
-                إعادة المحاولة عبر صفحة الدفع
+                اختيار طريقة دفع أخرى
               </Link>
             </div>
           </motion.div>
         )}
 
-        {/* Success & Verified Official Digital Receipt */}
+        {/* Success State */}
         {!loading && paymentData?.status === 'paid' && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.98, y: 15 }}
@@ -331,19 +333,18 @@ export default function PaymentConfirmationPage() {
               <div className="space-y-1">
                 <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-100/80 text-emerald-900 font-extrabold px-3.5 py-1 rounded-full font-mono">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-                  معاملة مسددة ومحققة 100%
+                  تم الدفع بنجاح 100%
                 </span>
-                <h1 className="text-2xl font-black text-[#1C1612]">إيصال سداد وتجديد اشتراك رسمي</h1>
-                <p className="text-xs text-[#5C524C]">شكراً لثقتكم بمنصة طاولة • تم تفعيل وتمديد الصلاحيات في النظام تلقائياً.</p>
+                <h1 className="text-2xl font-black text-[#1C1612]">إيصال سداد وتفعيل اشتراك رسمي</h1>
+                <p className="text-xs text-[#5C524C]">شكراً لثقتكم بمنصة طاولة — تم تفعيل وتمديد الصلاحيات في النظام تلقائياً.</p>
               </div>
             </div>
 
-            {/* Official Tax / Subscription Receipt Card */}
+            {/* Receipt Card */}
             <div className="bg-[#FAF8F5] border border-[#801B2C]/15 rounded-2xl p-6 space-y-4 text-right">
-              {/* Reference Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#801B2C]/10 pb-4">
                 <div>
-                  <span className="text-[11px] font-bold text-[#73675F] block">الرقم المرجعي المعتمد (Reference No):</span>
+                  <span className="text-[11px] font-bold text-[#73675F] block">الرقم المرجعي المعتمد:</span>
                   <span className="font-mono font-black text-sm text-[#801B2C] select-all">
                     {paymentData.referenceNumber || `TWL-2026-${paymentData.invoiceId}`}
                   </span>
@@ -382,9 +383,9 @@ export default function PaymentConfirmationPage() {
                 </div>
 
                 <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
-                  <span className="text-[#73675F]">دورة الفوترة:</span>
+                  <span className="text-[#73675F]">دورة الفاتورة:</span>
                   <span className="font-bold text-[#1C1612] text-sm">
-                    {paymentData.billingCycle === 'annual' ? 'سنوي (12 شهر)' : 'شهري (30 يوماً)'}
+                    {paymentData.billingCycle === 'annual' ? 'سنوي (12 شهراً)' : 'شهري (30 يوماً)'}
                   </span>
                 </div>
 
@@ -406,10 +407,10 @@ export default function PaymentConfirmationPage() {
                 )}
 
                 <div className="flex justify-between sm:flex-col sm:justify-start gap-1 pb-2 sm:pb-0 border-b sm:border-b-0 border-zinc-200/60">
-                  <span className="text-[#73675F]">بوابة الدفع والتحقق:</span>
+                  <span className="text-[#73675F]">بوابة الدفع والتحصيل:</span>
                   <span className="font-bold text-[#1C1612] text-xs flex items-center gap-1">
                     <CreditCard className="w-3.5 h-3.5 text-[#801B2C]" />
-                    فواتيرك (Fawaterk Hosted Gateway)
+                    الدفع الإلكتروني المعتمد
                   </span>
                 </div>
 
@@ -425,7 +426,7 @@ export default function PaymentConfirmationPage() {
               <div className="pt-3 border-t border-[#801B2C]/10 text-center">
                 <p className="text-[10px] text-[#73675F] flex items-center justify-center gap-1.5 font-medium">
                   <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                  <span>معاملة مشفرة وموثقة إلكترونياً بسجلات منصة طاولة لتقنية نظم الضيافة.</span>
+                  <span>معاملة مشفرة وموثقة إلكترونياً بسجلات منصة طاولة.</span>
                 </p>
               </div>
             </div>
@@ -437,7 +438,7 @@ export default function PaymentConfirmationPage() {
                   to="/admin?tab=subscription" 
                   className="w-full py-4 bg-[#801B2C] hover:bg-[#5E1422] text-white font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20 transition-all text-sm"
                 >
-                  <span>الدخول المباشر للوحة تحكم المطعم (Dashboard)</span>
+                  <span>الدخول إلى لوحة تحكم المطعم (Dashboard)</span>
                   <ArrowLeft className="w-4 h-4" />
                 </Link>
               ) : initialType === 'new' ? (
