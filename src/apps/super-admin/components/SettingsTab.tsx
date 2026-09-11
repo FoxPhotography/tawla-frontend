@@ -18,6 +18,7 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   const [proPrice, setProPrice] = useState(3000);
   const [annualBasicPrice, setAnnualBasicPrice] = useState(15000);
   const [annualProPrice, setAnnualProPrice] = useState(30000);
+  const [trialDays, setTrialDays] = useState(15);
 
   const [offerActive, setOfferActive] = useState(false);
   const [offerTitle, setOfferTitle] = useState('');
@@ -58,6 +59,7 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
       setProPrice(systemSettings.pricing?.pro || 3000);
       setAnnualBasicPrice(systemSettings.pricing?.annualBasic || (systemSettings.pricing?.basic ? systemSettings.pricing.basic * 10 : 15000));
       setAnnualProPrice(systemSettings.pricing?.annualPro || (systemSettings.pricing?.pro ? systemSettings.pricing.pro * 10 : 30000));
+      setTrialDays(systemSettings.trialDays || 15);
 
       setOfferActive(systemSettings.offer?.active || false);
       setOfferTitle(systemSettings.offer?.title || '');
@@ -119,6 +121,7 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   const updateSettingsMutation = useMutation({
     mutationFn: async () => {
       const payload = {
+        trialDays: Number(trialDays) || 15,
         pricing: {
           basic: Number(basicPrice),
           pro: Number(proPrice),
@@ -198,7 +201,20 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
           </h3>
           <p className="text-xs text-admin-text-muted font-bold">حدد الأسعار الأساسية المعتمدة للباقات الشهرية والسنوية بالجنيه المصري.</p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Trial Days */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-admin-accent">مدة التجربة المجانية (أيام) *</label>
+              <input
+                type="number"
+                required
+                min="1"
+                max="365"
+                value={trialDays}
+                onChange={(e) => setTrialDays(Number(e.target.value))}
+                className="w-full bg-admin-bg-base border border-admin-accent/40 focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+              />
+            </div>
             {/* Basic Monthly price */}
             <div className="space-y-2">
               <label className="block text-xs font-bold text-admin-text-secondary">سعر BASIC شهرياً (ج.م) *</label>
