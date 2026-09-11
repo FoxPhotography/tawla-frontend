@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tawla-cache-v8';
+const CACHE_NAME = 'tawla-cache-v9';
 const ASSETS_TO_CACHE = [
   '/staff',
   '/index.html',
@@ -59,7 +59,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/api') || 
     url.pathname.startsWith('/socket.io') ||
     url.hostname.includes('fawaterk.com') ||
-    url.hostname.includes('railway.app')
+    
   ) {
     return;
   }

@@ -2,17 +2,14 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
 const getApiUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_URL;
   if (typeof window !== 'undefined') {
     const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (!isLocalHost) {
-      if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
-        return envUrl;
-      }
+      // Always use relative /api path on production to communicate directly with Nginx and local backend
       return '/api';
     }
   }
-  return envUrl || '/api';
+  return import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 };
 
 const VITE_API_URL = getApiUrl();
