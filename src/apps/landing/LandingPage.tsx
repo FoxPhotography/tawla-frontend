@@ -177,7 +177,8 @@ export default function LandingPage() {
   }, [settings.offer]);
 
   const handleWhatsappContact = () => {
-    window.open('https://wa.me/201066980953', '_blank');
+    const message = encodeURIComponent('مرحباً طاولة، أود الاستفسار عن المنظومة وبدء التجربة المجانية لمدة 15 يوماً لكافيه/مطعم.');
+    window.open(`https://wa.me/201066980953?text=${message}`, '_blank');
   };
 
   // Interactive Simulator Functions
@@ -575,7 +576,7 @@ export default function LandingPage() {
             </div>
 
             <div className="text-[11px] text-[#5C524C]/50 tracking-wide font-medium">
-              تفعيل المنظومة خلال ٤٨ ساعة • باقة تجريبية مجانية شهر كامل • دعم فني مخصص
+              تفعيل المنظومة خلال ٤٨ ساعة • باقة تجريبية مجانية ١٥ يوماً بالكامل • دعم فني مخصص
             </div>
           </div>
 
@@ -667,7 +668,7 @@ export default function LandingPage() {
             {[
               { value: <CountUp target={35} suffix="%+" />, label: "زيادة في سرعة تلبية الطلبات" },
               { value: "0 خطأ", label: "في استقبال المطبخ للطلبات" },
-              { value: "30 يوم", label: "باقة تجريبية مجانية بالكامل للفرع" },
+              { value: "15 يوم", label: "باقة تجريبية مجانية بالكامل للفرع" },
             ].map((stat, i) => (
               <div key={i} className="text-center pt-4 md:pt-0 first:pt-0">
                 <div className="text-[34px] lg:text-[40px] font-bold text-white leading-none" style={{ fontFamily: '"Tajawal", sans-serif' }}>
@@ -1056,7 +1057,7 @@ export default function LandingPage() {
               خطط تناسب حجم أعمالك
             </h2>
             <p className="text-[14px] text-[#5C524C]">
-              جميع الباقات تأتي بـ 30 يوم تجربة مجانية بالكامل للتحقق من جودة وموثوقية النظام.
+              جميع الباقات تأتي بـ 15 يوماً تجربة مجانية بالكامل للتحقق من جودة وموثوقية النظام.
             </p>
           </div>
 
@@ -1498,7 +1499,7 @@ export default function LandingPage() {
               href="/refund" 
               className="hover:text-[#801B2C] transition-colors font-medium"
             >
-              سياسة الاسترجاع (15 يوماً)
+              سياسة الاسترجاع والتجربة (15 يوماً)
             </a>
             <a 
               href="/privacy" 
