@@ -13,6 +13,8 @@ import {
   Calendar,
   Building2,
   RefreshCw,
+  RotateCcw,
+  MessageCircle,
   Loader2
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -47,6 +49,15 @@ export default function PaymentConfirmationPage() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [paymentData, setPaymentData] = useState<PaymentDetails | null>(null);
+  const [supportWhatsapp, setSupportWhatsapp] = useState<string>('201066980953');
+
+  useEffect(() => {
+    api.get('/system-settings').then(res => {
+      const data = res.data?.data;
+      if (data?.supportWhatsapp) setSupportWhatsapp(data.supportWhatsapp);
+      else if (data?.supportPhone) setSupportWhatsapp(data.supportPhone);
+    }).catch(() => {});
+  }, []);
 
   const urlStatus = (searchParams.get('status') || '').toLowerCase().trim();
   const urlMessage = searchParams.get('message') || searchParams.get('error') || '';
@@ -411,49 +422,44 @@ export default function PaymentConfirmationPage() {
             )}
 
             {/* Action Buttons */}
-            <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="pt-5 border-t border-zinc-100 flex flex-wrap items-center justify-center gap-3 w-full">
+              {/* Primary Action Button: Re-try Payment */}
               {initialType === 'new' ? (
-                <>
-                  <Link
-                    to={`/register?plan=${paymentData.plan || 'basic'}&billing=${paymentData.billingCycle || 'monthly'}`}
-                    className="px-6 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>إعادة المحاولة مع اختيار الباقة</span>
-                  </Link>
-
-                  <Link
-                    to="/"
-                    className="px-6 py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center"
-                  >
-                    <span>العودة للصفحة الرئيسية</span>
-                  </Link>
-                </>
+                <Link
+                  to={`/register?plan=${paymentData.plan || 'basic'}&billing=${paymentData.billingCycle || 'monthly'}`}
+                  className="whitespace-nowrap px-6 py-3 bg-[#801B2C] hover:bg-[#601321] text-white rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/25 hover:shadow-lg active:scale-[0.98]"
+                >
+                  <RefreshCw className="w-4 h-4 shrink-0" />
+                  <span>إعادة المحاولة ببيانات صحيحة</span>
+                </Link>
               ) : (
-                <>
-                  <Link
-                    to={`/checkout?plan=${paymentData.plan || 'pro'}&billing=${paymentData.billingCycle || 'monthly'}`}
-                    className="px-6 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>إعادة المحاولة والدفع</span>
-                  </Link>
-
-                  <Link
-                    to="/admin?tab=subscription"
-                    className="px-6 py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center"
-                  >
-                    <span>العودة لإعدادات الاشتراك</span>
-                  </Link>
-                </>
+                <Link
+                  to={`/checkout?plan=${paymentData.plan || 'pro'}&billing=${paymentData.billingCycle || 'monthly'}`}
+                  className="whitespace-nowrap px-6 py-3 bg-[#801B2C] hover:bg-[#601321] text-white rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/25 hover:shadow-lg active:scale-[0.98]"
+                >
+                  <RefreshCw className="w-4 h-4 shrink-0" />
+                  <span>إعادة المحاولة ببيانات صحيحة</span>
+                </Link>
               )}
 
+              {/* Secondary Action Button: Re-verify Payment if money deducted */}
+              <button
+                type="button"
+                onClick={() => verifyInvoice(0)}
+                className="whitespace-nowrap px-6 py-3 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-200 hover:border-zinc-300 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+              >
+                <RotateCcw className="w-4 h-4 shrink-0 text-zinc-500" />
+                <span>إعادة التحقق (في حال تم الخصم)</span>
+              </button>
+
+              {/* Support Button */}
               <a 
-                href="https://wa.me/201090407080" 
+                href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "") || "201066980953"}`} 
                 target="_blank" 
                 rel="noreferrer"
-                className="px-6 py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                className="whitespace-nowrap px-6 py-3 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-300/80 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
               >
+                <MessageCircle className="w-4 h-4 shrink-0 text-emerald-600" />
                 <span>تواصل مع الدعم الفني</span>
               </a>
             </div>
@@ -577,39 +583,29 @@ export default function PaymentConfirmationPage() {
             </div>
 
             {/* Actions */}
-            <div className="space-y-3 pt-1 print:hidden">
-              {initialType === 'new' ? (
-                <Link 
-                  to="/admin" 
-                  className="w-full py-4 bg-[#801B2C] hover:bg-[#5E1422] text-white font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20 transition-all text-sm"
-                >
-                  <Building2 className="w-4 h-4" />
-                  <span>الدخول إلى لوحة تحكم المطعم الجديد (Dashboard)</span>
-                  <ArrowLeft className="w-4 h-4" />
-                </Link>
-              ) : (
-                <Link 
-                  to="/admin?tab=subscription" 
-                  className="w-full py-4 bg-[#801B2C] hover:bg-[#5E1422] text-white font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20 transition-all text-sm"
-                >
-                  <span>العودة إلى لوحة تحكم المطعم (Dashboard)</span>
-                  <ArrowLeft className="w-4 h-4" />
-                </Link>
-              )}
+            <div className="space-y-4 pt-2 print:hidden">
+              <Link 
+                to="/admin" 
+                className="w-full py-4 px-6 bg-gradient-to-r from-[#801B2C] via-[#6e1625] to-[#55101d] hover:from-[#6e1625] hover:to-[#400b15] text-white font-extrabold rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-[#801B2C]/25 transition-all text-base active:scale-[0.99] group"
+              >
+                <Building2 className="w-5 h-5 shrink-0 text-rose-200 group-hover:scale-110 transition-transform" />
+                <span className="whitespace-nowrap">الانتقال مباشرة إلى لوحة تحكم المطعم (Dashboard)</span>
+                <ArrowLeft className="w-5 h-5 shrink-0 rtl:rotate-180 group-hover:translate-x-1 transition-transform" />
+              </Link>
 
-              <div className="flex items-center justify-center gap-4 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
                 <button 
                   onClick={handlePrint}
-                  className="px-5 py-2.5 bg-white border border-[#801B2C]/20 text-[#5C524C] hover:text-[#801B2C] rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+                  className="whitespace-nowrap px-6 py-2.5 bg-white hover:bg-zinc-50 border border-zinc-200 hover:border-zinc-300 text-zinc-700 hover:text-[#801B2C] rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 shadow-xs"
                 >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>طباعة الفاتورة</span>
+                  <Printer className="w-4 h-4 shrink-0 text-zinc-500" />
+                  <span>طباعة إيصال السداد</span>
                 </button>
                 <Link 
                   to="/"
-                  className="px-5 py-2.5 text-xs text-[#5C524C] hover:text-[#1C1612] font-semibold transition-colors"
+                  className="whitespace-nowrap px-6 py-2.5 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 text-zinc-600 hover:text-[#1C1612] rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2"
                 >
-                  العودة للصفحة الرئيسية
+                  <span>العودة للصفحة الرئيسية</span>
                 </Link>
               </div>
             </div>

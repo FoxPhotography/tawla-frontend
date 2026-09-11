@@ -1,7 +1,15 @@
 import LegalLayout from './LegalLayout.js';
 import { Link } from 'react-router-dom';
+import { api } from '../../shared/services/api';
+import { useState, useEffect } from 'react';
 
 export default function TermsAndConditions() {
+  const [supportPhone, setSupportPhone] = useState('+201066980953');
+  useEffect(() => {
+    api.get('/system-settings').then(res => {
+      if (res.data?.data?.supportPhone) setSupportPhone(res.data.data.supportPhone);
+    }).catch(() => {});
+  }, []);
   return (
     <LegalLayout
       title="الشروط والأحكام العامة"
@@ -143,7 +151,7 @@ export default function TermsAndConditions() {
         <div className="p-4 rounded-2xl bg-[#F4EFEB] text-sm space-y-1">
           <p><strong>البريد الإلكتروني:</strong> <span className="font-mono text-[#801B2C]" dir="ltr">support.tawla@gmail.com</span></p>
           <p><strong>المقر الرئيسي:</strong> مركز بلقاس - محافظة الدقهلية - جمهورية مصر العربية</p>
-          <p><strong>هاتف وواتساب الدعم:</strong> <span className="font-mono" dir="ltr">+201066980953</span></p>
+          <p><strong>هاتف وواتساب الدعم:</strong> <span className="font-mono" dir="ltr">{supportPhone}</span></p>
         </div>
       </section>
 

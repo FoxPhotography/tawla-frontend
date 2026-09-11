@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Sliders, Flame, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Sliders, Flame, ShieldCheck, RefreshCw, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import CustomDateTimePicker from '../CustomDateTimePicker';
@@ -19,6 +19,8 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
   const [annualBasicPrice, setAnnualBasicPrice] = useState(15000);
   const [annualProPrice, setAnnualProPrice] = useState(30000);
   const [trialDays, setTrialDays] = useState(15);
+  const [supportPhone, setSupportPhone] = useState('201066980953');
+  const [supportWhatsapp, setSupportWhatsapp] = useState('201066980953');
 
   const [offerActive, setOfferActive] = useState(false);
   const [offerTitle, setOfferTitle] = useState('');
@@ -60,6 +62,8 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
       setAnnualBasicPrice(systemSettings.pricing?.annualBasic || (systemSettings.pricing?.basic ? systemSettings.pricing.basic * 10 : 15000));
       setAnnualProPrice(systemSettings.pricing?.annualPro || (systemSettings.pricing?.pro ? systemSettings.pricing.pro * 10 : 30000));
       setTrialDays(systemSettings.trialDays || 15);
+      setSupportPhone(systemSettings.supportPhone || '201066980953');
+      setSupportWhatsapp(systemSettings.supportWhatsapp || '201066980953');
 
       setOfferActive(systemSettings.offer?.active || false);
       setOfferTitle(systemSettings.offer?.title || '');
@@ -194,6 +198,48 @@ export default function SettingsTab({ systemSettings }: SettingsTabProps) {
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6 outline-none">
+        {/* Support & Contact Settings */}
+        <div className="bg-admin-bg-base/60 border border-admin-border rounded-xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+              <Phone className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-admin-text-primary">بيانات التواصل والدعم الفني للمنصة (Technical Support)</h3>
+              <p className="text-xs text-admin-text-muted font-medium">يتم تطبيق وتحديث هذا الرقم تلقائياً وفورياً في كافة صفحات المنصة، صفحة الهبوط، شاشات تأكيد وفشل الدفع، والسياسات الرسمية.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-admin-text-secondary">رقم واتساب الدعم الفني المباشر *</label>
+              <input
+                type="text"
+                required
+                value={supportWhatsapp}
+                onChange={(e) => setSupportWhatsapp(e.target.value)}
+                placeholder="201066980953"
+                className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+                dir="ltr"
+              />
+              <p className="text-[10px] text-admin-text-muted">الرقم بصيغة دولية بدون + (مثال: 201066980953) لربطه بروابط المحادثة المباشرة wa.me.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-admin-text-secondary">رقم هاتف الدعم الفني للعرض للجمهور *</label>
+              <input
+                type="text"
+                required
+                value={supportPhone}
+                onChange={(e) => setSupportPhone(e.target.value)}
+                placeholder="+20 106 698 0953"
+                className="w-full bg-admin-bg-base border border-admin-border focus:border-admin-accent text-admin-text-primary rounded-lg px-4 py-2.5 text-xs font-bold transition-all font-mono focus:outline-none outline-none"
+                dir="ltr"
+              />
+              <p className="text-[10px] text-admin-text-muted">الرقم المنسق المعروض للعملاء في أسفل الصفحات وشاشات التواصل.</p>
+            </div>
+          </div>
+        </div>
         <div className="space-y-3">
           <h3 className="text-sm font-extrabold text-admin-accent flex items-center gap-1.5">
             <Sliders className="w-4 h-4" />

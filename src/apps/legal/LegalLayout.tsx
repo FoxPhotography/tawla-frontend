@@ -1,4 +1,5 @@
-import React from 'react';
+import { api } from '../../shared/services/api.js';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Shield, FileText, RotateCcw, Mail, MapPin, Phone, Lock } from 'lucide-react';
@@ -18,6 +19,16 @@ export default function LegalLayout({
   children,
 }: LegalLayoutProps) {
   const location = useLocation();
+  const [supportPhone, setSupportPhone] = useState('+20 106 698 0953');
+  const [supportWhatsapp, setSupportWhatsapp] = useState('201066980953');
+
+  useEffect(() => {
+    api.get('/system-settings').then((res: any) => {
+      const data = res.data?.data;
+      if (data?.supportPhone) setSupportPhone(data.supportPhone);
+      if (data?.supportWhatsapp) setSupportWhatsapp(data.supportWhatsapp);
+    }).catch(() => {});
+  }, []);
 
   const navLinks = [
     { path: '/refund', label: 'سياسة الاسترجاع والإلغاء', icon: RotateCcw },
@@ -163,8 +174,8 @@ export default function LegalLayout({
               <Phone className="w-4 h-4 text-[#801B2C] mt-1 shrink-0" />
               <div>
                 <span className="text-[11px] text-[#5C524C] block">خدمة العملاء والواتساب</span>
-                <a href="https://wa.me/201066980953" target="_blank" rel="noreferrer" className="text-[13px] font-bold text-[#1C1612] hover:text-[#801B2C]" dir="ltr">
-                  +20 106 698 0953
+                <a href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "") || "201066980953"}`} target="_blank" rel="noreferrer" className="text-[13px] font-bold text-[#1C1612] hover:text-[#801B2C]" dir="ltr">
+                  {supportPhone}
                 </a>
               </div>
             </div>
