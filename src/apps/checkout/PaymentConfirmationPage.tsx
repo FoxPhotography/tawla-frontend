@@ -34,6 +34,8 @@ interface PaymentDetails {
   expiresAt?: string;
   paidAt?: string;
   message?: string;
+  tip?: string;
+  code?: string;
 }
 
 export default function PaymentConfirmationPage() {
@@ -46,7 +48,10 @@ export default function PaymentConfirmationPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [paymentData, setPaymentData] = useState<PaymentDetails | null>(null);
 
-  // 1. Live Instant Confirmation Listener
+  const urlStatus = (searchParams.get('status') || '').toLowerCase().trim();
+  const urlMessage = searchParams.get('message') || searchParams.get('error') || '';
+
+  // 1. Live Instant Confirmation / Rejection Listener via WebSocket
   useEffect(() => {
     if (!invoiceId) return;
 
@@ -77,12 +82,35 @@ export default function PaymentConfirmationPage() {
       }
     };
 
+    const handlePaymentFailed = (data: any) => {
+      if (data && String(data.invoiceId || '').trim() === String(invoiceId).trim()) {
+        setPaymentData((prev) => ({
+          status: 'failed',
+          invoiceId,
+          referenceNumber: data.referenceNumber || prev?.referenceNumber || `TWL-2026-${invoiceId}`,
+          plan: data.plan || prev?.plan || 'pro',
+          billingCycle: data.billingCycle || prev?.billingCycle || 'monthly',
+          amount: data.amount || prev?.amount,
+          restaurantName: data.restaurantName || prev?.restaurantName,
+          ownerName: data.ownerName || prev?.ownerName,
+          phone: data.phone || prev?.phone,
+          message: data.message || 'تم رفض عملية الدفع من قِبل البنك.',
+          tip: data.tip || 'يرجى مراجعة بيانات البطاقة وتوافر رصيد كافٍ أو تجربة وسيلة دفع أخرى.',
+          code: data.code,
+        }));
+        setLoading(false);
+        toast.error('تم رفض عملية الدفع من قِبل البنك.');
+      }
+    };
+
     socket.on('payment_confirmed', handlePaymentReceived);
     socket.on('payment_received', handlePaymentReceived);
+    socket.on('payment_failed', handlePaymentFailed);
 
     return () => {
       socket.off('payment_confirmed', handlePaymentReceived);
       socket.off('payment_received', handlePaymentReceived);
+      socket.off('payment_failed', handlePaymentFailed);
     };
   }, [invoiceId, restaurant, user]);
 
@@ -102,8 +130,11 @@ export default function PaymentConfirmationPage() {
       setLoading(true);
     }
 
+    const isKnownFailure = urlStatus === 'failed' || urlStatus === 'fail' || urlStatus === 'cancel' || urlStatus === 'declined';
+
     try {
-      const response = await api.get(`/subscriptions/verify-payment?invoiceId=${encodeURIComponent(invoiceId)}`);
+      const queryUrl = `/subscriptions/verify-payment?invoiceId=${encodeURIComponent(invoiceId)}${isKnownFailure ? '&status=failed' : ''}`;
+      const response = await api.get(queryUrl);
       const data = response.data?.data;
 
       if (data && (data.status === 'paid' || data.status === 'success' || data.status === 'captured')) {
@@ -122,32 +153,71 @@ export default function PaymentConfirmationPage() {
           message: 'تم تأكيد عملية الدفع بنجاح وتفعيل اشتراكك!'
         });
         setLoading(false);
-      } else if ((!data || data.status === 'pending') && retryCount < 25) {
-        // Continuous smooth auto-retry every 3s while waiting for bank confirmation
+      } else if (data && data.status === 'failed') {
+        // Explicit failure status returned from API
+        setPaymentData({
+          status: 'failed',
+          invoiceId,
+          referenceNumber: data.referenceNumber,
+          plan: data.plan || 'pro',
+          billingCycle: data.billingCycle || 'monthly',
+          amount: data.amount,
+          restaurantName: data.restaurantName || restaurant?.name,
+          ownerName: data.ownerName || user?.name,
+          phone: data.phone,
+          message: data.message || data.failureReason || 'تم رفض عملية الدفع من قِبل البنك المصدر.',
+          tip: data.tip || 'يرجى التأكد من رصيد البطاقة وصلاحيتها للشراء الإلكتروني أو استخدام بطاقة أخرى.',
+          code: data.code,
+        });
+        setLoading(false);
+      } else if (isKnownFailure) {
+        // Redirection URL already informed us of failure
+        setPaymentData({
+          status: 'failed',
+          invoiceId,
+          referenceNumber: data?.referenceNumber,
+          plan: data?.plan || 'pro',
+          billingCycle: data?.billingCycle || 'monthly',
+          amount: data?.amount,
+          message: data?.message || urlMessage || 'تم إلغاء أو رفض عملية الدفع.',
+          tip: data?.tip || 'يمكنك إعادة المحاولة واختيار وسيلة دفع أخرى أو التحقق من بيانات البطاقة.',
+          code: data?.code,
+        });
+        setLoading(false);
+      } else if ((!data || data.status === 'pending') && retryCount < 3) {
+        // Continuous smooth auto-retry every 2.5s (up to 3 times = ~8 seconds max)
         setTimeout(() => {
           verifyInvoice(retryCount + 1);
-        }, 3000);
+        }, 2500);
       } else {
+        // Stop spinning! Show Pending or Failed state with clear guidance
         setPaymentData({
           status: data?.status === 'pending' ? 'pending' : 'failed',
           invoiceId,
+          referenceNumber: data?.referenceNumber,
+          plan: data?.plan || 'pro',
+          billingCycle: data?.billingCycle || 'monthly',
+          amount: data?.amount,
+          restaurantName: data?.restaurantName || restaurant?.name,
+          ownerName: data?.ownerName || user?.name,
           message: data?.status === 'pending'
             ? 'المعاملة ما زالت قيد المعالجة لدى البنك. إذا تم خصم المبلغ من حسابك، اضغط على زر "تحديث حالة الدفع" أدناه.'
-            : 'لم يتم تأكيد السداد لهذه الفاتورة حتى الآن أو تم إلغاء العملية.'
+            : (data?.message || 'لم يتم تأكيد السداد لهذه الفاتورة حتى الآن أو تم إلغاء العملية.')
         });
         setLoading(false);
       }
     } catch (error: any) {
-      if (retryCount < 25) {
+      if (retryCount < 2 && !isKnownFailure) {
         setTimeout(() => {
           verifyInvoice(retryCount + 1);
-        }, 3000);
+        }, 2500);
       } else {
         console.error('[Verify Payment Page Error]:', error);
         setPaymentData({
           status: 'failed',
           invoiceId,
-          message: error.response?.data?.error || 'تعذر التحقق من حالة الفاتورة حالياً، يرجى إعادة المحاولة بعد قليل.'
+          message: error.response?.data?.error || 'تعذر تأكيد حالة الدفع من قِبل البنك. يرجى إعادة المحاولة.',
+          tip: 'يرجى مراجعة البنك أو استخدام وسيلة دفع بديلة.'
         });
         setLoading(false);
       }
@@ -278,39 +348,89 @@ export default function PaymentConfirmationPage() {
         {/* Failed State */}
         {!loading && paymentData?.status === 'failed' && (
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white border border-rose-300 rounded-3xl p-8 sm:p-10 text-center shadow-xl space-y-6"
+            initial={{ opacity: 0, scale: 0.98, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white border-2 border-rose-300 rounded-3xl p-6 sm:p-10 text-center shadow-xl space-y-6"
           >
-            <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-200">
-              <XCircle className="w-8 h-8" />
+            <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-200 shadow-sm">
+              <XCircle className="w-9 h-9" />
             </div>
+
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 text-xs bg-rose-100 text-rose-800 font-bold px-3 py-1 rounded-full">
-                لم يتم إتمام الدفع
+              <div className="inline-flex items-center gap-1.5 text-xs bg-rose-100 text-rose-800 font-extrabold px-3.5 py-1 rounded-full">
+                <span>عملية دفع غير مقبولة / مرفوضة</span>
               </div>
-              <h2 className="text-xl font-extrabold text-[#1C1612]">تعذر تأكيد عملية السداد</h2>
-              <p className="text-xs text-[#5C524C] leading-relaxed max-w-md mx-auto">
-                {paymentData.message || 'لم نتمكن من تأكيد عملية الدفع من البنك. إذا تم خصم المبلغ أو واجهت مشكلة، يرجى التواصل مع فريق الدعم.'}
+              <h1 className="text-2xl font-black text-[#1C1612]">تعذر إتمام عملية الدفع</h1>
+              <p className="text-sm font-semibold text-rose-700 bg-rose-50 border border-rose-200/60 p-3.5 rounded-2xl max-w-lg mx-auto leading-relaxed">
+                {paymentData.message || 'تم رفض المعاملة من قِبل البنك المصدر للبطاقة أو تم إلغاء العملية.'}
               </p>
-              {paymentData.invoiceId && (
-                <div className="p-2.5 bg-zinc-50 rounded-lg text-xs font-mono text-zinc-600 inline-block">
-                  رقم المعاملة: #{paymentData.invoiceId}
+              {paymentData.tip && (
+                <div className="p-3.5 bg-amber-50/80 border border-amber-200/70 rounded-2xl text-xs text-amber-900 max-w-lg mx-auto text-right leading-relaxed flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block mb-0.5">إرشادات مقترحة لحل المشكلة:</span>
+                    <span>{paymentData.tip}</span>
+                  </div>
                 </div>
               )}
             </div>
 
+            {/* Transaction Brief */}
+            {paymentData.invoiceId && (
+              <div className="bg-[#FAF8F5] border border-zinc-200/80 rounded-2xl p-4 text-xs space-y-2 max-w-md mx-auto text-right">
+                <div className="flex justify-between items-center border-b border-zinc-200/60 pb-2">
+                  <span className="text-[#5C524C]">رقم الفاتورة:</span>
+                  <span className="font-mono font-bold text-[#1C1612]">#{paymentData.invoiceId}</span>
+                </div>
+                {paymentData.amount ? (
+                  <div className="flex justify-between items-center border-b border-zinc-200/60 pb-2">
+                    <span className="text-[#5C524C]">المبلغ المطلوب:</span>
+                    <span className="font-bold text-[#801B2C]">{paymentData.amount.toLocaleString()} ج.م</span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between items-center">
+                  <span className="text-[#5C524C]">حالة المعاملة:</span>
+                  <span className="font-bold text-rose-600">مرفوضة / لم يتم الخصم</span>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
             <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
+              {initialType === 'new' ? (
+                <Link
+                  to={`/register?plan=${paymentData.plan || 'basic'}&billing=${paymentData.billingCycle || 'monthly'}`}
+                  className="px-6 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>إعادة المحاولة ببيانات صحيحة</span>
+                </Link>
+              ) : (
+                <Link
+                  to={`/checkout?plan=${paymentData.plan || 'pro'}&billing=${paymentData.billingCycle || 'monthly'}`}
+                  className="px-6 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>إعادة المحاولة والدفع</span>
+                </Link>
+              )}
+
               <button 
                 onClick={() => verifyInvoice(0)} 
-                className="px-6 py-3 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
+                className="px-6 py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>إعادة المحاولة</span>
+                <span>إعادة التحقق (في حال تم الخصم)</span>
               </button>
-              <Link to="/checkout" className="px-6 py-3 bg-[#801B2C] text-white rounded-xl text-xs font-bold hover:bg-[#5E1422] transition-colors">
-                اختيار طريقة دفع أخرى
-              </Link>
+
+              <a 
+                href="https://wa.me/201090407080" 
+                target="_blank" 
+                rel="noreferrer"
+                className="px-6 py-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span>تواصل مع الدعم الفني</span>
+              </a>
             </div>
           </motion.div>
         )}
