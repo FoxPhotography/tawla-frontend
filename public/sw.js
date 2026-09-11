@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tawla-cache-v10';
+const CACHE_NAME = 'tawla-cache-v11';
 const ASSETS_TO_CACHE = [
   '/staff',
   '/index.html',

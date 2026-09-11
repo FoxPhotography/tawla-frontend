@@ -28,6 +28,9 @@ const VITE_SOCKET_URL = getSocketUrl();
 export const socket = io(VITE_SOCKET_URL, {
   autoConnect: false,
   withCredentials: true,
-  transports: ['polling', 'websocket'],
+  transports: ['websocket', 'polling'],
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  timeout: 20000,
 });
 
