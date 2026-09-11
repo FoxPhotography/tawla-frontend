@@ -37,7 +37,20 @@ export default function StaffLogin() {
       }
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.response?.data?.error || 'اسم المستخدم أو كلمة المرور غير صحيحة');
+      const data = error.response?.data;
+      let msg = 'اسم المستخدم أو كلمة المرور غير صحيحة';
+      if (typeof data === 'string') {
+        msg = data;
+      } else if (data?.error && typeof data.error === 'string') {
+        msg = data.error;
+      } else if (data?.message && typeof data.message === 'string') {
+        msg = data.message;
+      } else if (data?.error?.message && typeof data.error.message === 'string') {
+        msg = data.error.message;
+      } else if (error.message && typeof error.message === 'string') {
+        msg = error.message;
+      }
+      toast.error(msg);
     },
   });
 
