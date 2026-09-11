@@ -12,7 +12,6 @@ import {
   Eye, 
   EyeOff, 
   CreditCard,
-  Sparkles,
   X,
   RefreshCw,
   AlertCircle
@@ -107,6 +106,21 @@ export default function Register() {
   };
 
   const currentPrice = getPrice();
+
+  // Dynamic percentage savings calculation (12 * monthly vs annual)
+  const getSavingsPercent = (plan: 'basic' | 'pro') => {
+    const monthlyPrice = plan === 'pro' ? proMonthly : basicMonthly;
+    const annualPrice = plan === 'pro' ? proAnnual : basicAnnual;
+    if (!monthlyPrice || monthlyPrice <= 0 || !annualPrice) return 0;
+    const yearlyMonthlyTotal = monthlyPrice * 12;
+    if (annualPrice >= yearlyMonthlyTotal) return 0;
+    return Math.round(((yearlyMonthlyTotal - annualPrice) / yearlyMonthlyTotal) * 100);
+  };
+
+  const basicSavingsPercent = getSavingsPercent('basic');
+  const proSavingsPercent = getSavingsPercent('pro');
+  const currentSavingsPercent = formData.plan === 'pro' ? proSavingsPercent : basicSavingsPercent;
+  const maxSavingsPercent = Math.max(basicSavingsPercent, proSavingsPercent);
 
   // Auto generate slug from restaurant name
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,11 +407,13 @@ export default function Register() {
                       }`}
                     >
                       <span>اشتراك سنوي</span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-extrabold ${
-                        billingCycle === 'annual' ? 'bg-amber-400 text-amber-950' : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        وفر شهرين
-                      </span>
+                      {maxSavingsPercent > 0 && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-extrabold ${
+                          billingCycle === 'annual' ? 'bg-amber-400 text-amber-950' : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          وفر {maxSavingsPercent}%
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -447,6 +463,11 @@ export default function Register() {
                         <span className="text-xs text-[#5C524C]">
                           {billingCycle === 'annual' ? 'ج.م / سنة' : 'ج.م / شهر'}
                         </span>
+                        {billingCycle === 'annual' && basicSavingsPercent > 0 && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded-md mr-auto">
+                            وفر {basicSavingsPercent}%
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] text-[#5C524C]">للكافيهات والمطاعم الناشئة</p>
                     </div>
@@ -463,9 +484,8 @@ export default function Register() {
                   >
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-sm text-[#801B2C] flex items-center gap-1">
-                          <span>المتقدمة Pro</span>
-                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <h3 className="font-bold text-sm text-[#801B2C]">
+                          المتقدمة Pro
                         </h3>
                         <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.plan === 'pro' ? 'border-[#801B2C] bg-[#801B2C]' : 'border-zinc-300'}`}>
                           {formData.plan === 'pro' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -478,6 +498,11 @@ export default function Register() {
                         <span className="text-xs text-[#5C524C]">
                           {billingCycle === 'annual' ? 'ج.م / سنة' : 'ج.م / شهر'}
                         </span>
+                        {billingCycle === 'annual' && proSavingsPercent > 0 && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded-md mr-auto">
+                            وفر {proSavingsPercent}%
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] text-[#5C524C]">شاملة كامل المميزات وبلا حدود</p>
                     </div>
@@ -751,10 +776,10 @@ export default function Register() {
                   </span>
                 </div>
 
-                {formData.plan !== 'trial' && billingCycle === 'annual' && (
+                {formData.plan !== 'trial' && billingCycle === 'annual' && currentSavingsPercent > 0 && (
                   <div className="flex items-center justify-between text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
                     <span>خصم الاشتراك السنوي</span>
-                    <span className="font-bold">وفرت شهرين كاملين مجاناً 🎁</span>
+                    <span className="font-bold">وفرت {currentSavingsPercent}%</span>
                   </div>
                 )}
 

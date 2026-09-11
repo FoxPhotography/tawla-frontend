@@ -1141,7 +1141,19 @@ export default function LandingPage() {
                 }`}
               >
                 <span>اشتراك سنوي</span>
-                <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono">وفر شهرين</span>
+                {(() => {
+                  const bYearly = (settings.pricing?.basic || 1500) * 12;
+                  const bAnn = settings.pricing?.annualBasic || 15000;
+                  const pYearly = (settings.pricing?.pro || 3000) * 12;
+                  const pAnn = settings.pricing?.annualPro || 30000;
+                  const pct = Math.max(
+                    bYearly > bAnn ? Math.round(((bYearly - bAnn) / bYearly) * 100) : 0,
+                    pYearly > pAnn ? Math.round(((pYearly - pAnn) / pYearly) * 100) : 0
+                  );
+                  return pct > 0 ? (
+                    <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono">وفر {pct}%</span>
+                  ) : null;
+                })()}
               </button>
             </div>
           </div>

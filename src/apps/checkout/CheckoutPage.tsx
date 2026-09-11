@@ -472,7 +472,11 @@ export default function CheckoutPage() {
                       }`}
                     >
                       سنوي
-                      <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.2 rounded-md font-mono">وفر شهرين</span>
+                      {annualSavings > 0 && originalAnnualPrice > 0 && (
+                        <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.2 rounded-md font-mono">
+                          وفر {Math.round((annualSavings / originalAnnualPrice) * 100)}%
+                        </span>
+                      )}
                     </button>
                   </div>
                 )}
@@ -781,8 +785,8 @@ export default function CheckoutPage() {
 
                 {isAnnual && annualSavings > 0 && (
                   <div className="flex items-center justify-between text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl">
-                    <span>خصم الدفع السنوي (شهرين مجاناً)</span>
-                    <span className="font-bold font-mono">-{annualSavings.toLocaleString()} ج.م</span>
+                    <span>خصم الاشتراك السنوي</span>
+                    <span className="font-bold">وفرت {originalAnnualPrice > 0 ? Math.round((annualSavings / originalAnnualPrice) * 100) : 0}% (-{annualSavings.toLocaleString()} ج.م)</span>
                   </div>
                 )}
 
