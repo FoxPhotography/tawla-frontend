@@ -138,6 +138,15 @@ export default function PaymentConfirmationPage() {
       const data = response.data?.data;
 
       if (data && (data.status === 'paid' || data.status === 'success' || data.status === 'captured')) {
+        // If a new registration returned session tokens, log in immediately replacing any old session
+        if (data.accessToken && data.user && data.restaurant) {
+          try {
+            useAuthStore.getState().login(data.accessToken, data.user, data.restaurant, data.offlineLease);
+          } catch (e) {
+            console.warn('[Auto-Login Warning]:', e);
+          }
+        }
+
         setPaymentData({
           status: 'paid',
           invoiceId,
@@ -145,9 +154,9 @@ export default function PaymentConfirmationPage() {
           plan: data.plan || 'pro',
           billingCycle: data.billingCycle || 'monthly',
           amount: data.amount,
-          restaurantName: data.restaurantName || restaurant?.name || 'مطعمنا العزيز',
-          ownerName: data.ownerName || user?.name || 'إدارة المطعم',
-          phone: data.phone || restaurant?.phone,
+          restaurantName: data.restaurantName || (initialType === 'new' ? 'مطعمنا الجديد' : (restaurant?.name || 'مطعمنا العزيز')),
+          ownerName: data.ownerName || (initialType === 'new' ? 'إدارة المطعم' : (user?.name || 'إدارة المطعم')),
+          phone: data.phone || (initialType === 'new' ? undefined : restaurant?.phone),
           expiresAt: data.expiresAt,
           paidAt: data.paidAt || new Date().toISOString(),
           message: 'تم تأكيد عملية الدفع بنجاح وتفعيل اشتراكك!'
@@ -338,9 +347,15 @@ export default function PaymentConfirmationPage() {
                 <RefreshCw className="w-4 h-4" />
                 <span>تحديث حالة الدفع</span>
               </button>
-              <Link to="/admin" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">
-                العودة للوحة التحكم
-              </Link>
+              {initialType === 'new' ? (
+                <Link to="/" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center">
+                  العودة للرئيسية
+                </Link>
+              ) : (
+                <Link to="/admin?tab=subscription" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center">
+                  العودة للوحة التحكم
+                </Link>
+              )}
             </div>
           </motion.div>
         )}
@@ -398,30 +413,40 @@ export default function PaymentConfirmationPage() {
             {/* Action Buttons */}
             <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
               {initialType === 'new' ? (
-                <Link
-                  to={`/register?plan=${paymentData.plan || 'basic'}&billing=${paymentData.billingCycle || 'monthly'}`}
-                  className="px-6 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>إعادة المحاولة ببيانات صحيحة</span>
-                </Link>
-              ) : (
-                <Link
-                  to={`/checkout?plan=${paymentData.plan || 'pro'}&billing=${paymentData.billingCycle || 'monthly'}`}
-                  className="px-6 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>إعادة المحاولة والدفع</span>
-                </Link>
-              )}
+                <>
+                  <Link
+                    to={`/register?plan=${paymentData.plan || 'basic'}&billing=${paymentData.billingCycle || 'monthly'}`}
+                    className="px-6 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>إعادة المحاولة مع اختيار الباقة</span>
+                  </Link>
 
-              <button 
-                onClick={() => verifyInvoice(0)} 
-                className="px-6 py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span>إعادة التحقق (في حال تم الخصم)</span>
-              </button>
+                  <Link
+                    to="/"
+                    className="px-6 py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center"
+                  >
+                    <span>العودة للصفحة الرئيسية</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to={`/checkout?plan=${paymentData.plan || 'pro'}&billing=${paymentData.billingCycle || 'monthly'}`}
+                    className="px-6 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>إعادة المحاولة والدفع</span>
+                  </Link>
+
+                  <Link
+                    to="/admin?tab=subscription"
+                    className="px-6 py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center"
+                  >
+                    <span>العودة لإعدادات الاشتراك</span>
+                  </Link>
+                </>
+              )}
 
               <a 
                 href="https://wa.me/201090407080" 
@@ -553,29 +578,21 @@ export default function PaymentConfirmationPage() {
 
             {/* Actions */}
             <div className="space-y-3 pt-1 print:hidden">
-              {user?.role === 'admin' ? (
+              {initialType === 'new' ? (
                 <Link 
-                  to="/admin?tab=subscription" 
+                  to="/admin" 
                   className="w-full py-4 bg-[#801B2C] hover:bg-[#5E1422] text-white font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20 transition-all text-sm"
                 >
-                  <span>الدخول إلى لوحة تحكم المطعم (Dashboard)</span>
-                  <ArrowLeft className="w-4 h-4" />
-                </Link>
-              ) : initialType === 'new' ? (
-                <Link 
-                  to={`/register?invoice_id=${paymentData.invoiceId}&plan=${paymentData.plan || 'pro'}`}
-                  className="w-full py-4 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-700/20 transition-all text-sm"
-                >
                   <Building2 className="w-4 h-4" />
-                  <span>إكمال إعداد حساب المطعم والدخول فوراً</span>
+                  <span>الدخول إلى لوحة تحكم المطعم الجديد (Dashboard)</span>
                   <ArrowLeft className="w-4 h-4" />
                 </Link>
               ) : (
                 <Link 
-                  to="/login" 
+                  to="/admin?tab=subscription" 
                   className="w-full py-4 bg-[#801B2C] hover:bg-[#5E1422] text-white font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#801B2C]/20 transition-all text-sm"
                 >
-                  <span>تسجيل الدخول للمنظومة</span>
+                  <span>العودة إلى لوحة تحكم المطعم (Dashboard)</span>
                   <ArrowLeft className="w-4 h-4" />
                 </Link>
               )}

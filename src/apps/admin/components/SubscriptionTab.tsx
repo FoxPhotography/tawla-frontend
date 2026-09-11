@@ -298,6 +298,24 @@ export default function SubscriptionTab() {
         </span>
       </div>
 
+      {/* Trial 30-Day Auto Purge Policy Warning Banner */}
+      {currentSub?.plan === 'trial' && (
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3.5 text-xs text-amber-900 dark:text-amber-200">
+          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1 leading-relaxed">
+            <span className="font-extrabold text-sm block text-amber-950 dark:text-amber-100">
+              تنبيه هام للنسخة التجريبية:
+            </span>
+            <p>
+              أنت تعمل حالياً بالنسخة التجريبية المجانية. تنص سياسة المنصة على أن <strong>الحسابات التجريبية التي لا تشترك في باقة مدفوعة خلال 30 يوماً من تاريخ إنشائها يتم حذفها بالكامل وبشكل نهائي مع كافة بياناتها</strong> (المنتجات، الطاولات، الطلبات، العملاء) دون إمكانية استرجاعها.
+            </p>
+            <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+              🛡️ الترقية إلى إحدى الباقات المدفوعة (Basic أو Pro) تضمن حفظ وحماية بيانات منشأتك بشكل دائم وأبدي في النظام حتى بعد انتهاء فترة الاشتراك.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Plan Quotas Summary Card */}
         <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card space-y-4">
@@ -364,31 +382,51 @@ export default function SubscriptionTab() {
             </div>
 
             {/* Monthly / Annual Toggle */}
-            <div className="flex items-center bg-admin-bg-base p-1 rounded-xl border border-admin-border text-xs">
-              <button
-                type="button"
-                onClick={() => setRenewCycle('monthly')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                  renewCycle === 'monthly'
-                    ? 'bg-admin-accent text-white shadow-sm'
-                    : 'text-admin-text-secondary hover:text-admin-text-primary'
-                }`}
-              >
-                شهري
-              </button>
-              <button
-                type="button"
-                onClick={() => setRenewCycle('annual')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${
-                  renewCycle === 'annual'
-                    ? 'bg-admin-accent text-white shadow-sm'
-                    : 'text-admin-text-secondary hover:text-admin-text-primary'
-                }`}
-              >
-                سنوي
-                <span className="bg-emerald-500 text-white text-[9px] px-1 py-0.2 rounded font-mono">خصم سنوي</span>
-              </button>
-            </div>
+            {(() => {
+              const isOffer = Boolean(systemSettings?.offer?.active && (!systemSettings.offer.endsAt || new Date(systemSettings.offer.endsAt) > new Date()));
+              const basicMonthly = isOffer && systemSettings?.offer?.basicPrice ? systemSettings.offer.basicPrice : (systemSettings?.pricing?.basic || 1500);
+              const basicAnnual = isOffer && systemSettings?.offer?.annualBasicPrice ? systemSettings.offer.annualBasicPrice : (systemSettings?.pricing?.annualBasic || (systemSettings?.pricing?.basic ? systemSettings.pricing.basic * 10 : 15000));
+              const proMonthly = isOffer && systemSettings?.offer?.proPrice ? systemSettings.offer.proPrice : (systemSettings?.pricing?.pro || 3000);
+              const proAnnual = isOffer && systemSettings?.offer?.annualProPrice ? systemSettings.offer.annualProPrice : (systemSettings?.pricing?.annualPro || (systemSettings?.pricing?.pro ? systemSettings.pricing.pro * 10 : 30000));
+
+              const basicSavings = basicMonthly * 12 > 0 ? Math.round(((basicMonthly * 12 - basicAnnual) / (basicMonthly * 12)) * 100) : 17;
+              const proSavings = proMonthly * 12 > 0 ? Math.round(((proMonthly * 12 - proAnnual) / (proMonthly * 12)) * 100) : 17;
+              const maxSavingsPercent = Math.max(basicSavings, proSavings);
+
+              return (
+                <div className="flex items-center bg-admin-bg-base p-1 rounded-xl border border-admin-border text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setRenewCycle('monthly')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      renewCycle === 'monthly'
+                        ? 'bg-admin-accent text-white shadow-sm'
+                        : 'text-admin-text-secondary hover:text-admin-text-primary'
+                    }`}
+                  >
+                    شهري
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRenewCycle('annual')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+                      renewCycle === 'annual'
+                        ? 'bg-admin-accent text-white shadow-sm'
+                        : 'text-admin-text-secondary hover:text-admin-text-primary'
+                    }`}
+                  >
+                    <span>سنوي</span>
+                    {maxSavingsPercent > 0 && (
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                        renewCycle === 'annual' ? 'bg-amber-400 text-amber-950' : 'bg-emerald-500 text-white'
+                      }`}>
+                        وفر {maxSavingsPercent}%
+                      </span>
+                    )}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Plan Selector Radios */}

@@ -128,10 +128,37 @@ export default function PrivacyPolicy() {
         </ul>
       </section>
 
-      {/* 6. مسؤول حماية البيانات والتواصل */}
-      <section className="space-y-3 pt-4">
+      {/* 6. سياسة الاحتفاظ بالبيانات وحذف الحسابات التجريبية */}
+      <section className="space-y-3">
         <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
           <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">6</span>
+          فترة الاحتفاظ بالبيانات وحذف الحسابات التجريبية (Data Retention)
+        </h2>
+        <div className="space-y-3 text-sm text-[#4A4039] leading-relaxed">
+          <p>
+            تتبع منصة طاولة سياسة صارمة وعادلة للاحتفاظ بالبيانات لحماية خصوصية المستخدمين وترشيد الموارد:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 text-xs space-y-1.5">
+              <h4 className="font-extrabold text-amber-900 text-sm">الحسابات التجريبية (30 يوماً كحد أقصى):</h4>
+              <p className="text-amber-800 leading-relaxed">
+                الحسابات التجريبية المجانية التي لا تشترك في أي باقة مدفوعة خلال ثلاثين (30) يوماً من تاريخ إنشائها يتم حذفها بشكل دائم وتلقائي بكافة بياناتها دون إمكانية استرجاعها.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-1.5">
+              <h4 className="font-extrabold text-emerald-900 text-sm">الحسابات المدفوعة (حفظ دائم وأبدي):</h4>
+              <p className="text-emerald-800 leading-relaxed">
+                بيانات المشتركين الفعليين في الباقات المدفوعة محفوظة ومحمية بصفة دائمة ولا تخضع للحذف التلقائي حتى بعد انتهاء الاشتراك، ويحق لصاحب الحساب الاطلاع عليها وتصديرها في أي وقت.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. مسؤول حماية البيانات والتواصل */}
+      <section className="space-y-3 pt-4">
+        <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">7</span>
           التواصل بخصوص الخصوصية
         </h2>
         <p className="text-sm text-[#5C524C]">

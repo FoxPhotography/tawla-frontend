@@ -62,6 +62,33 @@ export default function TermsAndConditions() {
       <section className="space-y-3">
         <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
           <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">4</span>
+          سياسة النسخ التجريبية وحذف البيانات بعد 30 يوماً
+        </h2>
+        <div className="space-y-3 text-sm text-[#4A4039] leading-relaxed">
+          <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-300/70 space-y-2">
+            <h3 className="font-extrabold text-amber-950 text-sm flex items-center gap-2">
+              <span>⚠️ الحسابات التجريبية المجانية (Trial Accounts & 30-Day Purge):</span>
+            </h3>
+            <p className="text-xs text-amber-900 leading-relaxed">
+              تمنح منصة طاولة حساباً تجريبياً مجانياً لمدد محددة لاختبار خصائص النظام. يقر ويوافق المشترك صراحةً وبشكل غير قابل للرجوع على أنه <strong>في حال عدم الاشتراك والترقية إلى إحدى الباقات المدفوعة خلال ثلاثين (30) يوماً من تاريخ إنشاء الحساب التجريبي، سيتم حذف الحساب بالكامل وبشكل نهائي وتلقائي من خوادم المنصة مع كافة البيانات المرتبطة به</strong> (بما يشمل: حسابات المستخدمين، قوائم الأصناف والمنتجات، الطاولات، سجلات الطلبات، بيانات العملاء، وسجلات العمليات)، <strong>ولن يستطيع المستخدم استرجاع أي جزء من هذه البيانات بعد انقضاء هذه المدة تحت أي ظرف</strong> نظراً لكونها نسخة تجريبية مجانية ومؤقتة تهدف لتجربة المنصة فقط ولترشيد مساحات الخوادم.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-300/70 space-y-2">
+            <h3 className="font-extrabold text-emerald-950 text-sm flex items-center gap-2">
+              <span>🛡️ الحسابات والمشتركون الفعليون (Paid Subscribers Permanent Protection):</span>
+            </h3>
+            <p className="text-xs text-emerald-900 leading-relaxed">
+              تؤكد منصة طاولة التزامها التام بحماية وأمان بيانات <strong>المشتركين الفعليين (باقة Basic أو Pro)</strong>. بيانات الحسابات المدفوعة <strong>محمية ومحفوظة بشكل دائم وأبدي في قواعد بيانات المنصة، ولن يتم حذفها إطلاقاً حتى في حال انتهاء صلاحية الاشتراك أو التوقف المؤقت</strong>. ويحق للمشترك الفعلي الوصول إلى حسابه والاطلاع على كافة بياناته وسجلاته وأرشيفه في أي وقت، وتفعيل التجديد متى رغب دون فقدان أي بيانات مسجلة.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. ضوابط الاستخدام المقبول والمحظورات */}
+      <section className="space-y-3">
+        <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">5</span>
           ضوابط الاستخدام المقبول والمحظورات
         </h2>
         <p className="text-sm text-[#5C524C]">
@@ -77,7 +104,7 @@ export default function TermsAndConditions() {
       {/* 5. الملكية الفكرية */}
       <section className="space-y-3">
         <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">5</span>
+          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">6</span>
           حقوق الملكية الفكرية
         </h2>
         <p className="text-sm text-[#5C524C] leading-relaxed">
@@ -88,7 +115,7 @@ export default function TermsAndConditions() {
       {/* 6. إتاحة الخدمة وحدود المسؤولية */}
       <section className="space-y-3">
         <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">6</span>
+          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">7</span>
           إتاحة الخدمة (Service Availability & SLA)
         </h2>
         <p className="text-sm text-[#5C524C] leading-relaxed">
@@ -99,7 +126,7 @@ export default function TermsAndConditions() {
       {/* 7. القانون الحاكم والاختصاص القضائي */}
       <section className="space-y-3">
         <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">7</span>
+          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">8</span>
           القانون الواجب التطبيق والاختصاص القضائي
         </h2>
         <p className="text-sm text-[#5C524C] leading-relaxed">
@@ -110,7 +137,7 @@ export default function TermsAndConditions() {
       {/* 8. معلومات التواصل */}
       <section className="space-y-3 pt-4">
         <h2 className="text-xl font-bold text-[#1C1612] flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">8</span>
+          <span className="w-8 h-8 rounded-xl bg-[#801B2C]/10 text-[#801B2C] text-sm flex items-center justify-center font-bold">9</span>
           معلومات التواصل الرسمية
         </h2>
         <div className="p-4 rounded-2xl bg-[#F4EFEB] text-sm space-y-1">

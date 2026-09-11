@@ -508,6 +508,17 @@ export default function Register() {
                     </div>
                   </div>
                 </div>
+
+                {/* 30-Day Auto Purge Policy Disclosure */}
+                <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-xs text-amber-900 leading-relaxed flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block text-amber-950 mb-0.5">سياسة حفظ وحذف البيانات (النسخ التجريبية vs المشتركون الفعليون):</span>
+                    <span>
+                      الحساب التجريبي مجاني وصالح للاختبار لمدة {trialDays} يوماً. في حال عدم الاشتراك في أي باقة مدفوعة خلال <strong>شهر (30 يوماً)</strong> من إنشاء الحساب، يتم حذف الحساب وكامل بياناته تلقائياً وبشكل نهائي ولا يمكن استرجاعها. بينما بيانات <strong>المشتركين الفعليين (باقة Basic أو Pro)</strong> محفوظة ومحمية بشكل دائم وأبدي ولن تُحذف أبداً حتى بعد انتهاء الاشتراك.
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -740,12 +751,12 @@ export default function Register() {
                     أوافق على{' '}
                     <Link to="/terms" target="_blank" className="text-[#801B2C] font-bold hover:underline">
                       شروط وأحكام الاستخدام
-                    </Link>{' '}
-                    و{' '}
-                    <Link to="/refund" target="_blank" className="text-[#801B2C] font-bold hover:underline">
-                      سياسة الاسترجاع والخصوصية
                     </Link>
-                    .
+                    ، و
+                    <Link to="/privacy" target="_blank" className="text-[#801B2C] font-bold hover:underline">
+                      سياسة الخصوصية
+                    </Link>{' '}
+                    (بما يشمل الموافقة الصريحة على حذف الحساب التجريبي وبياناته نهائياً بعد 30 يوماً في حال عدم الاشتراك).
                   </span>
                 </label>
               </div>
