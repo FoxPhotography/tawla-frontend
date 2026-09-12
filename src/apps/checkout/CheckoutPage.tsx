@@ -90,6 +90,8 @@ const DEFAULT_PLANS: Record<string, PlanDetails> = {
 export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { token, user, restaurant, logout } = useAuthStore();
+  const isLoggedIn = Boolean(token && user);
   const loginStore = useAuthStore((state) => state.login);
 
   const [plans, setPlans] = useState<Record<string, PlanDetails>>(DEFAULT_PLANS);
@@ -515,6 +517,64 @@ export default function CheckoutPage() {
             قم بتعبئة بياناتك للبدء الفوري أو الانتقال لبوابة الدفع الإلكتروني المعتمدة.
           </p>
         </div>
+
+        {/* Logged-in Session Banner */}
+        {isLoggedIn && user && (
+          <div className="mb-8 bg-amber-50/90 border border-amber-200/80 rounded-2xl p-5 text-right flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs backdrop-blur-xs">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-stone-900">
+                  أنت متصل حالياً بحساب: <span className="text-[#801B2C]">{user.name || user.username}</span>
+                  {restaurant && <span> (مطعم {restaurant.name})</span>}
+                </p>
+                <p className="text-xs text-stone-600 mt-0.5 leading-relaxed">
+                  {user.role === 'admin' && restaurant
+                    ? 'هل ترغب في تجديد أو ترقية باقة مطعمك الحالي؟ يمكنك التجديد فوراً دون إعادة كتابة البيانات، أو تسجيل الخروج لإنشاء مطعم جديد بحساب منفصل.'
+                    : 'لتسجيل مطعم جديد، يرجى تسجيل الخروج أولاً لتجنب أي تداخل في بيانات الجلسة الحالية.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0">
+              {user.role === 'admin' && restaurant && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const toastId = toast.loading('جاري تحضير فاتورة تجديد مطعمك...');
+                      const res = await api.post('/subscriptions/renew', {
+                        plan: selectedPlanId === 'trial' ? 'pro' : selectedPlanId,
+                        billingCycle,
+                      });
+                      toast.dismiss(toastId);
+                      if (res.data?.data?.invoiceLink) {
+                        window.location.href = res.data.data.invoiceLink;
+                      }
+                    } catch (e: any) {
+                      toast.dismiss();
+                      toast.error(e?.response?.data?.message || 'تعذر بدء التجديد.');
+                    }
+                  }}
+                  className="flex-1 md:flex-initial px-4 py-2.5 bg-[#801B2C] hover:bg-[#681523] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  تجديد باقة {selectedPlanId.toUpperCase()} لمطعم {restaurant.name}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  toast.success('تم تسجيل الخروج بنجاح. يمكنك إدخال بيانات المطعم الجديد الآن.');
+                }}
+                className="flex-1 md:flex-initial px-4 py-2.5 bg-white hover:bg-stone-50 border border-stone-300 text-stone-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+              >
+                تسجيل الخروج لإنشاء مطعم جديد
+              </button>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleCheckoutSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Right Column: Checkout Steps Form (7 Cols) */}

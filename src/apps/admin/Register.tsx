@@ -14,7 +14,9 @@ import {
   CreditCard,
   X,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  LogOut,
+  LayoutDashboard
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api.js';
@@ -25,6 +27,7 @@ import logoImg from '../../assets/TAWLA_Logo.png';
 export default function Register() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { token, user, restaurant, logout } = useAuthStore();
   const loginStore = useAuthStore((state) => state.login);
 
   const initialPlan = (searchParams.get('plan') as 'trial' | 'basic' | 'pro') || 'trial';
@@ -322,6 +325,89 @@ export default function Register() {
       setIsSubmitting(false);
     }
   };
+
+  // ══════════════════════════════════════════════════════════════
+  // ACTIVE SESSION GUARD: If already logged in, prevent duplicate/conflicting registration
+  // ══════════════════════════════════════════════════════════════
+  if (token && user) {
+    const roleLabel = user.role === 'super_admin'
+      ? 'المدير العام (Super Admin)'
+      : user.role === 'admin'
+      ? 'مدير مطعم'
+      : user.role === 'cashier'
+      ? 'كاشير'
+      : 'ويتر';
+
+    const dashboardPath = user.role === 'super_admin' ? '/super-admin' : user.role === 'admin' ? '/admin' : '/staff';
+
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center relative overflow-hidden font-sans" dir="rtl">
+        <Toaster position="top-center" />
+
+        <div className="relative z-10 w-full max-w-[460px] mx-4">
+          <div className="bg-white/95 backdrop-blur-md border border-[#801B2C]/15 rounded-3xl p-8 shadow-[0_20px_50px_rgba(128,27,44,0.08)] text-center">
+            <Link to="/" className="inline-block mb-4">
+              <img src={logoImg} alt="طاولة" className="h-14 mx-auto object-contain hover:scale-105 transition-transform" />
+            </Link>
+
+            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-200 shadow-xs">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
+
+            <h2 className="text-xl font-bold text-stone-900 mb-2">أنت مسجل دخولك بالفعل</h2>
+            <p className="text-xs text-stone-500 mb-6 leading-relaxed">
+              أنت متصل حالياً بحساب نشط. لتسجيل مطعم جديد أو إنشاء حساب مختلف، يرجى تسجيل الخروج أولاً لتجنب أي تداخل في بيانات المتصفح والجلسات.
+            </p>
+
+            <div className="bg-[#FAF8F5] border border-[#801B2C]/10 rounded-2xl p-4 text-right mb-6 space-y-2.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-stone-500 font-medium">اسم الحساب:</span>
+                <span className="font-bold text-stone-900">{user.name || user.username}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-stone-500 font-medium">نوع الصلاحية:</span>
+                <span className="font-bold text-[#801B2C] bg-[#801B2C]/10 px-2.5 py-0.5 rounded-md">{roleLabel}</span>
+              </div>
+              {restaurant && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-stone-500 font-medium">المطعم الحالي:</span>
+                  <span className="font-bold text-stone-900">{restaurant.name}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => navigate(dashboardPath)}
+                className="w-full py-3.5 bg-[#801B2C] hover:bg-[#681523] text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>الذهاب إلى لوحة التحكم</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  logout();
+                  toast.success('تم تسجيل الخروج. يمكنك الآن تسجيل مطعم جديد.');
+                }}
+                className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-xl border border-red-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>تسجيل الخروج لتسجيل مطعم جديد</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/')}
+                className="w-full py-2 text-stone-500 hover:text-stone-800 text-xs transition-colors cursor-pointer"
+              >
+                العودة للصفحة الرئيسية
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#1C1612] font-sans antialiased selection:bg-[#801B2C]/15 selection:text-[#801B2C]" dir="rtl">

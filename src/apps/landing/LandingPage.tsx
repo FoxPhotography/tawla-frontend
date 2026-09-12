@@ -6,11 +6,13 @@ import {
   Laptop, Check, ArrowLeft,
   ChevronDown, Send, Menu, X,
   Lock, ShoppingBag, Plus, Trash2, CloudOff,
-  Mail, MapPin, Shield, CreditCard
+  Mail, MapPin, Shield, CreditCard,
+  LogOut, LayoutDashboard
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket';
+import { useAuthStore } from '../../shared/store/authStore';
 import logoImg from '../../assets/TAWLA_Logo.png';
 import iconLogoImg from '../../assets/3.png';
 
@@ -74,6 +76,42 @@ function CountUp({ target, suffix = "", duration = 2000 }: { target: number; suf
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user, restaurant, token, logout } = useAuthStore();
+  const isLoggedIn = Boolean(token && user);
+  const [isRenewing, setIsRenewing] = useState<string | null>(null);
+
+  const handlePlanAction = async (planId: 'basic' | 'pro') => {
+    if (isLoggedIn && user?.role === 'admin' && restaurant) {
+      try {
+        setIsRenewing(planId);
+        const toastId = toast.loading('جاري تحضير فاتورة تجديد الاشتراك عبر فواتيرك...');
+        const res = await api.post('/subscriptions/renew', {
+          plan: planId,
+          billingCycle,
+        });
+        toast.dismiss(toastId);
+        const invoiceLink = res.data?.data?.invoiceLink;
+        if (invoiceLink) {
+          window.location.href = invoiceLink;
+        } else {
+          navigate('/admin');
+        }
+      } catch (err: any) {
+        toast.dismiss();
+        const msg = err?.response?.data?.message || err?.message || 'تعذر تجهيز الفاتورة، يرجى التجديد من لوحة التحكم.';
+        toast.error(msg);
+        navigate('/admin');
+      } finally {
+        setIsRenewing(null);
+      }
+    } else if (isLoggedIn) {
+      if (user?.role === 'super_admin') navigate('/super-admin');
+      else navigate('/staff');
+    } else {
+      navigate(`/checkout?plan=${planId}&billing=${billingCycle}`);
+    }
+  };
+
   const [settings, setSettings] = useState<SystemSettings>({
     pricing: { basic: 1500, pro: 3000, annualBasic: 15000, annualPro: 30000 },
     offer: { active: false, title: '', basicPrice: 0, proPrice: 0, annualBasicPrice: 0, annualProPrice: 0 },
@@ -386,20 +424,62 @@ export default function LandingPage() {
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-4">
-            <button 
-              onClick={() => navigate('/login')}
-              className="text-[13px] text-[#5C524C] hover:text-[#1C1612] transition-colors py-2 px-4 font-medium"
-            >
-              تسجيل دخول
-            </button>
-            <button 
-              onClick={() => navigate('/register')}
-              className="luxury-btn-gold font-bold text-[13px] px-6 py-2.5 rounded-xl transition-all duration-300 cursor-pointer transform active:scale-95"
-            >
-              ابدأ مجاناً
-            </button>
-          </div>
+          {/* Desktop Right Actions: Login/Register OR Logged-in Profile */}
+          {isLoggedIn && user ? (
+            <div className="hidden md:flex items-center gap-3">
+              <div className="flex items-center gap-2.5 bg-[#801B2C]/5 border border-[#801B2C]/15 rounded-xl px-3.5 py-1.5 text-right">
+                <div className="w-8 h-8 rounded-lg bg-[#801B2C] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                  {(user.name || user.username).charAt(0).toUpperCase()}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[12.5px] font-bold text-stone-900 leading-tight">
+                    {user.name || user.username}
+                  </span>
+                  <span className="text-[10px] text-[#801B2C] font-semibold leading-tight">
+                    {user.role === 'super_admin' ? 'Super Admin' : restaurant?.name ? restaurant.name : 'متصل'}
+                  </span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => {
+                  if (user.role === 'super_admin') navigate('/super-admin');
+                  else if (user.role === 'admin') navigate('/admin');
+                  else navigate('/staff');
+                }}
+                className="luxury-btn-gold font-bold text-[13px] px-4 py-2.5 rounded-xl transition-all duration-300 cursor-pointer transform active:scale-95 flex items-center gap-1.5 shadow-md"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>لوحة التحكم</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  logout();
+                  toast.success('تم تسجيل الخروج بنجاح');
+                }}
+                title="تسجيل الخروج"
+                className="p-2.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200 transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center gap-4">
+              <button 
+                onClick={() => navigate('/login')}
+                className="text-[13px] text-[#5C524C] hover:text-[#1C1612] transition-colors py-2 px-4 font-medium cursor-pointer"
+              >
+                تسجيل دخول
+              </button>
+              <button 
+                onClick={() => navigate('/register')}
+                className="luxury-btn-gold font-bold text-[13px] px-6 py-2.5 rounded-xl transition-all duration-300 cursor-pointer transform active:scale-95"
+              >
+                ابدأ مجاناً
+              </button>
+            </div>
+          )}
 
           {/* Mobile menu trigger */}
           <button 
@@ -466,18 +546,52 @@ export default function LandingPage() {
 
               {/* CTA / Action Buttons at bottom of drawer */}
               <div className="p-6 border-t border-[#801B2C]/10 flex flex-col gap-3">
-                <button 
-                  onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-                  className="w-full text-center text-[14px] text-[#5C524C] hover:text-[#1C1612] py-3 border border-[#801B2C]/15 rounded-xl font-bold bg-white hover:bg-[#801B2C]/5 transition-colors"
-                >
-                  تسجيل دخول
-                </button>
-                <button 
-                  onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
-                  className="w-full text-center luxury-btn-gold font-bold text-[14px] py-3.5 rounded-xl transition-all shadow-sm"
-                >
-                  ابدأ مجاناً
-                </button>
+                {isLoggedIn && user ? (
+                  <>
+                    <div className="bg-[#801B2C]/5 border border-[#801B2C]/15 rounded-xl p-3 text-right">
+                      <p className="text-[13px] font-bold text-stone-900">{user.name || user.username}</p>
+                      <p className="text-[11px] text-[#801B2C] font-semibold">{user.role === 'super_admin' ? 'Super Admin' : restaurant?.name || 'متصل'}</p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        if (user.role === 'super_admin') navigate('/super-admin');
+                        else if (user.role === 'admin') navigate('/admin');
+                        else navigate('/staff');
+                      }}
+                      className="w-full text-center luxury-btn-gold font-bold text-[14px] py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>لوحة التحكم</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        logout();
+                        toast.success('تم تسجيل الخروج بنجاح');
+                      }}
+                      className="w-full text-center text-[13px] text-red-600 hover:text-red-700 py-3 border border-red-200 rounded-xl font-bold bg-red-50/50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>تسجيل الخروج</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
+                      className="w-full text-center text-[14px] text-[#5C524C] hover:text-[#1C1612] py-3 border border-[#801B2C]/15 rounded-xl font-bold bg-white hover:bg-[#801B2C]/5 transition-colors cursor-pointer"
+                    >
+                      تسجيل دخول
+                    </button>
+                    <button 
+                      onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
+                      className="w-full text-center luxury-btn-gold font-bold text-[14px] py-3.5 rounded-xl transition-all shadow-sm cursor-pointer"
+                    >
+                      ابدأ مجاناً
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </>
@@ -1224,11 +1338,18 @@ export default function LandingPage() {
 
                   <div className="flex flex-col sm:flex-row gap-3 mt-10">
                     <button 
-                      onClick={() => navigate(`/checkout?plan=basic&billing=${billingCycle}`)}
-                      className="flex-1 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-[13px] font-bold shadow-md transition-all duration-300 cursor-pointer text-center flex items-center justify-center gap-2"
+                      disabled={Boolean(isRenewing)}
+                      onClick={() => handlePlanAction('basic')}
+                      className="flex-1 py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-[13px] font-bold shadow-md transition-all duration-300 cursor-pointer text-center flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <CreditCard className="w-4 h-4" />
-                      <span>اشتراك أونلاين</span>
+                      <span>
+                        {isRenewing === 'basic' 
+                          ? 'جاري التحضير...' 
+                          : isLoggedIn && user?.role === 'admin' 
+                          ? `تجديد باقة Basic ${restaurant ? `(${restaurant.name})` : ''}` 
+                          : 'اشتراك أونلاين'}
+                      </span>
                     </button>
                     <button 
                       onClick={handleWhatsappContact}
@@ -1313,11 +1434,18 @@ export default function LandingPage() {
 
                   <div className="flex flex-col sm:flex-row gap-3 mt-10 relative z-10">
                     <button 
-                      onClick={() => navigate(`/checkout?plan=pro&billing=${billingCycle}`)}
-                      className="flex-1 py-3.5 luxury-btn-gold rounded-xl text-[13px] font-bold transition-all duration-300 cursor-pointer text-center shadow-lg flex items-center justify-center gap-2"
+                      disabled={Boolean(isRenewing)}
+                      onClick={() => handlePlanAction('pro')}
+                      className="flex-1 py-3.5 luxury-btn-gold rounded-xl text-[13px] font-bold transition-all duration-300 cursor-pointer text-center shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <CreditCard className="w-4 h-4" />
-                      <span>اشترك بالباقة الآن</span>
+                      <span>
+                        {isRenewing === 'pro' 
+                          ? 'جاري التحضير...' 
+                          : isLoggedIn && user?.role === 'admin' 
+                          ? `تجديد باقة Pro ${restaurant ? `(${restaurant.name})` : ''}` 
+                          : 'اشترك بالباقة الآن'}
+                      </span>
                     </button>
                     <button 
                       onClick={handleWhatsappContact}
