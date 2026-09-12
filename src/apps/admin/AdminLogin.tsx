@@ -112,16 +112,7 @@ export default function AdminLogin() {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-zinc-400 font-body">كلمة المرور</label>
-                <button
-                  type="button"
-                  onClick={() => setIsForgotOpen(true)}
-                  className="text-xs font-bold text-[#B8973E] hover:underline cursor-pointer"
-                >
-                  نسيت كلمة المرور؟
-                </button>
-              </div>
+              <label className="block text-sm font-semibold text-zinc-400 font-body">كلمة المرور</label>
               <div className="relative group">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -138,6 +129,15 @@ export default function AdminLogin() {
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex justify-end pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotOpen(true)}
+                  className="text-xs font-bold text-[#B8973E] hover:underline cursor-pointer"
+                >
+                  نسيت كلمة المرور؟
                 </button>
               </div>
             </div>

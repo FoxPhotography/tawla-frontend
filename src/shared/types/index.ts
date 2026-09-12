@@ -153,6 +153,9 @@ export interface Order {
   totalAmount: number;
   discountAmount?: number;
   redeemLoyalty?: boolean;
+  isSettled?: boolean;
+  clientIp?: string;
+  sessionId?: string;
   status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   specialNotes?: string;
   customerName?: string;

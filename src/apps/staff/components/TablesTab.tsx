@@ -73,15 +73,36 @@ export default function TablesTab({
           const isWaitingBill = table.status === 'waitingBill';
           const isEmpty = table.status === 'empty';
           
-          // Find active order associated with this table
-          const activeOrder = !isEmpty ? orders.find(o => 
+          // Find ALL active/unsettled orders associated with this table
+          const tableOrders = !isEmpty ? orders.filter((o: any) => 
+            o.tableNumber === table.number && o.isSettled !== true && o.status !== 'cancelled'
+          ) : [];
+
+          const accumulatedTotal = tableOrders.length > 0
+            ? tableOrders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0)
+            : (table.currentOrderId ? (orders.find((o: any) => o.id === table.currentOrderId)?.totalAmount || 0) : 0);
+
+          const allTableItems = tableOrders.flatMap((o: any) => o.items || []);
+
+          const latestOrder = tableOrders[tableOrders.length - 1] || (!isEmpty ? orders.find((o: any) => 
             (table.currentOrderId && o.id === table.currentOrderId) || 
             (o.tableNumber === table.number && ['pending', 'accepted', 'preparing', 'ready'].includes(o.status))
-          ) : undefined;
+          ) : undefined);
+
+          const activeOrder = latestOrder;
+
+          const combinedTableOrder = tableOrders.length > 0 ? {
+            ...latestOrder,
+            id: latestOrder?.id || `TBL-${table.number}`,
+            tableNumber: table.number,
+            items: allTableItems,
+            totalAmount: accumulatedTotal,
+            createdAt: tableOrders[0]?.createdAt || latestOrder?.createdAt || new Date(),
+          } : activeOrder;
 
           // Elapsed time
-          const elapsedMins = activeOrder 
-            ? Math.floor((Date.now() - new Date(activeOrder.createdAt).getTime()) / (60 * 1000))
+          const elapsedMins = (tableOrders[0] || activeOrder) 
+            ? Math.floor((Date.now() - new Date((tableOrders[0] || activeOrder).createdAt).getTime()) / (60 * 1000))
             : 0;
 
           return (
@@ -183,10 +204,10 @@ export default function TablesTab({
                     {/* Ordered Items Pill Tray */}
                     <div className="bg-zinc-50 border border-zinc-200/70 rounded-2xl p-3 space-y-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
                       <div className="flex justify-between items-center mb-1 text-[10px] text-zinc-400 font-bold font-body">
-                        <span>أصناف الطلب:</span>
-                        <span>({activeOrder.items?.length || 0} أصناف)</span>
+                        <span>أصناف الطلبات التراكمية:</span>
+                        <span>({allTableItems.length > 0 ? allTableItems.length : (activeOrder.items?.length || 0)} أصناف)</span>
                       </div>
-                      {activeOrder.items.map((item: any, idx: number) => (
+                      {(allTableItems.length > 0 ? allTableItems : (activeOrder.items || [])).map((item: any, idx: number) => (
                         <div key={idx} className="flex justify-between text-xs font-bold font-body">
                           <span className="text-zinc-800 line-clamp-1">{item.name}</span>
                           <span className="text-zinc-900 font-mono font-black bg-white px-2 py-0.5 rounded-md border border-zinc-200 text-[10px] shadow-xs">
@@ -198,8 +219,8 @@ export default function TablesTab({
 
                     {/* Total Price Banner */}
                     <div className="flex justify-between items-center bg-zinc-50 px-3.5 py-2.5 rounded-2xl border border-zinc-200/80 font-body">
-                      <span className="text-xs font-bold text-zinc-600">المبلغ الإجمالي:</span>
-                      <span className="font-mono font-black text-[#801B2C] text-sm">{activeOrder.totalAmount} ج.م</span>
+                      <span className="text-xs font-bold text-zinc-600">المبلغ الإجمالي التراكمي:</span>
+                      <span className="font-mono font-black text-[#801B2C] text-sm">{accumulatedTotal || activeOrder.totalAmount} ج.م</span>
                     </div>
                   </div>
                 ) : (
@@ -227,7 +248,7 @@ export default function TablesTab({
                     <motion.button
                       onClick={() => {
                         staffAudio.play('action');
-                        onPrintReceipt(activeOrder);
+                        onPrintReceipt(combinedTableOrder || activeOrder);
                       }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.92 }}
@@ -284,10 +305,26 @@ export default function TablesTab({
       {/* Checkout Modal (Clean Light Luxury Dialog) */}
       <AnimatePresence>
         {checkoutTable && (() => {
-          const activeOrder = orders.find(o => 
+          const checkoutOrders = orders.filter((o: any) => 
+            o.tableNumber === checkoutTable.number && o.isSettled !== true && o.status !== 'cancelled'
+          );
+          const checkoutTotal = checkoutOrders.length > 0
+            ? checkoutOrders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0)
+            : (checkoutTable.currentOrderId ? (orders.find((o: any) => o.id === checkoutTable.currentOrderId)?.totalAmount || 0) : 0);
+          const checkoutItems = checkoutOrders.flatMap((o: any) => o.items || []);
+          const latestOrder = checkoutOrders[checkoutOrders.length - 1] || orders.find((o: any) => 
             (checkoutTable.currentOrderId && o.id === checkoutTable.currentOrderId) || 
             (o.tableNumber === checkoutTable.number && ['pending', 'accepted', 'preparing', 'ready'].includes(o.status))
           );
+          const combinedCheckoutOrder = checkoutOrders.length > 0 ? {
+            ...latestOrder,
+            id: latestOrder?.id || `TBL-${checkoutTable.number}`,
+            tableNumber: checkoutTable.number,
+            items: checkoutItems,
+            totalAmount: checkoutTotal,
+            createdAt: checkoutOrders[0]?.createdAt || latestOrder?.createdAt || new Date(),
+          } : latestOrder;
+          const activeOrder = latestOrder;
           
           return (
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -322,10 +359,15 @@ export default function TablesTab({
                 <div className="p-6 space-y-5">
                   {/* Order Total Display */}
                   <div className="bg-[#801B2C]/5 border border-[#801B2C]/15 rounded-2xl p-5 text-center space-y-1 shadow-inner">
-                    <span className="text-xs font-black text-[#801B2C] font-body block">إجمالي المبلغ المطلوب تحصيله</span>
+                    <span className="text-xs font-black text-[#801B2C] font-body block">إجمالي المبلغ المطلوب تحصيله (تراكمي)</span>
                     <span className="font-mono font-black text-3xl text-[#801B2C] leading-none inline-block mt-1">
-                      {activeOrder ? activeOrder.totalAmount : 0} <span className="text-sm font-bold">ج.م</span>
+                      {checkoutTotal} <span className="text-sm font-bold">ج.م</span>
                     </span>
+                    {checkoutOrders.length > 1 && (
+                      <span className="text-[10px] text-zinc-500 font-bold block pt-1">
+                        (مجموع {checkoutOrders.length} طلبات على الطاولة)
+                      </span>
+                    )}
                   </div>
 
                   {/* Payment Method Selector */}
@@ -397,8 +439,8 @@ export default function TablesTab({
                   </button>
                   <button
                     onClick={() => {
-                      if (activeOrder) {
-                        onPrintReceipt(activeOrder);
+                      if (combinedCheckoutOrder || activeOrder) {
+                        onPrintReceipt(combinedCheckoutOrder || activeOrder);
                       }
                       onEmptyTable(checkoutTable.id, paymentMethod);
                       setCheckoutTable(null);

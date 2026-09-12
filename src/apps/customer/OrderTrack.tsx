@@ -35,9 +35,9 @@ export default function OrderTrack() {
     enabled: !!orderId,
   });
 
-  // Clear active order ID from local storage when order is delivered or cancelled
+  // Clear active order ID from local storage when order is cancelled only
   useEffect(() => {
-    if (order && (order.status === 'delivered' || order.status === 'cancelled')) {
+    if (order && order.status === 'cancelled') {
       const activeOrderId = localStorage.getItem('tawla_active_order_id');
       if (activeOrderId === order.id) {
         localStorage.removeItem('tawla_active_order_id');

@@ -9,10 +9,11 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket.js';
-import type { Product, Category, Restaurant } from '../../shared/types';
+import type { Product, Category, Restaurant, Order } from '../../shared/types';
 import CartFAB from './components/CartFAB';
 import CartDrawer from './components/CartDrawer';
 import OrderConfirmationModal from './components/OrderConfirmationModal';
+import MyOrdersDrawer from './components/MyOrdersDrawer';
 
 // ============ Framer Motion Animations ============
 const productCardVariants = {
@@ -96,6 +97,23 @@ export default function CustomerMenu() {
   // Custom states for Tawla Luxury navigation
   const [isServiceOpen, setIsServiceOpen] = useState(false);
   const [isNoOrderModalOpen, setIsNoOrderModalOpen] = useState(false);
+  const [isMyOrdersOpen, setIsMyOrdersOpen] = useState(false);
+
+  // Fetch my orders for this table session
+  const { data: myOrdersData } = useQuery({
+    queryKey: ['myOrders', restaurantSlug, tableNumber],
+    queryFn: async () => {
+      const response = await api.get(`/orders/my-orders/${restaurantSlug}/${tableNumber || 0}`);
+      return response.data.data as {
+        orders: Order[];
+        totalAccumulated: number;
+        tableNumber: number;
+        tableStatus: string;
+      };
+    },
+    enabled: !!restaurantSlug,
+    refetchInterval: isMyOrdersOpen ? 5000 : 20000,
+  });
   const [submittedOrder, setSubmittedOrder] = useState<any | null>(null);
 
   // Delivery customer details states
@@ -460,6 +478,8 @@ export default function CustomerMenu() {
     onSuccess: (order) => {
       toast.success('تم إرسال طلبك للمطبخ بنجاح');
       localStorage.setItem('tawla_active_order_id', order.id);
+      queryClient.invalidateQueries({ queryKey: ['myOrders', restaurantSlug, tableNumber] });
+      queryClient.invalidateQueries({ queryKey: ['tableStatus', restaurantSlug, tableNumber] });
       setCart([]);
       setIsCartOpen(false);
       setSubmittedOrder(order);
@@ -744,6 +764,16 @@ export default function CustomerMenu() {
             <Receipt className="w-4 h-4" />
             <span>طلب الحساب</span>
           </motion.button>
+          {myOrdersData?.orders && myOrdersData.orders.length > 0 && (
+            <motion.button 
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setIsMyOrdersOpen(true)}
+              className="action-btn !bg-[#801B2C]/15 !border-[#801B2C]/30 !text-rose-300"
+            >
+              <Clock className="w-4 h-4 text-rose-400" />
+              <span>طلباتي ({myOrdersData.orders.length})</span>
+            </motion.button>
+          )}
         </div>
       )}
 
@@ -1085,17 +1115,15 @@ export default function CustomerMenu() {
         )}
 
         <button
-          onClick={() => {
-            const activeOrderId = localStorage.getItem('tawla_active_order_id');
-            if (activeOrderId) {
-              navigate(`/order/${activeOrderId}/track`);
-            } else {
-              setIsNoOrderModalOpen(true);
-            }
-          }}
-          className="bottom-nav-item"
+          onClick={() => setIsMyOrdersOpen(true)}
+          className={`bottom-nav-item relative ${isMyOrdersOpen ? 'active' : ''}`}
         >
           <Clock />
+          {myOrdersData?.orders && myOrdersData.orders.length > 0 && (
+            <span className="absolute top-1 right-5 w-4 h-4 bg-[#801B2C] text-white text-[9px] font-black rounded-full flex items-center justify-center border border-white/20">
+              {myOrdersData.orders.length}
+            </span>
+          )}
           <span>طلباتي</span>
         </button>
       </div>
@@ -1384,6 +1412,17 @@ export default function CustomerMenu() {
           </>
         )}
       </AnimatePresence>
+      {/* ===== My Orders Drawer ===== */}
+      <MyOrdersDrawer
+        isOpen={isMyOrdersOpen}
+        onClose={() => setIsMyOrdersOpen(false)}
+        orders={myOrdersData?.orders || []}
+        totalAccumulated={myOrdersData?.totalAccumulated || 0}
+        tableNumber={tableNumber}
+        onRequestBill={() => !isReadOnly && requestBillMutation.mutate()}
+        onCallWaiter={() => !isReadOnly && callWaiterMutation.mutate()}
+        isReadOnly={isReadOnly}
+      />
     </div>
   );
 }
