@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,6 +46,9 @@ export default function OrderTrack() {
   }, [order]);
 
   // Service Mutations
+  const lastCallWaiterTimeRef = useRef<number>(0);
+  const lastRequestBillTimeRef = useRef<number>(0);
+
   const callWaiterMutation = useMutation({
     mutationFn: async () => {
       if (!order) return;
@@ -54,10 +57,17 @@ export default function OrderTrack() {
       });
     },
     onSuccess: () => {
-      toast.success('تم استدعاء الويتر، وجاري الحضور إليك');
+      lastCallWaiterTimeRef.current = Date.now();
+      toast.success('تم استدعاء الويتر، وجاري الحضور إليك فوراً 👍');
     },
-    onError: () => {
-      toast.error('فشل استدعاء الويتر. يرجى المحاولة لاحقاً.');
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || 'فشل استدعاء الويتر. يرجى المحاولة لاحقاً.';
+      if (err.response?.status === 429) {
+        lastCallWaiterTimeRef.current = Date.now();
+        toast(msg, { icon: '🛎️', duration: 4500 });
+      } else {
+        toast.error(msg);
+      }
     },
   });
 
@@ -69,12 +79,57 @@ export default function OrderTrack() {
       });
     },
     onSuccess: () => {
-      toast.success('تم طلب الحساب، الكاشير هيحضرلك فوراً');
+      lastRequestBillTimeRef.current = Date.now();
+      toast.success('تم طلب الحساب، الكاشير هيحضرلك فوراً 👍');
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'فشل طلب الحساب.');
+      const msg = err.response?.data?.error || 'فشل طلب الحساب.';
+      if (err.response?.status === 429) {
+        lastRequestBillTimeRef.current = Date.now();
+        toast(msg, { icon: '🧾', duration: 4500 });
+      } else {
+        toast.error(msg);
+      }
     },
   });
+
+  const handleCallWaiter = () => {
+    const now = Date.now();
+    if (now - lastCallWaiterTimeRef.current < 60000) {
+      toast('طلبك وصل بالفعل يا فندم، والويتر في الطريق لحضرتك حالياً! 🙏', {
+        icon: '🛎️',
+        duration: 4500,
+        style: {
+          borderRadius: '16px',
+          background: '#801B2C',
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '13px',
+        }
+      });
+      return;
+    }
+    callWaiterMutation.mutate();
+  };
+
+  const handleRequestBill = () => {
+    const now = Date.now();
+    if (now - lastRequestBillTimeRef.current < 60000) {
+      toast('طلب الحساب وصل للكاشير بالفعل وجاري تجهيز الفاتورة لحضرتك! 🙏', {
+        icon: '🧾',
+        duration: 4500,
+        style: {
+          borderRadius: '16px',
+          background: '#801B2C',
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '13px',
+        }
+      });
+      return;
+    }
+    requestBillMutation.mutate();
+  };
 
   // Sound Synthesizer for Customer
   const playStatusSound = (status: string) => {
@@ -449,7 +504,7 @@ export default function OrderTrack() {
               <div className="grid grid-cols-2 gap-4">
                 <motion.button
                   onClick={() => {
-                    callWaiterMutation.mutate();
+                    handleCallWaiter();
                     setIsServiceOpen(false);
                   }}
                   whileTap={{ scale: 0.95 }}
@@ -462,7 +517,7 @@ export default function OrderTrack() {
                 </motion.button>
                 <motion.button
                   onClick={() => {
-                    requestBillMutation.mutate();
+                    handleRequestBill();
                     setIsServiceOpen(false);
                   }}
                   whileTap={{ scale: 0.95 }}

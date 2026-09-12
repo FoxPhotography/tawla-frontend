@@ -15,6 +15,8 @@ interface TablesTabProps {
   isEmptyTablePending: boolean;
   onStartOrderForTable: (tableNumber: number) => void;
   onPrintReceipt: (order: any) => void;
+  checkoutTable?: Table | null;
+  onSelectCheckoutTable?: (table: Table | null) => void;
 }
 
 const containerVariants: Variants = {
@@ -43,9 +45,16 @@ export default function TablesTab({
   onEmptyTable,
   isEmptyTablePending,
   onStartOrderForTable,
-  onPrintReceipt
+  onPrintReceipt,
+  checkoutTable: controlledCheckoutTable,
+  onSelectCheckoutTable
 }: TablesTabProps) {
-  const [checkoutTable, setCheckoutTable] = useState<Table | null>(null);
+  const [internalCheckoutTable, setInternalCheckoutTable] = useState<Table | null>(null);
+  const checkoutTable = controlledCheckoutTable !== undefined ? controlledCheckoutTable : internalCheckoutTable;
+  const setCheckoutTable = (tbl: Table | null) => {
+    if (onSelectCheckoutTable) onSelectCheckoutTable(tbl);
+    setInternalCheckoutTable(tbl);
+  };
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'wallet'>('cash');
 
   return (

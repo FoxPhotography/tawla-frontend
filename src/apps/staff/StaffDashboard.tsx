@@ -86,6 +86,7 @@ export default function StaffDashboard() {
   // Waiter ordering state
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   const [preselectedTableNumber, setPreselectedTableNumber] = useState<number | ''>('');
+  const [checkoutTable, setCheckoutTable] = useState<Table | null>(null);
 
   const handleStartOrderForTable = (tableNumber: number) => {
     staffAudio.play('click');
@@ -268,9 +269,14 @@ export default function StaffDashboard() {
       staffAudio.play('bill');
       await api.patch(`/tables/${tableId}/status`, { status: 'empty', currentOrderId: null, paymentMethod });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       staffAudio.play('success');
       toast.success('تم تفريغ الطاولة وتسوية الحساب بنجاح.');
+      const tbl = tables.find((t: Table) => t.id === variables.tableId);
+      if (tbl) {
+        setAlerts(prev => prev.filter(a => !(a.type === 'bill' && a.tableNumber === tbl.number)));
+      }
+      setCheckoutTable(null);
       queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
       queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
     },
@@ -395,6 +401,10 @@ export default function StaffDashboard() {
             : t
         );
       });
+      if (data.status === 'empty') {
+        setAlerts(prev => prev.filter(a => !(a.type === 'bill' && a.tableNumber === data.tableNumber)));
+        setCheckoutTable(curr => curr && (curr.id === data.tableId || curr.number === data.tableNumber) ? null : curr);
+      }
       queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
       queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
     };
@@ -957,10 +967,16 @@ export default function StaffDashboard() {
                       whileHover={{ scale: 1.2, zIndex: 10 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => {
-                        handleStartOrderForTable(table.number);
+                        if (table.status === 'waitingBill') {
+                          staffAudio.play('click');
+                          setCheckoutTable(table);
+                          setActiveTab('tables');
+                        } else {
+                          handleStartOrderForTable(table.number);
+                        }
                       }}
                       className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-xs font-mono font-bold transition-all cursor-pointer border ${circleClass} relative`}
-                      title={`طاولة رقم ${table.number} - انقر لبدء طلب جديد (${table.status === 'occupied' ? 'مشغولة' : table.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'})`}
+                      title={`طاولة رقم ${table.number} - ${table.status === 'waitingBill' ? 'انقر لتسوية وتصفية الحساب' : 'انقر لبدء طلب جديد'} (${table.status === 'occupied' ? 'مشغولة' : table.status === 'waitingBill' ? 'تطلب الحساب' : 'متاحة'})`}
                     >
                       <span>{table.number}</span>
                       {table.status === 'waitingBill' && (
@@ -1024,6 +1040,8 @@ export default function StaffDashboard() {
                     isEmptyTablePending={emptyTableMutation.isPending}
                     onStartOrderForTable={handleStartOrderForTable}
                     onPrintReceipt={handlePrintReceipt}
+                    checkoutTable={checkoutTable}
+                    onSelectCheckoutTable={setCheckoutTable}
                   />
                 ) : (
                   <KDSTab 

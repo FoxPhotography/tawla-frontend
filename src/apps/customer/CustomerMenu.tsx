@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -241,8 +241,24 @@ export default function CustomerMenu() {
 
     socket.on('table_status_changed', (data: { tableNumber: number, status: string, currentOrderId: string | null }) => {
       if (Number(data.tableNumber) === Number(tableNumber)) {
-        console.log('Table status updated via socket, invalidating tableStatus query...');
+        console.log('Table status updated via socket:', data.status);
         queryClient.invalidateQueries({ queryKey: ['tableStatus', restaurantSlug, tableNumber] });
+        queryClient.invalidateQueries({ queryKey: ['myOrders', restaurantSlug, tableNumber] });
+
+        if (data.status === 'empty') {
+          // Immediately wipe local myOrders data so customer UI updates in 0ms!
+          queryClient.setQueryData(['myOrders', restaurantSlug, tableNumber], {
+            orders: [],
+            totalAccumulated: 0,
+            tableNumber: Number(tableNumber),
+            tableStatus: 'empty',
+          });
+          setSubmittedOrder(null);
+          toast.success('تمت تصفية وتفريغ حساب الطاولة بنجاح، شكراً لزيارتكم! 🙏', { 
+            duration: 6000,
+            id: 'table-settled-toast',
+          });
+        }
       }
     });
     
@@ -252,7 +268,7 @@ export default function CustomerMenu() {
       socket.off('customer_updated');
       socket.off('table_status_changed');
     };
-  }, [restaurant?.id, restaurantSlug, queryClient]);
+  }, [restaurant?.id, restaurantSlug, tableNumber, queryClient]);
 
   const filteredProducts = useMemo(() => {
     const filtered = products.filter((product) => {
@@ -493,6 +509,9 @@ export default function CustomerMenu() {
     },
   });
 
+  const lastCallWaiterTimeRef = useRef<number>(0);
+  const lastRequestBillTimeRef = useRef<number>(0);
+
   const callWaiterMutation = useMutation({
     mutationFn: async () => {
       await api.post('/orders/call-waiter', { tableNumber }, {
@@ -500,10 +519,17 @@ export default function CustomerMenu() {
       });
     },
     onSuccess: () => {
-      toast.success('تم استدعاء الويتر، وجاري الحضور إليك');
+      lastCallWaiterTimeRef.current = Date.now();
+      toast.success('تم استدعاء الويتر، وجاري الحضور إليك فوراً 👍');
     },
-    onError: () => {
-      toast.error('فشل استدعاء الويتر. يرجى المحاولة لاحقاً.');
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || 'فشل استدعاء الويتر. يرجى المحاولة لاحقاً.';
+      if (err.response?.status === 429) {
+        lastCallWaiterTimeRef.current = Date.now();
+        toast(msg, { icon: '🛎️', duration: 4500 });
+      } else {
+        toast.error(msg);
+      }
     },
   });
 
@@ -514,12 +540,59 @@ export default function CustomerMenu() {
       });
     },
     onSuccess: () => {
-      toast.success('تم طلب الحساب، الكاشير هيحضرلك فوراً');
+      lastRequestBillTimeRef.current = Date.now();
+      toast.success('تم طلب الحساب، الكاشير هيحضرلك فوراً 👍');
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'فشل طلب الحساب.');
+      const msg = err.response?.data?.error || 'فشل طلب الحساب.';
+      if (err.response?.status === 429) {
+        lastRequestBillTimeRef.current = Date.now();
+        toast(msg, { icon: '🧾', duration: 4500 });
+      } else {
+        toast.error(msg);
+      }
     },
   });
+
+  const handleCallWaiter = () => {
+    if (isReadOnly) return;
+    const now = Date.now();
+    if (now - lastCallWaiterTimeRef.current < 60000) {
+      toast('طلبك وصل بالفعل يا فندم، والويتر في الطريق لحضرتك حالياً! 🙏', {
+        icon: '🛎️',
+        duration: 4500,
+        style: {
+          borderRadius: '16px',
+          background: '#801B2C',
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '13px',
+        }
+      });
+      return;
+    }
+    callWaiterMutation.mutate();
+  };
+
+  const handleRequestBill = () => {
+    if (isReadOnly) return;
+    const now = Date.now();
+    if (now - lastRequestBillTimeRef.current < 60000) {
+      toast('طلب الحساب وصل للكاشير بالفعل وجاري تجهيز الفاتورة لحضرتك! 🙏', {
+        icon: '🧾',
+        duration: 4500,
+        style: {
+          borderRadius: '16px',
+          background: '#801B2C',
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '13px',
+        }
+      });
+      return;
+    }
+    requestBillMutation.mutate();
+  };
 
   // Loading
   if (isLoading) {
@@ -597,9 +670,7 @@ export default function CustomerMenu() {
           </p>
           <div className="flex flex-col gap-2.5 w-full max-w-xs">
             <button
-              onClick={() => {
-                callWaiterMutation.mutate();
-              }}
+              onClick={handleCallWaiter}
               disabled={callWaiterMutation.isPending}
               className="w-full py-3 px-5 rounded-2xl bg-[#801B2C] hover:bg-[#962436] text-white font-black text-xs transition-all shadow-md shadow-[#801B2C]/20 flex items-center justify-center gap-2 cursor-pointer"
             >
@@ -608,7 +679,7 @@ export default function CustomerMenu() {
             </button>
             <button
               onClick={() => {
-                navigate(`/${restaurantSlug}`);
+                navigate(`/menu/${restaurantSlug}`);
               }}
               className="w-full py-3 px-5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs transition-all border border-zinc-200 flex items-center justify-center gap-2 cursor-pointer"
             >
@@ -781,7 +852,7 @@ export default function CustomerMenu() {
           <div className="action-row relative z-10">
             <motion.button 
               whileTap={isReadOnly ? {} : { scale: 0.97 }}
-              onClick={() => !isReadOnly && callWaiterMutation.mutate()}
+              onClick={handleCallWaiter}
               className={`action-btn ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}`}
               disabled={isReadOnly}
             >
@@ -790,7 +861,7 @@ export default function CustomerMenu() {
             </motion.button>
             <motion.button 
               whileTap={isReadOnly ? {} : { scale: 0.97 }}
-              onClick={() => !isReadOnly && requestBillMutation.mutate()}
+              onClick={handleRequestBill}
               className={`action-btn ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}`}
               disabled={isReadOnly}
             >
@@ -1200,7 +1271,7 @@ export default function CustomerMenu() {
               <div className="grid grid-cols-2 gap-4 text-center">
                 <motion.button
                   onClick={() => {
-                    callWaiterMutation.mutate();
+                    handleCallWaiter();
                     setIsServiceOpen(false);
                   }}
                   whileTap={{ scale: 0.95 }}
@@ -1213,7 +1284,7 @@ export default function CustomerMenu() {
                 </motion.button>
                 <motion.button
                   onClick={() => {
-                    requestBillMutation.mutate();
+                    handleRequestBill();
                     setIsServiceOpen(false);
                   }}
                   whileTap={{ scale: 0.95 }}
@@ -1457,8 +1528,8 @@ export default function CustomerMenu() {
         orders={myOrdersData?.orders || []}
         totalAccumulated={myOrdersData?.totalAccumulated || 0}
         tableNumber={tableNumber}
-        onRequestBill={() => !isReadOnly && requestBillMutation.mutate()}
-        onCallWaiter={() => !isReadOnly && callWaiterMutation.mutate()}
+        onRequestBill={handleRequestBill}
+        onCallWaiter={handleCallWaiter}
         isReadOnly={isReadOnly}
       />
     </div>
