@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   CheckCircle2, 
@@ -42,12 +42,14 @@ interface PaymentDetails {
 
 export default function PaymentConfirmationPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user, restaurant } = useAuthStore();
 
   const invoiceId = searchParams.get('invoice_id') || searchParams.get('invoiceId') || '';
   const initialType = searchParams.get('type') || 'renewal';
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [isRetrying, setIsRetrying] = useState<boolean>(false);
   const [paymentData, setPaymentData] = useState<PaymentDetails | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string>('201066980953');
 
@@ -269,6 +271,38 @@ export default function PaymentConfirmationPage() {
     window.print();
   };
 
+  const handleInstantRetry = async () => {
+    setIsRetrying(true);
+    const toastId = toast.loading('جاري تجهيز رابط دفع فوري جديد...');
+    try {
+      if (initialType === 'renewal' || (user?.role === 'admin' && restaurant)) {
+        const res = await api.post('/subscriptions/renew', {
+          plan: paymentData?.plan || 'pro',
+          billingCycle: paymentData?.billingCycle || 'monthly',
+        });
+        toast.dismiss(toastId);
+        if (res.data?.data?.invoiceLink) {
+          toast.success('تم إنشاء الفاتورة بنجاح! جاري التوجيه لبوابة الدفع...');
+          window.location.href = res.data.data.invoiceLink;
+          return;
+        }
+      }
+
+      // If new registration or fallback
+      toast.dismiss(toastId);
+      navigate(`/checkout?plan=${paymentData?.plan || 'basic'}&billing=${paymentData?.billingCycle || 'monthly'}`);
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      const rawMsg = err.response?.data?.message || err.response?.data?.error;
+      const msg = rawMsg && typeof rawMsg === 'string'
+        ? rawMsg
+        : 'تعذر بدء المحاولة الفورية، يمكنك مراجعة البيانات من لوحة التحكم.';
+      toast.error(msg);
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   const planTitle = paymentData?.plan === 'pro' ? 'الباقة المتقدمة (Pro)' : 'الباقة الأساسية (Basic)';
   
   const formattedExpiry = paymentData?.expiresAt 
@@ -440,22 +474,33 @@ export default function PaymentConfirmationPage() {
 
             {/* Action Buttons */}
             <div className="pt-5 border-t border-zinc-100 flex flex-wrap items-center justify-center gap-3 w-full">
-              {/* Primary Action Button: Re-try Payment */}
-              {initialType === 'new' ? (
-                <Link
-                  to={`/register?plan=${paymentData.plan || 'basic'}&billing=${paymentData.billingCycle || 'monthly'}`}
-                  className="whitespace-nowrap px-6 py-3 bg-[#801B2C] hover:bg-[#601321] text-white rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/25 hover:shadow-lg active:scale-[0.98]"
-                >
-                  <RefreshCw className="w-4 h-4 shrink-0" />
-                  <span>إعادة المحاولة ببيانات صحيحة</span>
-                </Link>
+              {/* Primary Action Button: Instant Retry if renewal, or Checkout if new */}
+              {initialType === 'renewal' || (user?.role === 'admin' && restaurant) ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={isRetrying}
+                    onClick={handleInstantRetry}
+                    className="whitespace-nowrap px-6 py-3 bg-[#801B2C] hover:bg-[#601321] text-white rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/25 hover:shadow-lg active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-4 h-4 shrink-0 ${isRetrying ? 'animate-spin' : ''}`} />
+                    <span>{isRetrying ? 'جاري تجهيز الفاتورة...' : 'إعادة محاولة الدفع الآن (رابط جديد)'}</span>
+                  </button>
+
+                  <Link
+                    to="/admin?tab=subscription"
+                    className="whitespace-nowrap px-5 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <span>العودة للوحة التحكم</span>
+                  </Link>
+                </>
               ) : (
                 <Link
-                  to={`/checkout?plan=${paymentData.plan || 'pro'}&billing=${paymentData.billingCycle || 'monthly'}`}
+                  to={`/checkout?plan=${paymentData?.plan || 'basic'}&billing=${paymentData?.billingCycle || 'monthly'}`}
                   className="whitespace-nowrap px-6 py-3 bg-[#801B2C] hover:bg-[#601321] text-white rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/25 hover:shadow-lg active:scale-[0.98]"
                 >
                   <RefreshCw className="w-4 h-4 shrink-0" />
-                  <span>إعادة المحاولة ببيانات صحيحة</span>
+                  <span>إعادة المحاولة وتعديل البيانات</span>
                 </Link>
               )}
 

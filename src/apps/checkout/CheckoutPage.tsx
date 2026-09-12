@@ -554,7 +554,11 @@ export default function CheckoutPage() {
                       }
                     } catch (e: any) {
                       toast.dismiss();
-                      toast.error(e?.response?.data?.message || 'تعذر بدء التجديد.');
+                      const raw = e?.response?.data?.message || e?.response?.data?.error;
+                      const msg = raw && typeof raw === 'string' && (raw.includes('try again later') || raw.toLowerCase().includes('please try again'))
+                        ? 'بوابة الدفع استغرقت وقتاً أطول للتحقق من بيانات العملية، يرجى الضغط مرة أخرى لإعادة المحاولة فوراً.'
+                        : (raw || 'تعذر بدء التجديد.');
+                      toast.error(msg);
                     }
                   }}
                   className="flex-1 md:flex-initial px-4 py-2.5 bg-[#801B2C] hover:bg-[#681523] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"

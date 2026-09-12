@@ -213,6 +213,9 @@ export default function SubscriptionTab() {
       } else if (typeof rawError === 'object' && rawError !== null) {
         msg = Object.values(rawError).flat().join(' - ');
       }
+      if (msg.includes('try again later') || msg.toLowerCase().includes('please try again')) {
+        msg = 'بوابة الدفع استغرقت وقتاً أطول للتحقق من بيانات العملية، يرجى الضغط مرة أخرى لإعادة المحاولة فوراً.';
+      }
       toast.error(msg);
     } finally {
       setIsRenewing(false);
