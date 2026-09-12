@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Bell, Receipt, Plus, Minus, 
-  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X, Gift, Trophy
+  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X, Gift, Trophy, Lock
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -558,38 +558,70 @@ export default function CustomerMenu() {
 
       {/* ===== Hero Header ===== */}
       <div className="hero relative overflow-hidden z-10">
-        {tableNumber ? (
-          <div className="table-badge">
-            <UtensilsCrossed className="w-3 h-3" />
-            <span>طاولة {tableNumber}</span>
-          </div>
-        ) : isReadOnly ? (
-          <div className="table-badge bg-zinc-500/10 text-zinc-400 border border-zinc-500/25">
-            <ShoppingBag className="w-3 h-3" />
-            <span>منيو رقمي للعرض فقط</span>
-          </div>
-        ) : (
-          <div className="table-badge bg-rose-500/10 text-rose-400 border border-rose-500/25">
-            <ShoppingBag className="w-3 h-3" />
-            <span>طلب توصيل / خارجي</span>
-          </div>
-        )}
-        <h1 className="restaurant-name">{restaurant.settings?.menuTitle || restaurant.name}</h1>
-        <div className="restaurant-sub">{restaurant.settings?.menuDescription || 'أهلاً بك في تجربة طعام فاخرة ومميزة'}</div>
+        <div className="max-w-[430px] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto w-full">
+          {tableNumber ? (
+            <div className="table-badge">
+              <UtensilsCrossed className="w-3 h-3" />
+              <span>طاولة {tableNumber}</span>
+            </div>
+          ) : isReadOnly ? (
+            <div className="table-badge bg-zinc-500/10 text-zinc-400 border border-zinc-500/25">
+              <ShoppingBag className="w-3 h-3" />
+              <span>منيو رقمي للعرض فقط</span>
+            </div>
+          ) : (
+            <div className="table-badge bg-rose-500/10 text-rose-400 border border-rose-500/25">
+              <ShoppingBag className="w-3 h-3" />
+              <span>طلب توصيل / خارجي</span>
+            </div>
+          )}
+          <h1 className="restaurant-name sm:text-4xl md:text-5xl">{restaurant.settings?.menuTitle || restaurant.name}</h1>
+          <div className="restaurant-sub sm:text-sm">{restaurant.settings?.menuDescription || 'أهلاً بك في تجربة طعام فاخرة ومميزة'}</div>
+        </div>
       </div>
 
-      {/* ===== Table Occupied Banner ===== */}
-      {isTableOccupiedByOthers && (
-        <div className="mx-4 mt-4 relative z-10 max-w-[428px] md:mx-auto bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-2xl p-4 text-center font-body" dir="rtl">
-          <p className="text-xs font-bold leading-relaxed">
-            ⚠️ هذه الطاولة مشغولة حالياً لعميل آخر. يمكنك تصفح المنيو فقط، ولا يمكنك إرسال طلبات أو طلب خدمات حالياً.
+      {/* ===== Table Occupied Fullscreen Overlay ===== */}
+      {tableNumber && isTableOccupiedByOthers && (
+        <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center" dir="rtl">
+          <div className="w-20 h-20 rounded-3xl bg-[#801B2C]/10 border border-[#801B2C]/20 flex items-center justify-center text-[#801B2C] mb-5 shadow-lg shadow-[#801B2C]/10">
+            <Lock className="w-9 h-9 text-[#801B2C]" />
+          </div>
+          <span className="text-xs font-black px-3.5 py-1 rounded-full bg-[#801B2C]/10 text-[#801B2C] border border-[#801B2C]/20 mb-3">
+            طاولة رقم {tableNumber}
+          </span>
+          <h2 className="text-lg font-black text-zinc-900 font-cairo mb-2">
+            هذه الطاولة مشغولة حالياً
+          </h2>
+          <p className="text-xs text-zinc-600 font-medium max-w-xs leading-relaxed mb-6">
+            طاولة رقم {tableNumber} مسجلة حالياً لعميل آخر ويوجد حساب نشط قيد التجهيز والتصفية. إذا كنت أنت صاحب الطاولة، يرجى استخدام نفس الجهاز أو إبلاغ طاقم الخدمة.
           </p>
+          <div className="flex flex-col gap-2.5 w-full max-w-xs">
+            <button
+              onClick={() => {
+                callWaiterMutation.mutate();
+              }}
+              disabled={callWaiterMutation.isPending}
+              className="w-full py-3 px-5 rounded-2xl bg-[#801B2C] hover:bg-[#962436] text-white font-black text-xs transition-all shadow-md shadow-[#801B2C]/20 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Bell className="w-4 h-4" />
+              <span>استدعاء الويتر للمساعدة</span>
+            </button>
+            <button
+              onClick={() => {
+                navigate(`/${restaurantSlug}`);
+              }}
+              className="w-full py-3 px-5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold text-xs transition-all border border-zinc-200 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>تصفح كطلب خارجي / دليفري</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* ===== Loyalty Checking Card ===== */}
       {restaurant.loyaltySettings?.enabled && (
-        <div className="mx-4 mt-5 relative z-10 max-w-[428px] md:mx-auto bg-customer-bg-elevated border border-customer-border rounded-2xl p-4 shadow-customer-card space-y-3.5 text-right" dir="rtl">
+        <div className="mx-4 sm:mx-auto mt-5 relative z-10 max-w-[430px] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl bg-customer-bg-elevated border border-customer-border rounded-2xl p-4 sm:p-5 shadow-customer-card space-y-3.5 text-right" dir="rtl">
           <div className="flex justify-between items-center">
             <h3 className="font-extrabold text-customer-text-primary text-xs flex items-center gap-1.5">
               <Gift className="w-4 h-4 text-customer-accent" />
@@ -745,62 +777,66 @@ export default function CustomerMenu() {
 
       {/* ===== Quick Action Row ===== */}
       {tableNumber && (
-        <div className="action-row relative z-10">
-          <motion.button 
-            whileTap={isReadOnly ? {} : { scale: 0.97 }}
-            onClick={() => !isReadOnly && callWaiterMutation.mutate()}
-            className={`action-btn ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}`}
-            disabled={isReadOnly}
-          >
-            <Bell className="w-4 h-4" />
-            <span>استدعاء ويتر</span>
-          </motion.button>
-          <motion.button 
-            whileTap={isReadOnly ? {} : { scale: 0.97 }}
-            onClick={() => !isReadOnly && requestBillMutation.mutate()}
-            className={`action-btn ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}`}
-            disabled={isReadOnly}
-          >
-            <Receipt className="w-4 h-4" />
-            <span>طلب الحساب</span>
-          </motion.button>
-          {myOrdersData?.orders && myOrdersData.orders.length > 0 && (
+        <div className="max-w-[430px] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto sm:px-6">
+          <div className="action-row relative z-10">
             <motion.button 
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setIsMyOrdersOpen(true)}
-              className="action-btn !bg-[#801B2C]/15 !border-[#801B2C]/30 !text-rose-300"
+              whileTap={isReadOnly ? {} : { scale: 0.97 }}
+              onClick={() => !isReadOnly && callWaiterMutation.mutate()}
+              className={`action-btn ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}`}
+              disabled={isReadOnly}
             >
-              <Clock className="w-4 h-4 text-rose-400" />
-              <span>طلباتي ({myOrdersData.orders.length})</span>
+              <Bell className="w-4 h-4" />
+              <span>استدعاء ويتر</span>
             </motion.button>
-          )}
+            <motion.button 
+              whileTap={isReadOnly ? {} : { scale: 0.97 }}
+              onClick={() => !isReadOnly && requestBillMutation.mutate()}
+              className={`action-btn ${isReadOnly ? 'opacity-40 cursor-not-allowed' : ''}`}
+              disabled={isReadOnly}
+            >
+              <Receipt className="w-4 h-4" />
+              <span>طلب الحساب</span>
+            </motion.button>
+            {myOrdersData?.orders && myOrdersData.orders.length > 0 && (
+              <motion.button 
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setIsMyOrdersOpen(true)}
+                className="action-btn !bg-[#801B2C]/15 !border-[#801B2C]/30 !text-rose-300 col-span-2 sm:col-span-1"
+              >
+                <Clock className="w-4 h-4 text-rose-400" />
+                <span>طلباتي ({myOrdersData.orders.length})</span>
+              </motion.button>
+            )}
+          </div>
         </div>
       )}
 
       {/* ===== Search ===== */}
-      <div className="search-box relative z-10">
-        <Search className="w-4 h-4" />
-        <input
-          type="text"
-          placeholder="ابحث عن مشروب أو أكلة..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="search-input"
-        />
+      <div className="max-w-[430px] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto sm:px-6">
+        <div className="search-box relative z-10">
+          <Search className="w-4 h-4" />
+          <input
+            type="text"
+            placeholder="ابحث عن مشروب أو أكلة..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+        </div>
       </div>
 
       {/* ===== Most Popular Carousel ===== */}
       {!searchQuery && popularProducts.length > 0 && (
-        <div className="mt-6 mb-2 relative z-10 px-4 max-w-[428px] mx-auto">
+        <div className="mt-6 mb-2 relative z-10 px-4 sm:px-6 max-w-[430px] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-extrabold text-customer-text-primary text-sm flex items-center gap-1.5">
+            <h3 className="font-extrabold text-customer-text-primary text-sm sm:text-base flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-customer-accent animate-pulse" />
               الأكثر طلباً 🔥
             </h3>
-            <span className="text-[10px] text-customer-text-muted font-medium">اسحب للمزيد</span>
+            <span className="text-[10px] sm:text-xs text-customer-text-muted font-medium">اسحب للمزيد</span>
           </div>
           
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide direction-rtl -mx-4 px-4">
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide direction-rtl -mx-4 sm:mx-0 px-4 sm:px-0">
             {popularProducts.map((prod) => {
               const inCartItem = cart.find(i => i.product.id === prod.id);
               const isAvailable = prod.isAvailable;
@@ -886,9 +922,9 @@ export default function CustomerMenu() {
       )}
 
       {/* ===== Category Circles Selector ===== */}
-      <div className="relative z-10 max-w-[428px] mx-auto mt-5 mb-2">
-        <h3 className="font-extrabold text-customer-text-primary text-sm px-4 mb-3">الأقسام</h3>
-        <div className="flex gap-4 overflow-x-auto py-2 px-4 scrollbar-hide direction-rtl">
+      <div className="relative z-10 max-w-[430px] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto mt-5 mb-2 px-4 sm:px-6">
+        <h3 className="font-extrabold text-customer-text-primary text-sm sm:text-base mb-3">الأقسام</h3>
+        <div className="flex gap-4 overflow-x-auto py-2 scrollbar-hide direction-rtl -mx-4 sm:mx-0 px-4 sm:px-0">
           <div 
             onClick={() => setSelectedCategory('all')}
             className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
@@ -936,7 +972,7 @@ export default function CustomerMenu() {
       </div>
 
       {/* ===== Products List ===== */}
-      <div className="px-4 py-4 space-y-3.5 relative z-10 max-w-[428px] mx-auto">
+      <div className="px-4 sm:px-6 py-4 relative z-10 max-w-[430px] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-14 h-14 rounded-2xl bg-customer-bg-elevated flex items-center justify-center mx-auto mb-3 border border-customer-border shadow-customer-card">
@@ -945,7 +981,8 @@ export default function CustomerMenu() {
             <p className="text-customer-text-secondary text-sm font-medium">لا توجد منتجات مطابقة للبحث.</p>
           </div>
         ) : (
-          filteredProducts.map((product, idx) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+            {filteredProducts.map((product, idx) => {
             const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
             const inCartIndex = !isCustom ? cart.findIndex(i => i.product.id === product.id) : -1;
             const inCartItem = inCartIndex > -1 ? cart[inCartIndex] : null;
@@ -1038,12 +1075,13 @@ export default function CustomerMenu() {
                 )}
               </motion.div>
             );
-          })
+          })}
+          </div>
         )}
       </div>
 
       {/* ===== Branded Footer ===== */}
-      <div className="text-center py-8 pb-24 relative z-10 max-w-[428px] mx-auto opacity-75">
+      <div className="text-center py-8 pb-28 relative z-10 max-w-[430px] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto opacity-75">
         <a 
           href="https://tawla.site" 
           target="_blank" 
@@ -1093,7 +1131,7 @@ export default function CustomerMenu() {
       />
 
       {/* ===== persistent Bottom Navigation Bar ===== */}
-      <div className="fixed bottom-0 inset-x-0 bottom-nav z-40 max-w-[430px] mx-auto rounded-t-2xl shadow-customer-elevated">
+      <div className="fixed bottom-0 sm:bottom-4 inset-x-0 bottom-nav z-40 max-w-[430px] sm:max-w-md md:max-w-lg mx-auto rounded-t-2xl sm:rounded-2xl shadow-customer-elevated sm:border sm:border-zinc-200/80">
         <button
           onClick={() => {
             window.scrollTo({ top: 0, behavior: 'smooth' });

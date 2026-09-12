@@ -204,6 +204,11 @@ export default function KDSTab({ orders, categories, products, onUpdateStatus, i
                         }`}>
                           {order.type === 'dine_in' ? `طاولة ${order.tableNumber}` : order.type === 'takeaway' ? 'تيك أواي' : 'توصيل دليفري'}
                         </span>
+                        {order.type === 'dine_in' && orders.some(o => o.tableNumber === order.tableNumber && o.id !== order.id && o.isSettled !== true) && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-800 border border-amber-500/25 mr-1.5 inline-block">
+                            طلب إضافي
+                          </span>
+                        )}
                         <h4 className="text-xs font-black text-zinc-900 font-mono">بون #{order.id.slice(-4).toUpperCase()}</h4>
                         {order.customerName && (
                           <div className="text-[10px] font-bold text-zinc-600 mt-1 flex items-center gap-1">

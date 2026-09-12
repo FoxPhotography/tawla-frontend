@@ -225,6 +225,12 @@
   border-bottom: 1px solid var(--c-border);
 }
 
+@media (min-width: 640px) {
+  .hero {
+    padding: 40px 24px 32px;
+  }
+}
+
 /* badge رقم الترابيزة */
 .table-badge {
   display: inline-flex;
@@ -268,6 +274,20 @@
   margin-top: 16px;
 }
 
+@media (min-width: 640px) {
+  .action-row {
+    display: flex;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0;
+    margin-top: 20px;
+  }
+  .action-btn {
+    width: auto;
+    padding: 10px 22px;
+  }
+}
+
 .action-btn {
   display: flex;
   align-items: center;
@@ -309,6 +329,13 @@
   margin: 14px 16px 0;
   transition: border-color 0.2s;
   box-shadow: var(--shadow-card-light);
+}
+
+@media (min-width: 640px) {
+  .search-box {
+    margin: 16px 0 0;
+    max-width: 480px;
+  }
 }
 
 .search-box:focus-within {
@@ -559,6 +586,16 @@
   border-top: 1px solid var(--customer-border);
   padding: 10px 0 20px;   /* 20px عشان iPhone home indicator */
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.03);
+}
+
+@media (min-width: 640px) {
+  .bottom-nav {
+    padding: 10px 0;
+    border-radius: 18px;
+    border: 1px solid var(--customer-border);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.12);
+  }
 }
 
 .bottom-nav-item {
