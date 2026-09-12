@@ -1,18 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Edit2, Trash2, Eye, EyeOff, Users } from 'lucide-react';
+import { Edit2, Trash2, Eye, EyeOff, Users, CheckCircle2, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
+import { socket } from '../../../shared/services/socket';
 
 export default function StaffTab() {
   const queryClient = useQueryClient();
 
   const [staffName, setStaffName] = useState('');
   const [staffUsername, setStaffUsername] = useState('');
+  const [originalUsername, setOriginalUsername] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [showStaffPass, setShowStaffPass] = useState(false);
+
+  // Live Socket Username Status
+  const [usernameStatus, setUsernameStatus] = useState<{
+    checked: boolean;
+    available: boolean;
+    checking: boolean;
+    message: string;
+  }>({
+    checked: false,
+    available: false,
+    checking: false,
+    message: '',
+  });
 
   // Fetch staff list
   const { data: staffList = [], isLoading: loadingStaff } = useQuery({
@@ -27,8 +42,15 @@ export default function StaffTab() {
     setEditingStaffId(null);
     setStaffName('');
     setStaffUsername('');
+    setOriginalUsername('');
     setStaffPassword('');
     setShowStaffPass(false);
+    setUsernameStatus({
+      checked: false,
+      available: false,
+      checking: false,
+      message: '',
+    });
   };
 
   // Create / Update Staff Mutation
@@ -81,9 +103,83 @@ export default function StaffTab() {
     }
   });
 
+  // Live Socket Username Check Effect
+  useEffect(() => {
+    const clean = staffUsername.toLowerCase().trim();
+    if (!clean) {
+      setUsernameStatus({ checked: false, available: false, checking: false, message: '' });
+      return;
+    }
+
+    if (editingStaffId && clean === originalUsername.toLowerCase().trim()) {
+      setUsernameStatus({ checked: true, available: true, checking: false, message: 'اسم المستخدم الحالي' });
+      return;
+    }
+
+    if (clean.length < 3) {
+      setUsernameStatus({
+        checked: true,
+        available: false,
+        checking: false,
+        message: 'يجب ألا يقل عن 3 أحرف',
+      });
+      return;
+    }
+
+    if (!/^[a-z0-9_.-]+$/.test(clean)) {
+      setUsernameStatus({
+        checked: true,
+        available: false,
+        checking: false,
+        message: 'أحرف إنجليزية وأرقام و (_ . -) فقط',
+      });
+      return;
+    }
+
+    setUsernameStatus(prev => ({ ...prev, checking: true }));
+
+    const timer = setTimeout(() => {
+      if (socket.connected) {
+        socket.emit('check_staff_username', { username: clean, excludeUserId: editingStaffId || undefined }, (res: any) => {
+          if (res) {
+            setUsernameStatus({
+              checked: true,
+              available: Boolean(res.available),
+              checking: false,
+              message: res.available ? 'اسم المستخدم متاح للاستخدام ✓' : (res.message || 'اسم المستخدم مستخدم بالفعل، يرجى اختيار اسم آخر'),
+            });
+          }
+        });
+      } else {
+        api.get(`/auth/check-username?username=${encodeURIComponent(clean)}`)
+          .then(res => {
+            if (res.data?.data) {
+              setUsernameStatus({
+                checked: true,
+                available: Boolean(res.data.data.available),
+                checking: false,
+                message: res.data.data.available ? 'اسم المستخدم متاح للاستخدام ✓' : 'اسم المستخدم مستخدم بالفعل، يرجى اختيار اسم آخر',
+              });
+            }
+          })
+          .catch(() => {
+            setUsernameStatus({ checked: false, available: false, checking: false, message: '' });
+          });
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [staffUsername, editingStaffId, originalUsername]);
+
+  const isUsernameValid = usernameStatus.checked && usernameStatus.available && !usernameStatus.checking;
+  const isFormValid = staffName.trim().length > 0 &&
+    isUsernameValid &&
+    (editingStaffId || staffPassword.length >= 6);
+
   const submitStaff = (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffName.trim() || !staffUsername.trim()) return toast.error('يرجى إدخال الحقول المطلوبة.');
+    if (!isUsernameValid) return toast.error('اسم المستخدم محجوز، يرجى اختيار اسم متاح أولاً.');
     staffMutation.mutate();
   };
 
@@ -116,16 +212,43 @@ export default function StaffTab() {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-xs text-admin-text-secondary font-bold">اسم المستخدم للدخول (Username) *</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs text-admin-text-secondary font-bold">اسم المستخدم للدخول (Username) *</label>
+              {usernameStatus.checking ? (
+                <span className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 border-2 border-admin-accent border-t-transparent rounded-full animate-spin" />
+                  جاري التحقق...
+                </span>
+              ) : usernameStatus.checked ? (
+                <span className={`text-[11px] font-bold flex items-center gap-1 ${usernameStatus.available ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {usernameStatus.available ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  {usernameStatus.message}
+                </span>
+              ) : null}
+            </div>
             <input
               type="text"
               required
               value={staffUsername}
-              onChange={(e) => setStaffUsername(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, '');
+                setStaffUsername(val);
+              }}
               placeholder="مثال: ahmed_staff"
-              className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3 text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted text-left font-mono"
+              className={`w-full bg-admin-bg-base border ${
+                usernameStatus.checked
+                  ? usernameStatus.available
+                    ? 'border-emerald-500 focus:border-emerald-500 ring-2 ring-emerald-500/10'
+                    : 'border-rose-500 focus:border-rose-500 ring-2 ring-rose-500/10 bg-rose-50/10'
+                  : 'border-admin-border focus:border-admin-accent'
+              } text-admin-text-primary rounded-lg px-4 py-3 text-sm focus:outline-none transition-all placeholder:text-admin-text-muted text-left font-mono`}
               dir="ltr"
             />
+            {usernameStatus.checked && !usernameStatus.available && (
+              <p className="text-[11px] text-rose-600 font-semibold mt-1">
+                ⚠️ اسم المستخدم هذا محجوز مسبقاً، اختر اسماً آخر متاحاً لتتمكن من إنشاء الحساب.
+              </p>
+            )}
           </div>
         </div>
 
@@ -139,7 +262,7 @@ export default function StaffTab() {
               required={!editingStaffId}
               value={staffPassword}
               onChange={(e) => setStaffPassword(e.target.value)}
-              placeholder={editingStaffId ? '••••••••' : 'اكتب كلمة مرور قوية'}
+              placeholder={editingStaffId ? '••••••••' : 'اكتب كلمة مرور قوية (6 أحرف فأكثر)'}
               className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary rounded-lg px-4 py-3 pr-4 pl-11 text-right text-sm focus:border-admin-accent focus:outline-none transition-all placeholder:text-admin-text-muted"
             />
             <button
@@ -155,9 +278,13 @@ export default function StaffTab() {
         <div className="flex gap-3 pt-1">
           <motion.button
             type="submit"
-            disabled={staffMutation.isPending}
-            whileTap={{ scale: 0.97 }}
-            className="py-3 px-6 rounded-lg bg-admin-accent text-white font-bold text-xs hover:opacity-95 transition-opacity cursor-pointer"
+            disabled={!isFormValid || staffMutation.isPending}
+            whileTap={{ scale: isFormValid ? 0.97 : 1 }}
+            className={`py-3 px-6 rounded-lg text-white font-bold text-xs transition-all ${
+              !isFormValid
+                ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-400 dark:text-zinc-500 cursor-not-allowed opacity-60'
+                : 'bg-admin-accent hover:opacity-95 cursor-pointer shadow-sm'
+            }`}
           >
             {staffMutation.isPending ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -244,7 +371,14 @@ export default function StaffTab() {
                               setEditingStaffId(staffMember.id);
                               setStaffName(staffMember.name);
                               setStaffUsername(staffMember.username);
+                              setOriginalUsername(staffMember.username);
                               setStaffPassword('');
+                              setUsernameStatus({
+                                checked: true,
+                                available: true,
+                                checking: false,
+                                message: 'اسم المستخدم الحالي لهذا الموظف',
+                              });
                             }}
                             className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors cursor-pointer"
                           >

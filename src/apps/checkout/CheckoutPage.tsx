@@ -214,6 +214,75 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
 
+  // Email OTP Verification States
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verificationToken, setVerificationToken] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cooldown timer for OTP resend
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
+  // Send OTP
+  const handleSendOtp = async () => {
+    const email = formData.email.trim();
+    if (!email || !email.includes('@')) {
+      return toast.error('يرجى كتابة بريد إلكتروني صالح لإرسال كود التأكيد.');
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const res = await api.post('/auth/send-registration-otp', {
+        email,
+        name: formData.ownerName || formData.restaurantName || 'المدير',
+      });
+      toast.success(res.data?.message || 'تم إرسال كود التأكيد إلى بريدك الإلكتروني بنجاح!');
+      setCooldown(60);
+      setShowOtpModal(true);
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.response?.data?.error || 'تعذر إرسال كود التأكيد، يرجى مراجعة البريد والمحاولة ثانية.';
+      toast.error(errMsg);
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Verify OTP
+  const handleVerifyOtp = async () => {
+    const cleanCode = otpCode.trim();
+    if (!cleanCode || cleanCode.length < 6) {
+      return toast.error('يرجى إدخال كود التأكيد المكون من 6 أرقام.');
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const res = await api.post('/auth/verify-registration-otp', {
+        email: formData.email.trim(),
+        code: cleanCode,
+      });
+
+      const token = res.data?.data?.verificationToken;
+      setEmailVerified(true);
+      setVerificationToken(token || 'verified');
+      setShowOtpModal(false);
+      setOtpCode('');
+      toast.success('🎉 تم تأكيد بريدك الإلكتروني بنجاح!');
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.response?.data?.error || 'كود التأكيد غير صحيح أو انتهت صلاحيته.';
+      toast.error(errMsg);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
   // Auto-switch payment method to free trial if trial plan selected
   useEffect(() => {
     if (selectedPlanId === 'trial') {
@@ -291,6 +360,14 @@ export default function CheckoutPage() {
       toast.error('يرجى إدخال بريد إلكتروني صالح.');
       return;
     }
+
+    // Enforce Email OTP Verification
+    if (!emailVerified || !verificationToken) {
+      toast.error('يرجى تأكيد بريدك الإلكتروني أولاً عبر كود التحقق (OTP) لإتمام العملية.');
+      handleSendOtp();
+      return;
+    }
+
     if (!formData.username.trim() || formData.username.length < 3) {
       toast.error('اسم المستخدم يجب أن يكون 3 أحرف أو أرقام على الأقل.');
       return;
@@ -332,6 +409,7 @@ export default function CheckoutPage() {
           password: formData.password,
           plan: 'trial',
           deviceFingerprint,
+          emailVerificationToken: verificationToken,
         });
 
         const data = response.data?.data;
@@ -364,6 +442,7 @@ export default function CheckoutPage() {
         amount: price,
         currency: 'EGP',
         paymentGateway: 'fawaterk',
+        emailVerificationToken: verificationToken,
         redirectUrls: {
           successUrl: `${window.location.origin}/payment/confirmation?status=success&type=new`,
           failUrl: `${window.location.origin}/payment/confirmation?status=failed&type=new`,
@@ -605,21 +684,69 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
+                {/* Email with OTP Verification */}
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-[#1C1612] mb-1.5">البريد الإلكتروني للتواصل والإشعارات *</label>
-                  <div className="relative">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-[#1C1612]">
+                      البريد الإلكتروني لتأكيد الحساب والإيصالات *
+                    </label>
+                    {emailVerified ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        تم تأكيد البريد بنجاح
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-amber-700 font-medium">
+                        يتطلب تأكيد البريد عبر كود OTP
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative flex items-center">
                     <Mail className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        setEmailVerified(false);
+                        setVerificationToken('');
+                        handleInputChange(e);
+                      }}
                       required
                       dir="ltr"
                       placeholder="name@restaurant.com"
-                      className="w-full pr-10 pl-3 py-2.5 rounded-xl border border-zinc-200 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/10 text-sm outline-none transition-all text-right"
+                      className={`w-full pr-10 pl-28 py-2.5 rounded-xl border ${
+                        emailVerified
+                          ? 'border-emerald-500 bg-emerald-50/20'
+                          : 'border-zinc-200 focus:border-[#801B2C]'
+                      } focus:ring-2 focus:ring-[#801B2C]/10 text-sm outline-none transition-all text-right`}
                     />
+                    <button
+                      type="button"
+                      disabled={isSendingOtp || cooldown > 0 || !formData.email || emailVerified}
+                      onClick={handleSendOtp}
+                      className={`absolute left-2 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        emailVerified
+                          ? 'bg-emerald-100 text-emerald-800 cursor-default'
+                          : cooldown > 0
+                          ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                          : 'bg-[#801B2C] text-white hover:bg-[#5E1422] shadow-sm'
+                      }`}
+                    >
+                      {isSendingOtp ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : emailVerified ? (
+                        'مؤكد ✓'
+                      ) : cooldown > 0 ? (
+                        `إعادة (${cooldown}s)`
+                      ) : (
+                        'تأكيد البريد'
+                      )}
+                    </button>
                   </div>
+                  <p className="text-[10px] text-[#5C524C]/80 mt-1">
+                    سنرسل كود تأكيد مكون من 6 أرقام إلى هذا الإيميل للتحقق من ملكيتك له وضمان وصول إيصالات الدفع وبيانات الدخول.
+                  </p>
                 </div>
               </div>
             </div>
@@ -849,6 +976,79 @@ export default function CheckoutPage() {
           </div>
         </form>
       </main>
+
+      {/* Email OTP Verification Modal */}
+      {showOtpModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-zinc-100 text-center space-y-6 relative animate-in fade-in zoom-in duration-200">
+            <button
+              type="button"
+              onClick={() => setShowOtpModal(false)}
+              className="absolute left-4 top-4 p-2 text-zinc-400 hover:text-zinc-600 rounded-full hover:bg-zinc-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-16 h-16 bg-[#801B2C]/10 rounded-2xl flex items-center justify-center mx-auto text-[#801B2C]">
+              <Mail className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-black text-[#1C1612]">
+                تأكيد البريد الإلكتروني
+              </h3>
+              <p className="text-xs text-[#5C524C] leading-relaxed">
+                أدخل كود التحقق المكون من 6 أرقام المرسل إلى:
+                <br />
+                <span className="font-bold text-[#801B2C] font-mono dir-ltr inline-block mt-1">
+                  {formData.email}
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                autoFocus
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="123456"
+                className="w-full text-center text-3xl font-mono font-black tracking-[10px] py-3.5 rounded-2xl border-2 border-[#801B2C]/30 focus:border-[#801B2C] focus:ring-4 focus:ring-[#801B2C]/10 outline-none transition-all text-[#1C1612]"
+                dir="ltr"
+              />
+
+              <button
+                type="button"
+                disabled={isVerifyingOtp || otpCode.length < 6}
+                onClick={handleVerifyOtp}
+                className="w-full py-3.5 bg-[#801B2C] hover:bg-[#5E1422] text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isVerifyingOtp ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>تأكيد الكود والمتابعة</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs text-[#5C524C]">
+              <span>لم يصلك الكود؟</span>
+              <button
+                type="button"
+                disabled={cooldown > 0 || isSendingOtp}
+                onClick={handleSendOtp}
+                className="text-[#801B2C] font-bold hover:underline disabled:text-zinc-400 disabled:no-underline"
+              >
+                {cooldown > 0 ? `إعادة الإرسال بعد (${cooldown} ثانية)` : 'إعادة إرسال كود جديد'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

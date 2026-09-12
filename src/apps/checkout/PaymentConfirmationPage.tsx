@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -62,6 +62,23 @@ export default function PaymentConfirmationPage() {
   const urlStatus = (searchParams.get('status') || '').toLowerCase().trim();
   const urlMessage = searchParams.get('message') || searchParams.get('error') || '';
 
+  const hasNotifiedSuccessRef = useRef(false);
+  const hasNotifiedErrorRef = useRef(false);
+
+  const notifySuccessOnce = () => {
+    if (!hasNotifiedSuccessRef.current) {
+      hasNotifiedSuccessRef.current = true;
+      toast.success('تم تأكيد عملية الدفع بنجاح وتفعيل الاشتراك!');
+    }
+  };
+
+  const notifyErrorOnce = (msg?: string) => {
+    if (!hasNotifiedErrorRef.current) {
+      hasNotifiedErrorRef.current = true;
+      toast.error(msg || 'تم رفض عملية الدفع من قِبل البنك.');
+    }
+  };
+
   // 1. Live Instant Confirmation / Rejection Listener via WebSocket
   useEffect(() => {
     if (!invoiceId) return;
@@ -89,7 +106,7 @@ export default function PaymentConfirmationPage() {
           message: 'تم تأكيد عملية الدفع بنجاح وتفعيل اشتراكك!'
         });
         setLoading(false);
-        toast.success('تم تأكيد عملية الدفع بنجاح وتفعيل الاشتراك!');
+        notifySuccessOnce();
       }
     };
 
@@ -110,17 +127,15 @@ export default function PaymentConfirmationPage() {
           code: data.code,
         }));
         setLoading(false);
-        toast.error('تم رفض عملية الدفع من قِبل البنك.');
+        notifyErrorOnce(data.message);
       }
     };
 
     socket.on('payment_confirmed', handlePaymentReceived);
-    socket.on('payment_received', handlePaymentReceived);
     socket.on('payment_failed', handlePaymentFailed);
 
     return () => {
       socket.off('payment_confirmed', handlePaymentReceived);
-      socket.off('payment_received', handlePaymentReceived);
       socket.off('payment_failed', handlePaymentFailed);
     };
   }, [invoiceId, restaurant, user]);
@@ -173,8 +188,10 @@ export default function PaymentConfirmationPage() {
           message: 'تم تأكيد عملية الدفع بنجاح وتفعيل اشتراكك!'
         });
         setLoading(false);
+        notifySuccessOnce();
       } else if (data && data.status === 'failed') {
         // Explicit failure status returned from API
+        notifyErrorOnce(data.message);
         setPaymentData({
           status: 'failed',
           invoiceId,
