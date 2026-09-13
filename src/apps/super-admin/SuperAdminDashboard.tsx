@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Key, LogOut, Coffee, Sliders, CreditCard
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
+import { socket } from '../../shared/services/socket';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { SerialKey } from '../../shared/types';
 import logoImg from '../../assets/TAWLA_Logo.png';
@@ -22,7 +23,8 @@ import RestaurantDetailsModal from './components/RestaurantDetailsModal';
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, logout } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { user, token: currentToken, logout } = useAuthStore();
   
   const urlTab = (searchParams.get('tab') as any) || 'restaurants';
   const [activeTab, setActiveTab] = useState<'restaurants' | 'serials' | 'settings' | 'transactions'>(
@@ -53,6 +55,105 @@ export default function SuperAdminDashboard() {
     logout();
     navigate('/login');
   };
+
+  // Audio chime function for real-time alerts
+  const playAlertChime = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const now = ctx.currentTime;
+      // High-end pleasant two-tone chime (F5 -> A5 -> C6)
+      [698.46, 880, 1046.5].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.12);
+        gain.gain.setValueAtTime(0.25, now + i * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.12);
+        osc.stop(now + i * 0.12 + 0.45);
+      });
+    } catch (e) {
+      console.warn('Audio chime notice:', e);
+    }
+  };
+
+  // Socket Connection for Real-Time Super Admin Updates
+  useEffect(() => {
+    if (!user || user.role !== 'super_admin') return;
+
+    if (currentToken) {
+      socket.auth = { token: currentToken };
+    }
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    socket.emit('join_super_admin', { token: currentToken }, (res: any) => {
+      if (res && !res.success) {
+        console.warn('[Socket.io]: Failed to join super_admin room:', res.error);
+      } else {
+        console.log('[Socket.io]: Super Admin successfully joined super_admin room');
+      }
+    });
+
+    // When a new subscription / payment transaction is submitted
+    const handleNewTransaction = (data: any) => {
+      console.log('[Socket.io]: New transaction received:', data);
+      playAlertChime();
+      const tx = data?.transaction || data;
+      const amount = tx?.amount ? `${tx.amount} ج.م` : '';
+      const invoice = tx?.invoiceId || '';
+      const restName = tx?.restaurantName || tx?.restaurantId?.name || 'مطعم';
+      
+      toast.success(
+        `🔔 وصل طلب اشتراك/تحويل جديد (${invoice}) بقيمة ${amount} من "${restName}"!`,
+        { duration: 8000 }
+      );
+
+      // Invalidate queries so tables & badges update live without refresh
+      queryClient.invalidateQueries({ queryKey: ['super-admin-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-restaurants'] });
+    };
+
+    // When a transaction status is updated (approved / rejected)
+    const handleTransactionStatusUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-restaurants'] });
+    };
+
+    // When a new restaurant registers
+    const handleNewRestaurant = (data: any) => {
+      playAlertChime();
+      const restName = data?.restaurant?.name || 'مطعم جديد';
+      toast.success(`🏪 انضم مطعم جديد للمنصة: "${restName}"!`, { duration: 6000 });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-restaurants'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-transactions'] });
+    };
+
+    // When a customer order is created
+    const handleSuperAdminNewOrder = () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin-restaurants'] });
+    };
+
+    socket.on('new_transaction', handleNewTransaction);
+    socket.on('super_admin_transaction_created', handleNewTransaction);
+    socket.on('transaction_status_updated', handleTransactionStatusUpdated);
+    socket.on('new_restaurant', handleNewRestaurant);
+    socket.on('super_admin_new_order', handleSuperAdminNewOrder);
+
+    return () => {
+      socket.off('new_transaction', handleNewTransaction);
+      socket.off('super_admin_transaction_created', handleNewTransaction);
+      socket.off('transaction_status_updated', handleTransactionStatusUpdated);
+      socket.off('new_restaurant', handleNewRestaurant);
+      socket.off('super_admin_new_order', handleSuperAdminNewOrder);
+    };
+  }, [user, currentToken, queryClient]);
 
   // Queries
   const { data: restaurants = [], isLoading: loadingRest } = useQuery({
