@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Crown, CreditCard, ArrowLeft, KeyRound, AlertTriangle } from 'lucide-react';
+import { Crown, CreditCard, ArrowLeft, KeyRound, AlertTriangle, Check, ShoppingBag, FolderOpen, Tag, Smartphone, Wallet, Copy, ExternalLink, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import { useAuthStore } from '../../../shared/store/authStore';
+import type { Category, Product } from '../../../shared/types';
 
 export default function SubscriptionTab() {
   const queryClient = useQueryClient();
@@ -15,6 +16,29 @@ export default function SubscriptionTab() {
   const [renewCycle, setRenewCycle] = useState<'monthly' | 'annual'>('monthly');
   const [isRenewing, setIsRenewing] = useState(false);
   const [showSerialInput, setShowSerialInput] = useState(false);
+
+  // Renewal Modal & Gateway States
+  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [renewGateway, setRenewGateway] = useState<'vodafone_cash' | 'instapay' | 'paypal' | 'fawaterk'>('vodafone_cash');
+  const [renewSenderContact, setRenewSenderContact] = useState('');
+  const [renewSenderReference, setRenewSenderReference] = useState('');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopy = (text: string, key: string) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    setCopiedKey(key);
+    toast.success('تم نسخ النص بنجاح!');
+    setTimeout(() => setCopiedKey(null), 2500);
+  };
 
   // Fetch real-time subscription status from backend
   const { data: subStatusData } = useQuery({
@@ -87,9 +111,34 @@ export default function SubscriptionTab() {
   const [loyaltyTarget, setLoyaltyTarget] = useState(restaurant?.loyaltySettings?.targetOrderCount || 10);
   const [loyaltyRewardType, setLoyaltyRewardType] = useState(restaurant?.loyaltySettings?.rewardType || 'free_product');
   const [loyaltyRewardProductName, setLoyaltyRewardProductName] = useState(restaurant?.loyaltySettings?.rewardProductName || 'مشروب مجاني');
+  const [loyaltyRewardScope, setLoyaltyRewardScope] = useState<'all' | 'category' | 'products'>(
+    restaurant?.loyaltySettings?.rewardScope || 
+    (restaurant?.loyaltySettings?.rewardProductIds?.length ? 'products' : 
+    (restaurant?.loyaltySettings?.rewardCategoryId ? 'category' : 'all'))
+  );
+  const [loyaltyRewardCategoryId, setLoyaltyRewardCategoryId] = useState(restaurant?.loyaltySettings?.rewardCategoryId || '');
+  const [loyaltyRewardProductIds, setLoyaltyRewardProductIds] = useState<string[]>(
+    restaurant?.loyaltySettings?.rewardProductIds || []
+  );
   const [loyaltyRewardDiscountPercent, setLoyaltyRewardDiscountPercent] = useState(restaurant?.loyaltySettings?.rewardDiscountPercent || 50);
 
   const plan = restaurant?.subscription?.plan || 'trial';
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['admin-categories'],
+    queryFn: async () => {
+      const res = await api.get('/categories');
+      return res.data?.data || [];
+    }
+  });
+
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ['admin-products'],
+    queryFn: async () => {
+      const res = await api.get('/products');
+      return res.data?.data || [];
+    }
+  });
 
   const { data: systemSettings } = useQuery({
     queryKey: ['system-settings'],
@@ -122,7 +171,13 @@ export default function SubscriptionTab() {
       setIsGiftsEnabled(mode === 'loyalty_enabled');
       setLoyaltyTarget(restaurant.loyaltySettings?.targetOrderCount || 10);
       setLoyaltyRewardType(restaurant.loyaltySettings?.rewardType || 'free_product');
+      const scope = restaurant.loyaltySettings?.rewardScope || 
+        (restaurant.loyaltySettings?.rewardProductIds?.length ? 'products' : 
+        (restaurant.loyaltySettings?.rewardCategoryId ? 'category' : 'all'));
+      setLoyaltyRewardScope(scope);
       setLoyaltyRewardProductName(restaurant.loyaltySettings?.rewardProductName || 'مشروب مجاني');
+      setLoyaltyRewardCategoryId(restaurant.loyaltySettings?.rewardCategoryId || '');
+      setLoyaltyRewardProductIds(restaurant.loyaltySettings?.rewardProductIds || []);
       setLoyaltyRewardDiscountPercent(restaurant.loyaltySettings?.rewardDiscountPercent || 50);
     }
   }, [restaurant]);
@@ -191,17 +246,40 @@ export default function SubscriptionTab() {
     activateMutation.mutate(serialKey);
   };
 
-  const handleRenewFawaterk = async () => {
+  const handleRenewSubmit = async () => {
+    if (renewGateway === 'vodafone_cash' || renewGateway === 'instapay' || renewGateway === 'paypal') {
+      if (!renewSenderContact.trim()) {
+        const label = renewGateway === 'vodafone_cash' ? 'رقم المحفظة' : renewGateway === 'instapay' ? 'رقم حساب أو هاتف إنستاباي' : 'بريد أو معرّف الحساب';
+        return toast.error(`يرجى كتابة ${label} لتأكيد السداد.`);
+      }
+      if (!renewSenderReference.trim()) {
+        return toast.error('يرجى كتابة رقم المعاملة / كود التحويل.');
+      }
+    }
+
     setIsRenewing(true);
     try {
       const response = await api.post('/subscriptions/renew', {
         plan: renewPlan,
         billingCycle: renewCycle,
+        paymentGateway: renewGateway,
+        senderContact: renewSenderContact.trim() || undefined,
+        senderReference: renewSenderReference.trim() || undefined,
       });
 
-      if (response.data?.data?.invoiceLink) {
+      const data = response.data?.data;
+      if (data?.manualPayment || data?.status === 'pending') {
+        toast.success('تم تسجيل طلب التجديد بنجاح، جاري فتح صفحة المعاملة...');
+        setShowRenewModal(false);
+        setTimeout(() => {
+          window.location.href = `/payment/confirmation?invoiceId=${data.invoiceId}&status=pending&type=renewal&method=${renewGateway}`;
+        }, 500);
+        return;
+      }
+
+      if (data?.invoiceLink) {
         toast.success('جاري توجيهك لبوابة الدفع الآمنة (فواتيرك)...');
-        window.location.href = response.data.data.invoiceLink;
+        window.location.href = data.invoiceLink;
       } else {
         toast.error('تعذر إنشاء رابط الفاتورة من فواتيرك.');
       }
@@ -212,9 +290,6 @@ export default function SubscriptionTab() {
         msg = rawError;
       } else if (typeof rawError === 'object' && rawError !== null) {
         msg = Object.values(rawError).flat().join(' - ');
-      }
-      if (msg.includes('try again later') || msg.toLowerCase().includes('please try again')) {
-        msg = 'بوابة الدفع استغرقت وقتاً أطول للتحقق من بيانات العملية، يرجى الضغط مرة أخرى لإعادة المحاولة فوراً.';
       }
       toast.error(msg);
     } finally {
@@ -248,19 +323,30 @@ export default function SubscriptionTab() {
     }
   };
 
+  const handleToggleRewardProduct = (productId: string) => {
+    setLoyaltyRewardProductIds(prev =>
+      prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
+    );
+  };
+
   const handleSaveLoyaltySettings = (e: React.FormEvent) => {
     e.preventDefault();
     const computedMode = !isCustomerDbEnabled 
       ? 'disabled' 
       : (!isGiftsEnabled ? 'database_only' : 'loyalty_enabled');
 
+    const selectedCategory = categories.find((c: any) => c.id === loyaltyRewardCategoryId);
     saveMenuSettingsMutation.mutate({
       loyaltySettings: {
         enabled: computedMode === 'loyalty_enabled',
         mode: computedMode,
         targetOrderCount: Number(loyaltyTarget),
         rewardType: loyaltyRewardType,
+        rewardScope: loyaltyRewardScope,
         rewardProductName: loyaltyRewardProductName,
+        rewardCategoryId: loyaltyRewardScope === 'category' ? (loyaltyRewardCategoryId || null) : null,
+        rewardCategoryName: loyaltyRewardScope === 'category' && selectedCategory ? selectedCategory.name : null,
+        rewardProductIds: loyaltyRewardScope === 'products' ? loyaltyRewardProductIds : [],
         rewardDiscountPercent: Number(loyaltyRewardDiscountPercent),
       }
     });
@@ -515,24 +601,18 @@ export default function SubscriptionTab() {
             </div>
           )}
 
-          {/* Checkout Button & Fawaterk Badges */}
+          {/* Checkout Button & Payment Modal Trigger */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
             <motion.button
               type="button"
-              onClick={handleRenewFawaterk}
+              onClick={() => setShowRenewModal(true)}
               disabled={isRenewing}
               whileTap={{ scale: 0.98 }}
               className="w-full sm:w-auto py-3.5 px-8 bg-admin-accent hover:opacity-95 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-admin-accent cursor-pointer transition-all disabled:opacity-50"
             >
-              {isRenewing ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4" />
-                  <span>تجديد / ترقية الباقة الآن بالدفع الإلكتروني (فواتيرك)</span>
-                  <ArrowLeft className="w-4 h-4" />
-                </>
-              )}
+              <CreditCard className="w-4 h-4" />
+              <span>تجديد / ترقية الباقة واختيار وسيلة الدفع</span>
+              <ArrowLeft className="w-4 h-4" />
             </motion.button>
 
             <button
@@ -778,15 +858,131 @@ export default function SubscriptionTab() {
 
               <div className="grid grid-cols-1 gap-4">
                 {loyaltyRewardType === 'free_product' ? (
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">اسم المنتج / المشروب المجاني</label>
-                    <input
-                      type="text"
-                      value={loyaltyRewardProductName}
-                      onChange={(e) => setLoyaltyRewardProductName(e.target.value)}
-                      placeholder="مثال: فنجان قهوة مجاني، أو حلوى مجانية"
-                      className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-bold"
-                    />
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">تطبيق الهدية المجانية على:</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {[
+                          { key: 'all', label: 'جميع الأصناف (أي صنف)', icon: ShoppingBag },
+                          { key: 'category', label: 'قسم كامل من المنيو', icon: FolderOpen },
+                          { key: 'products', label: 'أصناف ومشاريب معينة', icon: Tag },
+                        ].map((scope) => {
+                          const Icon = scope.icon;
+                          const isActive = loyaltyRewardScope === scope.key;
+                          return (
+                            <button
+                              key={scope.key}
+                              type="button"
+                              onClick={() => {
+                                setLoyaltyRewardScope(scope.key as any);
+                                if (scope.key === 'all') {
+                                  setLoyaltyRewardCategoryId('');
+                                  setLoyaltyRewardProductIds([]);
+                                }
+                              }}
+                              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                                isActive
+                                  ? 'border-admin-accent bg-admin-accent/10 text-admin-accent'
+                                  : 'border-admin-border text-admin-text-secondary hover:bg-admin-bg-base'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                              <span>{scope.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {loyaltyRewardScope === 'category' && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">اختر قسم المنيو المستحق للهدية</label>
+                        <select
+                          value={loyaltyRewardCategoryId}
+                          onChange={(e) => {
+                            const catId = e.target.value;
+                            setLoyaltyRewardCategoryId(catId);
+                            if (catId) {
+                              const found = categories.find((c: any) => c.id === catId);
+                              if (found && (!loyaltyRewardProductName || loyaltyRewardProductName === 'مشروب مجاني' || loyaltyRewardProductName.startsWith('هدية مجانية من قسم'))) {
+                                setLoyaltyRewardProductName(`هدية مجانية من قسم ${found.name}`);
+                              }
+                            }
+                          }}
+                          className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-bold"
+                        >
+                          <option value="">-- اختر القسم (مثل: المشروبات أو الحلويات) --</option>
+                          {categories.map((cat: any) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-admin-text-muted">العميل سيحصل على هدية مجانية من الأصناف التابعة لهذا القسم فقط.</p>
+                      </div>
+                    )}
+
+                    {loyaltyRewardScope === 'products' && (
+                      <div className="space-y-2 bg-admin-bg-base border border-admin-border rounded-lg p-3 max-h-60 overflow-y-auto">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[11px] font-bold text-admin-text-secondary">
+                            اختر الأصناف أو المشاريب المحددة المؤهلة للهدية:
+                          </span>
+                          <span className="text-[10px] font-bold bg-admin-accent/10 text-admin-accent px-2 py-0.5 rounded-full">
+                            تم تحديد {loyaltyRewardProductIds.length} صنف
+                          </span>
+                        </div>
+                        <div className="space-y-3">
+                          {categories.map((cat: any) => {
+                            const catProds = products.filter((p: any) => p.categoryId === cat.id);
+                            if (catProds.length === 0) return null;
+                            return (
+                              <div key={cat.id} className="space-y-1.5">
+                                <h4 className="text-[10px] font-extrabold text-admin-accent bg-admin-accent/5 px-2 py-0.5 rounded inline-block">{cat.name}</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                  {catProds.map((prod: any) => {
+                                    const isChecked = loyaltyRewardProductIds.includes(prod.id);
+                                    return (
+                                      <label
+                                        key={prod.id}
+                                        onClick={() => handleToggleRewardProduct(prod.id)}
+                                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-bold transition-all ${
+                                          isChecked
+                                            ? 'border-admin-accent bg-admin-accent/10 text-admin-text-primary'
+                                            : 'border-admin-border text-admin-text-secondary hover:bg-admin-bg-subtle'
+                                        }`}
+                                      >
+                                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
+                                          isChecked ? 'bg-admin-accent border-admin-accent text-white' : 'border-zinc-400 bg-white'
+                                        }`}>
+                                          {isChecked && <Check className="w-2.5 h-2.5" />}
+                                        </div>
+                                        <div className="flex justify-between items-center w-full ml-1 truncate">
+                                          <span className="truncate">{prod.name}</span>
+                                          <span className="text-[9px] text-admin-text-muted font-mono shrink-0 mr-1">{prod.price} ج.م</span>
+                                        </div>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-admin-text-secondary font-bold block mb-1.5">اسم الهدية المعروض للعميل</label>
+                      <input
+                        type="text"
+                        value={loyaltyRewardProductName}
+                        onChange={(e) => setLoyaltyRewardProductName(e.target.value)}
+                        placeholder="مثال: فنجان قهوة مجاني، أو حلوى مجانية"
+                        className="w-full bg-admin-bg-base border border-admin-border text-admin-text-primary text-xs rounded-lg px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-bold"
+                      />
+                      <p className="text-[10px] text-admin-text-muted">الاسم التوضيحي الذي يظهر للعميل في قائمة المنيو وإشعار الهدية وفاتورة الطلب.</p>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-1.5">
@@ -939,6 +1135,367 @@ export default function SubscriptionTab() {
           </div>
         </form>
       </div>
+
+      {/* Renew / Upgrade Modal */}
+      {showRenewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            className="bg-admin-bg-elevated border border-admin-border rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl relative my-8 text-right"
+            dir="rtl"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-admin-border/60">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-admin-accent/10 border border-admin-accent/20 flex items-center justify-center text-admin-accent">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-admin-text-primary">
+                    تأكيد تجديد الاشتراك واختيار وسيلة السداد
+                  </h3>
+                  <p className="text-xs text-admin-text-secondary mt-0.5">
+                    اختر الطريقة الأنسب لك لإتمام السداد وتفعيل الباقة فوراً
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRenewModal(false)}
+                className="w-8 h-8 rounded-xl bg-admin-bg-base border border-admin-border text-admin-text-secondary hover:text-admin-text-primary flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Selected Plan & Amount Summary Bar */}
+            {(() => {
+              const isOffer = Boolean(systemSettings?.offer?.active && (!systemSettings.offer.endsAt || new Date(systemSettings.offer.endsAt) > new Date()));
+              const basicMonthly = isOffer && systemSettings?.offer?.basicPrice ? systemSettings.offer.basicPrice : (systemSettings?.pricing?.basic || 1500);
+              const basicAnnual = isOffer && systemSettings?.offer?.annualBasicPrice ? systemSettings.offer.annualBasicPrice : (systemSettings?.pricing?.annualBasic || (systemSettings?.pricing?.basic ? systemSettings.pricing.basic * 10 : 15000));
+              const proMonthly = isOffer && systemSettings?.offer?.proPrice ? systemSettings.offer.proPrice : (systemSettings?.pricing?.pro || 3000);
+              const proAnnual = isOffer && systemSettings?.offer?.annualProPrice ? systemSettings.offer.annualProPrice : (systemSettings?.pricing?.annualPro || (systemSettings?.pricing?.pro ? systemSettings.pricing.pro * 10 : 30000));
+
+              const amount = renewPlan === 'pro'
+                ? (renewCycle === 'annual' ? proAnnual : proMonthly)
+                : (renewCycle === 'annual' ? basicAnnual : basicMonthly);
+              const approxUsd = Math.round(amount / 50);
+
+              return (
+                <div className="my-5 p-4 rounded-2xl bg-admin-bg-base border border-admin-border/80 flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-admin-text-secondary font-bold block">تفاصيل الطلب:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-admin-accent/10 text-admin-accent uppercase">
+                        {renewPlan === 'pro' ? 'الباقة المتقدمة Pro' : 'الباقة الأساسية Basic'}
+                      </span>
+                      <span className="text-xs font-bold text-admin-text-secondary">
+                        ({renewCycle === 'annual' ? 'اشتراك سنوي - 12 شهر' : 'اشتراك شهري'})
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-left" dir="ltr">
+                    <span className="text-[11px] text-admin-text-secondary font-bold block text-right">إجمالي المطلوب سداده:</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-black text-admin-accent font-mono">
+                        {amount.toLocaleString()} EGP
+                      </span>
+                      {renewGateway === 'paypal' && (
+                        <span className="text-xs font-bold text-amber-500 font-mono">
+                          (≈ ${approxUsd} USD)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Payment Method Selector (4 Options) */}
+            <div className="space-y-3">
+              <label className="text-xs font-black text-admin-text-primary block">
+                اختر وسيلة الدفع:
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {[
+                  {
+                    id: 'vodafone_cash',
+                    name: 'فودافون كاش',
+                    sub: 'والمحافظ الإلكترونية',
+                    icon: Smartphone,
+                    color: 'text-rose-500',
+                    bg: 'bg-rose-500/10'
+                  },
+                  {
+                    id: 'instapay',
+                    name: 'إنستاباي (InstaPay)',
+                    sub: 'تحويل بنكي لحظي',
+                    icon: CreditCard,
+                    color: 'text-purple-600',
+                    bg: 'bg-purple-500/10'
+                  },
+                  {
+                    id: 'paypal',
+                    name: 'PayPal',
+                    sub: 'الدفع الدولي بالدولار',
+                    icon: Wallet,
+                    color: 'text-blue-500',
+                    bg: 'bg-blue-500/10'
+                  },
+                  {
+                    id: 'fawaterk',
+                    name: 'فواتيرك',
+                    sub: 'بطاقات Visa / Mada',
+                    icon: CreditCard,
+                    color: 'text-emerald-500',
+                    bg: 'bg-emerald-500/10'
+                  }
+                ].map((item) => {
+                  const isSelected = renewGateway === item.id;
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setRenewGateway(item.id as any)}
+                      className={`p-3 rounded-2xl border text-right transition-all flex flex-col justify-between cursor-pointer ${
+                        isSelected
+                          ? 'border-admin-accent bg-admin-accent/10 shadow-sm ring-1 ring-admin-accent'
+                          : 'border-admin-border bg-admin-bg-base hover:border-admin-border/80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`w-8 h-8 rounded-xl ${item.bg} ${item.color} flex items-center justify-center`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        {isSelected && (
+                          <div className="w-4 h-4 rounded-full bg-admin-accent text-white flex items-center justify-center">
+                            <Check className="w-2.5 h-2.5" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-admin-text-primary">{item.name}</div>
+                        <div className="text-[10px] text-admin-text-secondary mt-0.5">{item.sub}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Gateway Specific Instructions & Fields */}
+            <div className="mt-5 p-4 rounded-2xl bg-admin-bg-base border border-admin-border space-y-4">
+              {renewGateway === 'vodafone_cash' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bg-admin-bg-elevated p-3 rounded-xl border border-admin-border">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-admin-text-secondary font-bold block">رقم محفظة التحويل (فودافون كاش / المحافظ):</span>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-sm font-black text-admin-text-primary font-mono select-all">01005023649</span>
+                        <span className="text-xs font-bold text-admin-text-primary">(باسم: كريم ا.... ع.... ع.... ا....)</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy('01005023649', 'vf_renew')}
+                      className="px-3 py-1.5 rounded-lg bg-admin-accent/10 text-admin-accent hover:bg-admin-accent hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {copiedKey === 'vf_renew' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedKey === 'vf_renew' ? 'تم النسخ!' : 'نسخ الرقم'}</span>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-admin-text-secondary leading-relaxed">
+                    💡 قم بتحويل المبلغ المطلوب أعلاه إلى الرقم، وتأكد من ظهور الاسم أعلاه، ثم أدخل رقم محفظتك وكود العملية لتفعيل اشتراكك فوراً.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-xs text-admin-text-secondary font-bold block mb-1">
+                        رقم محفظتك (المحول منها) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={renewSenderContact}
+                        onChange={(e) => setRenewSenderContact(e.target.value)}
+                        placeholder="مثال: 01012345678"
+                        className="w-full bg-admin-bg-elevated border border-admin-border text-admin-text-primary text-xs rounded-xl px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-admin-text-secondary font-bold block mb-1">
+                        رقم المعاملة / كود العملية <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={renewSenderReference}
+                        onChange={(e) => setRenewSenderReference(e.target.value)}
+                        placeholder="مثال: 84930218"
+                        className="w-full bg-admin-bg-elevated border border-admin-border text-admin-text-primary text-xs rounded-xl px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {renewGateway === 'instapay' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bg-admin-bg-elevated p-3 rounded-xl border border-admin-border">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-admin-text-secondary font-bold block">رقم حساب إنستاباي المعتمد (InstaPay):</span>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-sm font-black text-purple-600 font-mono select-all">01066980953</span>
+                        <span className="text-xs font-bold text-admin-text-primary">(باسم: ابراهيم م.... ع.... م....)</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy('01066980953', 'instapay_renew')}
+                      className="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-600 hover:bg-purple-600 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {copiedKey === 'instapay_renew' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedKey === 'instapay_renew' ? 'تم النسخ!' : 'نسخ الرقم'}</span>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-admin-text-secondary leading-relaxed">
+                    💡 افتح تطبيق إنستاباي واختر "إرسال نقود" لرقم الهاتف أعلاه وتأكد من الاسم، ثم اكتب بيانات التحويل بالأسفل.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-xs text-admin-text-secondary font-bold block mb-1">
+                        رقم حساب أو هاتف إنستاباي الخاص بك <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={renewSenderContact}
+                        onChange={(e) => setRenewSenderContact(e.target.value)}
+                        placeholder="مثال: 010xxxxxxxx أو username@instapay"
+                        className="w-full bg-admin-bg-elevated border border-admin-border text-admin-text-primary text-xs rounded-xl px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-admin-text-secondary font-bold block mb-1">
+                        الرقم المرجعي للعملية (Reference Number) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={renewSenderReference}
+                        onChange={(e) => setRenewSenderReference(e.target.value)}
+                        placeholder="الرقم المرجعي من إشعار نجاح المعاملة في إنستاباي"
+                        className="w-full bg-admin-bg-elevated border border-admin-border text-admin-text-primary text-xs rounded-xl px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {renewGateway === 'paypal' && (
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-admin-bg-elevated p-3 rounded-xl border border-admin-border">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-admin-text-secondary font-bold block">حساب PayPal المعتمد:</span>
+                      <span className="text-sm font-black text-blue-500 font-mono select-all">@Ibrahimx66</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="https://paypal.me/Ibrahimx66"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>فتح الرابط مباشرة</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy('https://paypal.me/Ibrahimx66', 'paypal_renew')}
+                        className="px-3 py-1.5 rounded-lg bg-admin-bg-base border border-admin-border text-admin-text-secondary hover:text-admin-text-primary text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        {copiedKey === 'paypal_renew' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedKey === 'paypal_renew' ? 'تم النسخ!' : 'نسخ'}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-admin-text-secondary leading-relaxed">
+                    💡 يمكنك السداد عبر رابط PayPal.me أو إرسال المبلغ إلى الحساب أعلاه بعملة الدولار، ثم تدوين بريدك ورقم العملية هنا.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-xs text-admin-text-secondary font-bold block mb-1">
+                        البريد الإلكتروني لحسابك على PayPal <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={renewSenderContact}
+                        onChange={(e) => setRenewSenderContact(e.target.value)}
+                        placeholder="yourname@gmail.com"
+                        className="w-full bg-admin-bg-elevated border border-admin-border text-admin-text-primary text-xs rounded-xl px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-admin-text-secondary font-bold block mb-1">
+                        رقم المعاملة (Transaction ID) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={renewSenderReference}
+                        onChange={(e) => setRenewSenderReference(e.target.value)}
+                        placeholder="مثال: 9XY39281KL829301"
+                        className="w-full bg-admin-bg-elevated border border-admin-border text-admin-text-primary text-xs rounded-xl px-3 py-2.5 focus:border-admin-accent focus:outline-none transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {renewGateway === 'fawaterk' && (
+                <div className="space-y-2 text-xs text-admin-text-secondary leading-relaxed">
+                  <div className="flex items-center gap-2 text-emerald-600 font-extrabold text-xs">
+                    <Check className="w-4 h-4 text-emerald-500" />
+                    <span>الدفع الإلكتروني الآمن والمشفر بنسبة 100%</span>
+                  </div>
+                  <p>
+                    عند الضغط على تأكيد، سيتم إنشاء فاتورتك الرسمية ونقلك مباشرة إلى بوابة الدفع الإلكتروني (فواتيرك) لإدخال بيانات بطاقتك البنكية وإتمام السداد فورياً وبشكل مؤتمت بالكامل.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4 border-t border-admin-border/60">
+              <button
+                type="button"
+                onClick={() => setShowRenewModal(false)}
+                disabled={isRenewing}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-admin-border text-admin-text-secondary hover:text-admin-text-primary text-xs font-bold transition-colors cursor-pointer"
+              >
+                إلغاء وتراجع
+              </button>
+
+              <motion.button
+                type="button"
+                onClick={handleRenewSubmit}
+                disabled={isRenewing}
+                whileTap={{ scale: 0.98 }}
+                className="w-full sm:w-auto py-3 px-8 bg-admin-accent text-white font-extrabold text-xs rounded-xl hover:opacity-95 transition-opacity flex items-center justify-center gap-2 shadow-admin-accent cursor-pointer disabled:opacity-50"
+              >
+                {isRenewing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>جاري معالجة الطلب...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>تأكيد وسداد الاشتراك الآن</span>
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

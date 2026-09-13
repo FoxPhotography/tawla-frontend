@@ -51,7 +51,11 @@ export interface Restaurant {
     mode?: 'disabled' | 'database_only' | 'loyalty_enabled';
     targetOrderCount: number;
     rewardType: 'free_product' | 'discount';
+    rewardScope?: 'all' | 'category' | 'products';
     rewardProductName?: string;
+    rewardCategoryId?: string;
+    rewardCategoryName?: string;
+    rewardProductIds?: string[];
     rewardDiscountPercent?: number;
   };
 }

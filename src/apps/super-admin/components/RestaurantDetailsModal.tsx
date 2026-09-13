@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Coffee, Sliders, Lock, Users, Trash2, RefreshCw } from 'lucide-react';
+import { Coffee, Sliders, Lock, Users, Trash2, RefreshCw, CreditCard, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
+import ConfirmModal from '../../../shared/components/ConfirmModal';
 import CustomDateTimePicker from '../CustomDateTimePicker';
 import CustomSelect from '../CustomSelect';
 
@@ -25,6 +26,8 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
   const [editPlan, setEditPlan] = useState<'trial' | 'basic' | 'pro'>('basic');
   const [editExpiresAt, setEditExpiresAt] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [approvingTxInModal, setApprovingTxInModal] = useState<any | null>(null);
 
   // Initializing state
   useEffect(() => {
@@ -59,6 +62,36 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
       return response.data.data;
     },
     enabled: !!rest?.id,
+  });
+
+  // Query for transactions of this restaurant
+  const { data: allTransactions = [] } = useQuery({
+    queryKey: ['super-admin-transactions'],
+    queryFn: async () => {
+      const res = await api.get('/super-admin/transactions');
+      const d = res.data?.data;
+      return Array.isArray(d?.transactions) ? d.transactions : Array.isArray(d) ? d : [];
+    },
+  });
+
+  const restTransactions = allTransactions.filter((t: any) => 
+    (t.restaurantId?._id && String(t.restaurantId._id) === String(rest?.id)) ||
+    (t.restaurantId && String(t.restaurantId) === String(rest?.id)) ||
+    (t.restaurantName && t.restaurantName === rest?.name)
+  );
+
+  const approveTxMutation = useMutation({
+    mutationFn: async (txId: string) => {
+      return api.post(`/super-admin/transactions/${txId}/approve`);
+    },
+    onSuccess: () => {
+      toast.success('تم قبول المعاملة وتفعيل اشتراك المطعم بنجاح!');
+      queryClient.invalidateQueries({ queryKey: ['super-admin-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-restaurants'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل اعتماد المعاملة.');
+    }
   });
 
   // Mutations
@@ -133,9 +166,7 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
   };
 
   const handleDelete = () => {
-    if (confirm(`هل أنت متأكد تماماً من حذف مطعم "${rest.name}"؟\nسيؤدي هذا إلى حذف المطعم وجميع مستخدميه وأقسامه ومنتجاته وطلباته نهائياً ولا يمكن استرجاع البيانات!`)) {
-      deleteRestMutation.mutate(rest.id);
-    }
+    setShowDeleteModal(true);
   };
 
   const editPlanOptions = [
@@ -354,6 +385,58 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
             )}
           </div>
 
+          {/* 4. Payment Transactions for this Restaurant */}
+          <div className="bg-admin-bg-base border border-admin-border rounded-xl p-5 space-y-4">
+            <h4 className="text-sm font-extrabold text-admin-accent flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4 text-admin-accent" />
+                <span>المدفوعات وسجل الفواتير للمطعم</span>
+              </span>
+              <span className="text-xs font-bold bg-admin-accent/10 text-admin-accent px-3 py-1 rounded-full border border-admin-accent/20">
+                {restTransactions.length} معاملة
+              </span>
+            </h4>
+
+            {restTransactions.length === 0 ? (
+              <div className="text-center py-5 text-xs text-admin-text-muted font-bold">
+                لا توجد معاملات مالية مسجلة لهذا المطعم حتى الآن.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {restTransactions.map((tx: any) => (
+                  <div key={tx._id} className="bg-admin-bg-elevated border border-admin-border rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-1 text-right">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-xs text-admin-text-primary">#{tx.invoiceId}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          tx.status === 'paid' ? 'bg-emerald-500/10 text-emerald-600' : tx.status === 'pending' ? 'bg-amber-500/10 text-amber-600' : 'bg-red-500/10 text-red-600'
+                        }`}>
+                          {tx.status === 'paid' ? 'مقبولة ومفعلة' : tx.status === 'pending' ? 'بانتظار المراجعة' : 'مرفوضة'}
+                        </span>
+                        <span className="text-xs font-bold text-admin-accent font-mono">{tx.amount} ج.م</span>
+                      </div>
+                      <div className="text-[11px] text-admin-text-muted">
+                        <span>الوسيلة: {tx.paymentGateway === 'vodafone_cash' ? 'فودافون كاش' : tx.paymentGateway === 'instapay' ? 'إنستاباي' : tx.paymentGateway === 'paypal' ? 'بايبال' : 'فواتيرك'}</span>
+                        {tx.senderContact && <span className="mr-3">المحوّل: {tx.senderContact}</span>}
+                        {tx.senderReference && <span className="mr-3">كود/مرجع: {tx.senderReference}</span>}
+                      </div>
+                    </div>
+                    {tx.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => setApprovingTxInModal(tx)}
+                        disabled={approveTxMutation.isPending}
+                        className="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>تأكيد واعتماد فوراً</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Modal Footer */}
@@ -377,6 +460,40 @@ export default function RestaurantDetailsModal({ rest, onClose }: RestaurantDeta
         </div>
 
       </motion.div>
+
+      {/* Delete Restaurant Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={() => {
+          deleteRestMutation.mutate(rest.id);
+          setShowDeleteModal(false);
+        }}
+        title={`حذف مطعم "${rest.name}" نهائياً؟`}
+        message="تحذير: سيؤدي هذا الإجراء إلى حذف كافة بيانات المطعم، الطاولات، المنتجات، وقوائم الطلبات وحسابات الموظفين بشكل لا رجعة فيه."
+        confirmText="نعم، حذف المطعم نهائياً"
+        cancelText="تراجع وإلغاء"
+        variant="danger"
+        isLoading={deleteRestMutation.isPending}
+      />
+
+      {/* Approve Transaction Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!approvingTxInModal}
+        onClose={() => setApprovingTxInModal(null)}
+        onConfirm={() => {
+          if (approvingTxInModal) {
+            approveTxMutation.mutate(approvingTxInModal._id);
+            setApprovingTxInModal(null);
+          }
+        }}
+        title="تأكيد قبول الفاتورة وتفعيل الاشتراك"
+        message={`هل أنت متأكد من مراجعة وقبول الفاتورة (${approvingTxInModal?.invoiceId}) وتفعيل اشتراك المطعم فوراً؟`}
+        confirmText="تأكيد واعتماد الاشتراك الآن"
+        cancelText="تراجع وإلغاء"
+        variant="success"
+        isLoading={approveTxMutation.isPending}
+      />
     </div>
   );
 }

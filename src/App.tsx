@@ -21,7 +21,7 @@ const StaffLogin = lazyWithRetry(() => import('./apps/staff/StaffLogin.js'));
 const StaffDashboard = lazyWithRetry(() => import('./apps/staff/StaffDashboard.js'));
 const AdminDashboard = lazyWithRetry(() => import('./apps/admin/AdminDashboard.js'));
 const Register = lazyWithRetry(() => import('./apps/admin/Register.js'));
-const SuperAdminDashboard = lazyWithRetry(() => import('./apps/super-admin/SuperAdminDashboard.js'));
+const SuperAdminDashboard = lazyWithRetry(() => import('./apps/super-admin/SuperAdminDashboard'));
 const LandingPage = lazyWithRetry(() => import('./apps/landing/LandingPage.js'));
 const CheckoutPage = lazyWithRetry(() => import('./apps/checkout/CheckoutPage.js'));
 const PaymentConfirmationPage = lazyWithRetry(() => import('./apps/checkout/PaymentConfirmationPage.js'));

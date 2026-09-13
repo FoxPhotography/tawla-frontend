@@ -125,31 +125,76 @@ export default function CreateOrderModal({
   // Helper to find free product price in table items or cart items
   const findFreeProductPrice = () => {
     if (!loyaltyStatus || !loyaltyStatus.rewardValue) return 0;
-    const rewardName = loyaltyStatus.rewardValue as string;
+    const rewardName = String(loyaltyStatus.rewardValue);
+    const rewardScope = loyaltyStatus.rewardScope;
+    const rewardCategoryId = loyaltyStatus.rewardCategoryId;
+    const rewardProductIds = loyaltyStatus.rewardProductIds as string[] | undefined;
 
-    const itemsList = [
-      ...(orderType === 'dine_in' && activeOrderForTable ? activeOrderForTable.items.map((i: any) => ({ name: i.name, price: i.price })) : []),
-      ...newOrderCart.map(i => ({ name: i.product.name, price: i.calculatedPrice }))
+    // Collect order items with their category IDs and product IDs
+    const itemsList: Array<{ name: string; price: number; categoryId?: string; productId?: string }> = [
+      ...(orderType === 'dine_in' && activeOrderForTable 
+        ? activeOrderForTable.items.map((i: any) => {
+            const product = (menuData?.products || []).find((p: any) => p.id === i.productId);
+            return { name: i.name, price: i.price, categoryId: product?.categoryId, productId: i.productId };
+          }) 
+        : []),
+      ...newOrderCart.map(i => ({ 
+        name: i.product.name, 
+        price: i.calculatedPrice, 
+        categoryId: i.product.categoryId,
+        productId: i.product.id
+      }))
     ];
 
     if (itemsList.length === 0) return 0;
 
+    // 1. If reward is tied to specific menu products
+    if (rewardScope === 'products' || (rewardProductIds && rewardProductIds.length > 0)) {
+      if (rewardProductIds && rewardProductIds.length > 0) {
+        const productMatches = itemsList.filter(i => i.productId && rewardProductIds.includes(i.productId));
+        if (productMatches.length > 0) {
+          // Discount the lowest-priced matching item to protect margins
+          return Math.min(...productMatches.map(i => i.price));
+        }
+        return 0;
+      }
+    }
+
+    // 2. If reward is tied to a specific menu category
+    if (rewardScope === 'category' || rewardCategoryId) {
+      if (rewardCategoryId) {
+        const categoryItems = itemsList.filter(i => i.categoryId === rewardCategoryId);
+        if (categoryItems.length > 0) {
+          // Discount the lowest-priced item from this category to protect margins
+          return Math.min(...categoryItems.map(i => i.price));
+        }
+        // If order does not have any item from the reward category, return 0
+        return 0;
+      }
+    }
+
+    // 3. Exact or partial name match with rewardProductName
     const nameMatch = itemsList.find(i => 
       i.name.toLowerCase().includes(rewardName.toLowerCase()) ||
       rewardName.toLowerCase().includes(i.name.toLowerCase())
     );
     if (nameMatch) return nameMatch.price;
 
+    // 4. Fallback for legacy drink keywords if no category or product list was explicitly specified
     const isDrinkReward = rewardName.includes('مشروب') || rewardName.includes('عصير') || rewardName.includes('شاي') || rewardName.includes('قهوة') || rewardName.includes('مياه');
     if (isDrinkReward) {
       const drinkKeywords = ['شاي', 'قهوة', 'مشروب', 'عصير', 'بيبسي', 'كولا', 'سفن', 'فانتا', 'مياه', 'سحلب', 'كابتشينو', 'لاتيه', 'نسكافيه', 'اسبريسو', 'شوكولاتة', 'ليمون', 'مانجو', 'جوافة', 'فراولة', 'نعناع', 'كركدية', 'ينسون', 'soda', 'water', 'tea', 'coffee', 'juice'];
-      const drinkMatch = itemsList.find(i => 
+      const drinkMatches = itemsList.filter(i => 
         drinkKeywords.some(keyword => i.name.toLowerCase().includes(keyword))
       );
-      if (drinkMatch) return drinkMatch.price;
+      if (drinkMatches.length > 0) {
+        return Math.min(...drinkMatches.map(i => i.price));
+      }
+      return 0;
     }
 
-    return itemsList[0].price;
+    // 5. Default: return 0 if no matching item found
+    return 0;
   };
 
   const handleSearchCustomer = async (phoneStr: string) => {
@@ -907,6 +952,16 @@ export default function CreateOrderModal({
                                 onClick={() => {
                                   staffAudio.play('action');
                                   const freeItemPrice = findFreeProductPrice();
+                                  if (freeItemPrice <= 0) {
+                                    let errorMsg = 'يرجى إضافة صنف مؤهل للهدية المجانية إلى الطلب أولاً!';
+                                    if (loyaltyStatus.rewardProductIds && loyaltyStatus.rewardProductIds.length > 0) {
+                                      errorMsg = 'الطلب لا يحتوي على أي صنف من الأصناف المحددة للهدية المجانية!';
+                                    } else if (loyaltyStatus.rewardCategoryName) {
+                                      errorMsg = `الطلب لا يحتوي على أي صنف من قسم (${loyaltyStatus.rewardCategoryName}) لتطبيق الهدية المجانية!`;
+                                    }
+                                    toast.error(errorMsg);
+                                    return;
+                                  }
                                   setDiscountAmount(freeItemPrice);
                                   setRedeemLoyalty(true);
                                   toast.success(`تم تطبيق الهدية المجانية (${loyaltyStatus.rewardValue}) بقيمة: ${freeItemPrice} ج.م`);
@@ -1249,7 +1304,6 @@ export default function CreateOrderModal({
                       .filter((item) => item.product.id === prod.id)
                       .reduce((sum, item) => sum + item.quantity, 0);
                     const disc = getProductDiscountInfo(prod);
-                    const hasOptions = (prod.options && prod.options.length > 0) || (prod.modifiers && prod.modifiers.length > 0);
 
                     return (
                       <div key={prod.id} className="flex h-full">
@@ -1294,13 +1348,6 @@ export default function CreateOrderModal({
                               {disc.discountActive && (
                                 <span className="absolute top-2 right-2 bg-red-500/90 backdrop-blur-md text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm z-10">
                                   خصم {Math.round(disc.percent * 100)}%
-                                </span>
-                              )}
-
-                              {/* Customization Options Pill */}
-                              {hasOptions && !disc.discountActive && (
-                                <span className="absolute top-2 right-2 bg-black/50 backdrop-blur-md text-white text-[8.5px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
-                                  تخصيص ✨
                                 </span>
                               )}
                             </div>

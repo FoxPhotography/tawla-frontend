@@ -915,7 +915,7 @@ export default function CustomerMenu() {
               return (
                 <div 
                   key={prod.id}
-                  onClick={() => !isReadOnly && isAvailable && addToCart(prod)}
+                  onClick={() => !isReadOnly && isAvailable && handleProductClick(prod)}
                   className={`flex-shrink-0 w-36 bg-customer-bg-elevated border rounded-2xl p-3 flex flex-col justify-between shadow-customer-card relative overflow-hidden transition-all ${
                     isReadOnly || !isAvailable ? 'cursor-default' : 'cursor-pointer'
                   } ${
@@ -960,7 +960,7 @@ export default function CustomerMenu() {
                       disabled={!isAvailable}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isAvailable) addToCart(prod);
+                        if (isAvailable) handleProductClick(prod);
                       }}
                       className={`w-full py-1.5 rounded-xl border text-[10px] font-bold transition-all flex items-center justify-center gap-1 ${
                         !isAvailable

@@ -5,6 +5,7 @@ import { Key, Activity, Sliders, Calendar, Copy, Check, ShieldCheck, RefreshCw, 
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import type { SerialKey } from '../../../shared/types';
+import ConfirmModal from '../../../shared/components/ConfirmModal';
 import CustomSelect from '../CustomSelect';
 
 interface SerialsTabProps {
@@ -21,6 +22,7 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
   const [customDays, setCustomDays] = useState('');
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [deletingSerialId, setDeletingSerialId] = useState<string | null>(null);
 
   // Mutations
   const generateSerialMutation = useMutation({
@@ -52,9 +54,7 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
   });
 
   const handleDeleteSerial = (id: string) => {
-    if (confirm('هل أنت متأكد تماماً من حذف كود التفعيل هذا؟')) {
-      deleteSerialMutation.mutate(id);
-    }
+    setDeletingSerialId(id);
   };
 
   const handleGenerateSerial = (e: React.FormEvent) => {
@@ -288,6 +288,24 @@ export default function SerialsTab({ serialKeys, loadingSerials }: SerialsTabPro
           )}
         </div>
       </div>
+
+      {/* Delete Serial Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingSerialId}
+        onClose={() => setDeletingSerialId(null)}
+        onConfirm={() => {
+          if (deletingSerialId) {
+            deleteSerialMutation.mutate(deletingSerialId);
+            setDeletingSerialId(null);
+          }
+        }}
+        title="حذف كود التفعيل؟"
+        message="هل أنت متأكد من رغبتك في حذف كود التفعيل هذا؟ لن يتمكن أي مطعم من استخدامه بعد الحذف."
+        confirmText="نعم، حذف الكود"
+        cancelText="تراجع وإلغاء"
+        variant="danger"
+        isLoading={deleteSerialMutation.isPending}
+      />
     </div>
   );
 }

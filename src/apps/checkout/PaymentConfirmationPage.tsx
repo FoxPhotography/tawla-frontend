@@ -35,6 +35,9 @@ interface PaymentDetails {
   phone?: string;
   expiresAt?: string;
   paidAt?: string;
+  paymentGateway?: string;
+  senderContact?: string;
+  senderReference?: string;
   message?: string;
   tip?: string;
   code?: string;
@@ -239,8 +242,11 @@ export default function PaymentConfirmationPage() {
           amount: data?.amount,
           restaurantName: data?.restaurantName || restaurant?.name,
           ownerName: data?.ownerName || user?.name,
+          paymentGateway: data?.paymentGateway || searchParams.get('method') || undefined,
+          senderContact: data?.senderContact,
+          senderReference: data?.senderReference,
           message: data?.status === 'pending'
-            ? 'المعاملة ما زالت قيد المعالجة لدى البنك. إذا تم خصم المبلغ من حسابك، اضغط على زر "تحديث حالة الدفع" أدناه.'
+            ? 'تم استلام وتوثيق طلب السداد بنجاح وهو الآن بانتظار المراجعة والاعتماد الفوري. يمكنك إرسال صورة التحويل عبر الواتساب لتسريع التفعيل.'
             : (data?.message || 'لم يتم تأكيد السداد لهذه الفاتورة حتى الآن أو تم إلغاء العملية.')
         });
         setLoading(false);
@@ -382,7 +388,7 @@ export default function PaymentConfirmationPage() {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white border-2 border-amber-400/40 rounded-3xl p-8 sm:p-10 text-center shadow-xl space-y-6"
+            className="bg-white border-2 border-amber-400/40 rounded-3xl p-6 sm:p-10 text-center shadow-xl space-y-6"
           >
             <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mx-auto border border-amber-200">
               <Loader2 className="w-8 h-8 animate-spin" />
@@ -390,34 +396,99 @@ export default function PaymentConfirmationPage() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-100 text-amber-900 rounded-full text-xs font-bold">
                 <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
-                <span>بانتظار تأكيد البنك</span>
+                <span>
+                  {paymentData.paymentGateway === 'vodafone_cash'
+                    ? 'تحويل فودافون كاش - بانتظار التأكيد'
+                    : paymentData.paymentGateway === 'instapay'
+                    ? 'تحويل إنستاباي - بانتظار التأكيد'
+                    : paymentData.paymentGateway === 'paypal'
+                    ? 'تحويل بايبال - بانتظار التأكيد'
+                    : 'بانتظار التأكيد النهائي'}
+                </span>
               </div>
-              <h2 className="text-xl font-extrabold text-[#1C1612]">جاري معالجة عملية الدفع</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-[#1C1612]">تم توثيق طلب السداد بنجاح</h2>
               <p className="text-xs text-[#5C524C] leading-relaxed max-w-md mx-auto">
-                {paymentData.message || 'تم إرسال طلب السداد وبانتظار التأكيد النهائي من البنك. سيتم تحديث الصفحة وتفعيل اشتراكك تلقائياً فور الاعتماد.'}
+                {paymentData.message || 'تم تسجيل تفاصيل المعاملة بنجاح، وهي الآن قيد المراجعة والاعتماد. سيتم تحديث الصفحة وتفعيل اشتراكك تلقائياً فور الاعتماد.'}
               </p>
-              <div className="p-3 bg-amber-50 rounded-xl font-mono text-xs text-amber-900 inline-block mt-2 border border-amber-100">
-                رقم الفاتورة: #{paymentData.invoiceId}
-              </div>
             </div>
 
-            <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-3 justify-center">
-              <button 
-                onClick={() => verifyInvoice(0)} 
-                className="px-6 py-3 bg-[#801B2C] text-white rounded-xl text-xs font-bold hover:bg-[#5E1422] transition-colors flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/20"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span>تحديث حالة الدفع</span>
-              </button>
-              {initialType === 'new' ? (
-                <Link to="/" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center">
-                  العودة للرئيسية
-                </Link>
-              ) : (
-                <Link to="/admin?tab=subscription" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center">
-                  العودة للوحة التحكم
-                </Link>
+            {/* Receipt Summary Card */}
+            <div className="bg-[#FAF8F5] rounded-2xl p-4 sm:p-5 border border-amber-200/60 text-right space-y-3 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-zinc-200/80">
+                <span className="text-[#5C524C]">رقم الفاتورة:</span>
+                <span className="font-mono font-bold text-[#1C1612] dir-ltr">#{paymentData.invoiceId}</span>
+              </div>
+              {paymentData.referenceNumber && (
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-200/80">
+                  <span className="text-[#5C524C]">الرقم المرجعي:</span>
+                  <span className="font-mono font-bold text-[#801B2C] dir-ltr">{paymentData.referenceNumber}</span>
+                </div>
               )}
+              <div className="flex items-center justify-between pb-2 border-b border-zinc-200/80">
+                <span className="text-[#5C524C]">الباقة والدورة:</span>
+                <span className="font-bold text-[#1C1612]">
+                  {planTitle} ({paymentData.billingCycle === 'annual' ? 'سنوي' : 'شهري'})
+                </span>
+              </div>
+              {paymentData.amount !== undefined && (
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-200/80">
+                  <span className="text-[#5C524C]">المبلغ:</span>
+                  <span className="font-bold text-[#801B2C] font-mono text-sm">{paymentData.amount.toLocaleString()} ج.م</span>
+                </div>
+              )}
+              {paymentData.senderContact && (
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-200/80">
+                  <span className="text-[#5C524C]">الحساب / المحفظة المُرسل منها:</span>
+                  <span className="font-mono font-bold text-[#1C1612] dir-ltr">{paymentData.senderContact}</span>
+                </div>
+              )}
+              {paymentData.senderReference && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#5C524C]">كود / رقم عملية التحويل:</span>
+                  <span className="font-mono font-bold text-emerald-800 dir-ltr">{paymentData.senderReference}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex flex-col gap-2.5">
+              <a 
+                href={`https://wa.me/${supportWhatsapp}?text=${encodeURIComponent(
+                  `مرحباً طاولة، قمت بسداد اشتراك (${planTitle}) عبر ${
+                    paymentData.paymentGateway === 'vodafone_cash'
+                      ? 'فودافون كاش'
+                      : paymentData.paymentGateway === 'instapay'
+                      ? 'إنستاباي'
+                      : paymentData.paymentGateway === 'paypal'
+                      ? 'بايبال'
+                      : 'الدفع الإلكتروني'
+                  } برقم فاتورة: #${paymentData.invoiceId} ورقم مرجعي: ${paymentData.referenceNumber || ''}. يرجى التكرم بالاعتماد وتفعيل الحساب.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>إرسال إيصال التحويل عبر واتساب للتفعيل الفوري</span>
+              </a>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
+                <button 
+                  onClick={() => verifyInvoice(0)} 
+                  className="px-6 py-3 bg-[#801B2C] hover:bg-[#5E1422] text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-md shadow-[#801B2C]/20"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>تحديث حالة الدفع</span>
+                </button>
+                {initialType === 'new' ? (
+                  <Link to="/" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center">
+                    العودة للرئيسية
+                  </Link>
+                ) : (
+                  <Link to="/admin?tab=subscription" className="px-6 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center">
+                    العودة للوحة التحكم
+                  </Link>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

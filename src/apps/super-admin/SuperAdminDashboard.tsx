@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Key, LogOut, Coffee, Sliders
+  Key, LogOut, Coffee, Sliders, CreditCard
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -16,13 +16,24 @@ import StatsGrid from './components/StatsGrid';
 import RestaurantsTab from './components/RestaurantsTab';
 import SerialsTab from './components/SerialsTab';
 import SettingsTab from './components/SettingsTab';
+import TransactionsTab from './components/TransactionsTab';
 import RestaurantDetailsModal from './components/RestaurantDetailsModal';
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'serials' | 'settings'>('restaurants');
+  
+  const urlTab = (searchParams.get('tab') as any) || 'restaurants';
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'serials' | 'settings' | 'transactions'>(
+    ['restaurants', 'transactions', 'serials', 'settings'].includes(urlTab) ? urlTab : 'restaurants'
+  );
   const [selectedRest, setSelectedRest] = useState<any | null>(null);
+
+  const handleTabChange = (tabId: 'restaurants' | 'serials' | 'settings' | 'transactions') => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId });
+  };
 
   // Redirect if not super_admin
   useEffect(() => {
@@ -68,6 +79,18 @@ export default function SuperAdminDashboard() {
     },
   });
 
+  // Query transactions for live pending badge
+  const { data: txQueryData } = useQuery({
+    queryKey: ['super-admin-transactions'],
+    queryFn: async () => {
+      const response = await api.get('/super-admin/transactions');
+      const d = response.data?.data;
+      return Array.isArray(d?.transactions) ? d.transactions : Array.isArray(d) ? d : [];
+    },
+    refetchInterval: 10000,
+  });
+  const pendingTxCount = (txQueryData || []).filter((t: any) => t.status === 'pending').length;
+
   if (!user || user.role !== 'super_admin') {
     return null;
   }
@@ -82,6 +105,7 @@ export default function SuperAdminDashboard() {
 
   const navItems = [
     { id: 'restaurants' as const, label: 'الاشتراكات والمطاعم', icon: Coffee },
+    { id: 'transactions' as const, label: 'المدفوعات والتحويلات', icon: CreditCard },
     { id: 'serials' as const, label: 'أكواد التفعيل (Serials)', icon: Key },
     { id: 'settings' as const, label: 'إعدادات المنصة والأسعار', icon: Sliders }
   ] as const;
@@ -113,7 +137,7 @@ export default function SuperAdminDashboard() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id as any)}
+                  onClick={() => handleTabChange(item.id)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     isActive
                       ? 'bg-[#801B2C] text-white shadow-lg shadow-[#801B2C]/20'
@@ -124,6 +148,11 @@ export default function SuperAdminDashboard() {
                     <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-white' : 'text-zinc-500'}`} />
                     <span>{item.label}</span>
                   </div>
+                  {item.id === 'transactions' && pendingTxCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">
+                      {pendingTxCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -155,6 +184,8 @@ export default function SuperAdminDashboard() {
           unusedSerialsCount={unusedSerialsCount}
           loadingRest={loadingRest}
           loadingSerials={loadingSerials}
+          pendingTxCount={pendingTxCount}
+          onOpenTransactions={() => handleTabChange('transactions')}
         />
 
         <AnimatePresence mode="wait">
@@ -171,6 +202,10 @@ export default function SuperAdminDashboard() {
                 loadingRest={loadingRest}
                 onOpenRestDetails={setSelectedRest}
               />
+            )}
+
+            {activeTab === 'transactions' && (
+              <TransactionsTab />
             )}
 
             {activeTab === 'serials' && (
