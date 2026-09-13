@@ -18,8 +18,7 @@ import {
   Smartphone,
   Wallet,
   Copy,
-  ExternalLink,
-  Sparkles
+  ExternalLink
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import logoImg from '../../assets/TAWLA_Logo.png';
@@ -1023,8 +1022,7 @@ export default function CheckoutPage() {
                         </div>
 
                         <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3.5 text-xs text-amber-950 space-y-1.5">
-                          <p className="font-bold flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-amber-700 shrink-0" />
+                          <p className="font-bold">
                             خطوات التحويل والتأكيد:
                           </p>
                           <ol className="list-decimal list-inside space-y-1 text-[#5C524C] text-[11px] pr-1 leading-relaxed">
@@ -1131,8 +1129,7 @@ export default function CheckoutPage() {
                         </div>
 
                         <div className="bg-purple-50/80 border border-purple-200/80 rounded-2xl p-3.5 text-xs text-purple-950 space-y-1.5">
-                          <p className="font-bold flex items-center gap-1.5 text-purple-900">
-                            <Sparkles className="w-4 h-4 text-purple-700 shrink-0" />
+                          <p className="font-bold text-purple-900">
                             خطوات التحويل عبر InstaPay:
                           </p>
                           <ol className="list-decimal list-inside space-y-1 text-[#5C524C] text-[11px] pr-1 leading-relaxed">
@@ -1246,8 +1243,7 @@ export default function CheckoutPage() {
                         </div>
 
                         <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3.5 text-xs text-amber-950 space-y-1.5">
-                          <p className="font-bold flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-amber-700 shrink-0" />
+                          <p className="font-bold">
                             خطوات التحويل عبر PayPal:
                           </p>
                           <ol className="list-decimal list-inside space-y-1 text-[#5C524C] text-[11px] pr-1 leading-relaxed">

@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crown, CreditCard, ArrowLeft, KeyRound, AlertTriangle, Check, ShoppingBag, FolderOpen, Tag, Smartphone, Wallet, Copy, ExternalLink, X } from 'lucide-react';
+import { Crown, CreditCard, ArrowLeft, KeyRound, AlertTriangle, Check, ShoppingBag, FolderOpen, Tag, Smartphone, Wallet, Copy, ExternalLink, X, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
+import { socket } from '../../../shared/services/socket';
 import { useAuthStore } from '../../../shared/store/authStore';
 import type { Category, Product } from '../../../shared/types';
 
 export default function SubscriptionTab() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { restaurant, updateRestaurant } = useAuthStore();
 
   const [serialKey, setSerialKey] = useState('');
@@ -69,6 +72,22 @@ export default function SubscriptionTab() {
   }, [subStatusData]);
 
   const currentSub = subStatusData?.subscription || restaurant?.subscription;
+  const pendingTx = subStatusData?.pendingTransaction;
+
+  // Real-time listener for transaction & subscription status updates
+  useEffect(() => {
+    const handleStatusRefresh = () => {
+      queryClient.invalidateQueries({ queryKey: ['subscription-status'] });
+    };
+
+    socket.on('restaurant_transaction_updated', handleStatusRefresh);
+    socket.on('subscription_updated', handleStatusRefresh);
+
+    return () => {
+      socket.off('restaurant_transaction_updated', handleStatusRefresh);
+      socket.off('subscription_updated', handleStatusRefresh);
+    };
+  }, [queryClient]);
 
   // Check URL for payment completion and verify immediately
   useEffect(() => {
@@ -387,18 +406,114 @@ export default function SubscriptionTab() {
         </span>
       </div>
 
+      {/* Pending Transaction Tracker Banner */}
+      {pendingTx && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-5 md:p-6 bg-gradient-to-br from-amber-50/95 via-orange-50/50 to-amber-100/40 border-2 border-amber-300/80 rounded-2xl shadow-sm space-y-4 text-right"
+          dir="rtl"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-200/70 pb-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-800 shrink-0 shadow-inner">
+                <Clock className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-black text-amber-950">
+                    طلب اشتراك / تجديد قيد المراجعة والاعتماد
+                  </h3>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-200/80 text-amber-900 border border-amber-400/40">
+                    <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
+                    قيد الانتظار
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-amber-800/90 mt-0.5">
+                  تم تسجيل تفاصيل طلبك بنجاح، ويقوم فريق الإدارة بمطابقة إيصال السداد لتفعيل باقتك فوراً.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigate(`/payment/confirmation?invoice_id=${pendingTx.invoiceId}&status=pending&type=${pendingTx.type || 'renewal'}`);
+              }}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#801B2C] hover:bg-[#661523] text-white text-xs font-extrabold shadow-md hover:shadow-lg transition-all transform active:scale-95 shrink-0 cursor-pointer"
+            >
+              <span>متابعة حالة الطلب والإيصال</span>
+              <ArrowLeft className="w-4 h-4 rtl:rotate-0" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="bg-white/90 border border-amber-200/70 rounded-xl p-3 shadow-xs">
+              <span className="text-[11px] text-amber-800/75 font-bold block mb-1">رقم الفاتورة</span>
+              <span className="font-black text-amber-950 font-mono text-xs dir-ltr block truncate">
+                #{pendingTx.invoiceId}
+              </span>
+            </div>
+
+            <div className="bg-white/90 border border-amber-200/70 rounded-xl p-3 shadow-xs">
+              <span className="text-[11px] text-amber-800/75 font-bold block mb-1">الباقة والدورة</span>
+              <span className="font-extrabold text-amber-950 block">
+                {pendingTx.plan === 'pro' ? 'المتقدمة (Pro)' : 'الأساسية (Basic)'} • {pendingTx.billingCycle === 'annual' ? 'سنوي' : 'شهري'}
+              </span>
+            </div>
+
+            <div className="bg-white/90 border border-amber-200/70 rounded-xl p-3 shadow-xs">
+              <span className="text-[11px] text-amber-800/75 font-bold block mb-1">المبلغ المطلوب</span>
+              <span className="font-black text-emerald-700 text-sm block">
+                {Number(pendingTx.amount || 0).toLocaleString()} {pendingTx.currency || 'ج.م'}
+              </span>
+            </div>
+
+            <div className="bg-white/90 border border-amber-200/70 rounded-xl p-3 shadow-xs">
+              <span className="text-[11px] text-amber-800/75 font-bold block mb-1">طريقة السداد</span>
+              <span className="font-extrabold text-amber-950 block truncate">
+                {pendingTx.paymentGateway === 'vodafone_cash' ? 'فودافون كاش' :
+                 pendingTx.paymentGateway === 'instapay' ? 'انستا باي' :
+                 pendingTx.paymentGateway === 'paypal' ? 'PayPal' :
+                 pendingTx.paymentGateway === 'binance' ? 'Binance' : 'فواتيرك / بطاقة مصرفية'}
+              </span>
+            </div>
+          </div>
+
+          {(pendingTx.senderContact || pendingTx.senderReference) && (
+            <div className="flex flex-wrap items-center gap-4 text-[11px] text-amber-900 bg-amber-100/60 border border-amber-200/70 rounded-xl px-3.5 py-2 font-medium">
+              {pendingTx.senderContact && (
+                <span><strong>رقم الحساب / المحفظة المُرسل منها:</strong> <span className="font-mono">{pendingTx.senderContact}</span></span>
+              )}
+              {pendingTx.senderReference && (
+                <span><strong>الرقم المرجعي للتحويل:</strong> <span className="font-mono font-bold text-amber-950">{pendingTx.senderReference}</span></span>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px] text-amber-800/85">
+            <span>💡 يمكنك النقر على زر "متابعة حالة الطلب والإيصال" لعرض الإيصال الرقمي الكامل، أو التواصل عبر واتساب مع الدعم الفني لإرسال صورة التحويل وتسريع الاعتماد.</span>
+            {pendingTx.createdAt && (
+              <span className="text-[10px] text-amber-700/70 font-semibold shrink-0">
+                تاريخ الطلب: {new Date(pendingTx.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* Trial 30-Day Auto Purge Policy Warning Banner */}
       {currentSub?.plan === 'trial' && (
-        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3.5 text-xs text-amber-900 dark:text-amber-200">
-          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3.5 text-xs text-amber-900">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="space-y-1 leading-relaxed">
-            <span className="font-extrabold text-sm block text-amber-950 dark:text-amber-100">
+            <span className="font-extrabold text-sm block text-amber-950">
               تنبيه هام للنسخة التجريبية:
             </span>
             <p>
               أنت تعمل حالياً بالنسخة التجريبية المجانية. تنص سياسة المنصة على أن <strong>الحسابات التجريبية التي لا تشترك في باقة مدفوعة خلال 30 يوماً من تاريخ إنشائها يتم حذفها بالكامل وبشكل نهائي مع كافة بياناتها</strong> (المنتجات، الطاولات، الطلبات، العملاء) دون إمكانية استرجاعها.
             </p>
-            <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+            <p className="font-semibold text-emerald-700">
               🛡️ الترقية إلى إحدى الباقات المدفوعة (Basic أو Pro) تضمن حفظ وحماية بيانات منشأتك بشكل دائم وأبدي في النظام حتى بعد انتهاء فترة الاشتراك.
             </p>
           </div>
@@ -1169,6 +1284,27 @@ export default function SubscriptionTab() {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {pendingTx && (
+              <div className="mt-4 p-3.5 bg-amber-500/10 border border-amber-300/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-right">
+                <div className="flex items-center gap-2.5 text-amber-950">
+                  <Clock className="w-4 h-4 text-amber-700 shrink-0 animate-pulse" />
+                  <span>
+                    لديك بالفعل طلب اشتراك/تجديد قيد المراجعة برقم فاتورة <strong className="font-mono">#{pendingTx.invoiceId}</strong> بمبلغ <strong>{pendingTx.amount} ج.م</strong>.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRenewModal(false);
+                    navigate(`/payment/confirmation?invoice_id=${pendingTx.invoiceId}&status=pending&type=${pendingTx.type || 'renewal'}`);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-[11px] shrink-0 transition-colors cursor-pointer"
+                >
+                  متابعة الطلب الحالي ←
+                </button>
+              </div>
+            )}
 
             {/* Selected Plan & Amount Summary Bar */}
             {(() => {

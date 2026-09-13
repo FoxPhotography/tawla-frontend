@@ -120,11 +120,13 @@ export default function AdminDashboard() {
     socket.on('system_settings_updated', handleSettingsUpdate);
     socket.on('menu_updated', handleMenuUpdated);
     socket.on('subscription_updated', handleSubscriptionUpdated);
+    socket.on('restaurant_transaction_updated', handleSubscriptionUpdated);
 
     return () => {
       socket.off('system_settings_updated', handleSettingsUpdate);
       socket.off('menu_updated', handleMenuUpdated);
       socket.off('subscription_updated', handleSubscriptionUpdated);
+      socket.off('restaurant_transaction_updated', handleSubscriptionUpdated);
     };
   }, [restaurant, queryClient, updateRestaurant]);
 
