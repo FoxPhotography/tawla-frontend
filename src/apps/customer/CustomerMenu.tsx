@@ -278,7 +278,7 @@ export default function CustomerMenu() {
   }, [products, categories, searchQuery, selectedCategory]);
 
   // ============ Progressive Chunking (12 items per batch) ============
-  const BATCH_SIZE = 16;
+  const BATCH_SIZE = 24;
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
 
@@ -300,7 +300,7 @@ export default function CustomerMenu() {
           setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
         }
       },
-      { rootMargin: '350px 0px' }
+      { rootMargin: '600px 0px' }
     );
     const el = loadMoreSentinelRef.current;
     if (el) observer.observe(el);
@@ -1064,24 +1064,21 @@ export default function CustomerMenu() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {visibleProducts.map((product, idx) => {
+            {visibleProducts.map((product) => {
             const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
             const inCartIndex = !isCustom ? cart.findIndex(i => i.product.id === product.id) : -1;
             const inCartItem = inCartIndex > -1 ? cart[inCartIndex] : null;
             const isAvailable = product.isAvailable;
             
-            const batchIndex = idx % BATCH_SIZE;
-            const staggerDelay = Math.min(batchIndex * 0.035, 0.35);
-            
             return (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, x: 28, scale: 0.94 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
+                initial={{ opacity: 0, x: 36, scale: 0.92 }}
+                whileInView={{ opacity: 1, x: 0, scale: 1 }}
+                viewport={{ once: true, margin: '0px 0px -40px 0px' }}
                 transition={{
-                  duration: 0.32,
+                  duration: 0.38,
                   ease: [0.22, 1, 0.36, 1],
-                  delay: staggerDelay,
                 }}
                 onClick={() => !isReadOnly && isAvailable && handleProductClick(product)}
                 className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}

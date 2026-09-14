@@ -397,7 +397,7 @@
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 0.25s ease, transform 0.2s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
   direction: rtl;
   box-shadow: var(--shadow-card-light);
 }
