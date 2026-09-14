@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -12,11 +12,15 @@ import {
   Square,
   Coffee,
   UtensilsCrossed,
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import type { Category } from '../../../shared/types';
 import CustomSelect from './CustomSelect.js';
+import EditCatalogItemModal from '../../../shared/components/EditCatalogItemModal';
 
 interface CatalogOptionChoice {
   name: string;
@@ -71,6 +75,51 @@ export function CatalogImportModal({ isOpen, onClose, categories }: CatalogImpor
   const [selectedType, setSelectedType] = useState<'all' | 'cafe' | 'restaurant'>('all');
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [targetCategoryOption, setTargetCategoryOption] = useState<string>('auto'); // 'auto' or specific categoryId
+
+  // Edit Master Catalog Item state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCatalogItem, setEditingCatalogItem] = useState<MasterCatalogItem | null>(null);
+
+  // Horizontal scroll for category pills
+  const pillsScrollRef = useRef<HTMLDivElement>(null);
+  const [isDraggingPills, setIsDraggingPills] = useState(false);
+  const [pillsStartX, setPillsStartX] = useState(0);
+  const [pillsScrollLeft, setPillsScrollLeft] = useState(0);
+
+  const scrollPills = (direction: 'left' | 'right') => {
+    if (pillsScrollRef.current) {
+      const amount = 220;
+      pillsScrollRef.current.scrollBy({
+        left: direction === 'left' ? -amount : amount,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  const handlePillsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (pillsScrollRef.current && (e.deltaY !== 0 || e.deltaX !== 0)) {
+      pillsScrollRef.current.scrollLeft += e.deltaY || e.deltaX;
+    }
+  };
+
+  const handlePillsMouseDown = (e: React.MouseEvent) => {
+    if (!pillsScrollRef.current) return;
+    setIsDraggingPills(true);
+    setPillsStartX(e.pageX - pillsScrollRef.current.offsetLeft);
+    setPillsScrollLeft(pillsScrollRef.current.scrollLeft);
+  };
+
+  const handlePillsMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingPills || !pillsScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - pillsScrollRef.current.offsetLeft;
+    const walk = (x - pillsStartX) * 1.5;
+    pillsScrollRef.current.scrollLeft = pillsScrollLeft - walk;
+  };
+
+  const handlePillsMouseUp = () => {
+    setIsDraggingPills(false);
+  };
 
   // Fetch catalog items
   const { data: catalogItems = [], isLoading: loadingCatalog } = useQuery<MasterCatalogItem[]>({
@@ -174,7 +223,8 @@ export function CatalogImportModal({ isOpen, onClose, categories }: CatalogImpor
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
+    <>
+      <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-sm">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -290,40 +340,68 @@ export function CatalogImportModal({ isOpen, onClose, categories }: CatalogImpor
               </div>
             </div>
 
-            {/* Category Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {/* Category Pills with Smooth Scroll Controls */}
+            <div className="relative flex items-center group/scroll">
               <button
                 type="button"
-                onClick={() => setSelectedCategory('all')}
-                className={`text-xs px-3.5 py-1.5 rounded-full font-bold whitespace-nowrap transition-all ${
-                  selectedCategory === 'all'
-                    ? 'bg-admin-accent text-white shadow-sm'
-                    : 'bg-admin-bg-elevated border border-admin-border text-admin-text-secondary hover:text-admin-text-primary hover:border-admin-accent/40'
-                }`}
+                onClick={() => scrollPills('right')}
+                className="absolute right-0 z-10 w-7 h-7 rounded-full bg-admin-bg-elevated/95 hover:bg-admin-bg-base border border-admin-border text-admin-text-primary shadow-md flex items-center justify-center transition-all opacity-85 hover:opacity-100 hover:scale-105 active:scale-95 cursor-pointer"
+                title="التمرير لليمين"
               >
-                جميع الأقسام ({catalogItems.length})
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
-              {catalogCategories.map((cat) => (
+
+              <div
+                ref={pillsScrollRef}
+                onWheel={handlePillsWheel}
+                onMouseDown={handlePillsMouseDown}
+                onMouseMove={handlePillsMouseMove}
+                onMouseUp={handlePillsMouseUp}
+                onMouseLeave={handlePillsMouseUp}
+                className="flex items-center gap-2 overflow-x-auto px-9 py-1.5 scrollbar-thin scrollbar-thumb-zinc-700/60 hover:scrollbar-thumb-admin-accent/80 scrollbar-track-transparent select-none cursor-grab active:cursor-grabbing scroll-smooth w-full"
+              >
                 <button
-                  key={cat.name}
                   type="button"
-                  onClick={() => setSelectedCategory(cat.name)}
-                  className={`text-xs px-3.5 py-1.5 rounded-full font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                    selectedCategory === cat.name
+                  onClick={() => setSelectedCategory('all')}
+                  className={`text-xs px-3.5 py-1.5 rounded-full font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    selectedCategory === 'all'
                       ? 'bg-admin-accent text-white shadow-sm'
                       : 'bg-admin-bg-elevated border border-admin-border text-admin-text-secondary hover:text-admin-text-primary hover:border-admin-accent/40'
                   }`}
                 >
-                  <span>{cat.name}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      selectedCategory === cat.name ? 'bg-white/20 text-white' : 'bg-admin-bg-subtle text-admin-text-muted'
+                  جميع الأقسام ({catalogItems.length})
+                </button>
+                {catalogCategories.map((cat) => (
+                  <button
+                    key={cat.name}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.name)}
+                    className={`text-xs px-3.5 py-1.5 rounded-full font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                      selectedCategory === cat.name
+                        ? 'bg-admin-accent text-white shadow-sm'
+                        : 'bg-admin-bg-elevated border border-admin-border text-admin-text-secondary hover:text-admin-text-primary hover:border-admin-accent/40'
                     }`}
                   >
-                    {cat.count}
-                  </span>
-                </button>
-              ))}
+                    <span>{cat.name}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        selectedCategory === cat.name ? 'bg-white/20 text-white' : 'bg-admin-bg-subtle text-admin-text-muted'
+                      }`}
+                    >
+                      {cat.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => scrollPills('left')}
+                className="absolute left-0 z-10 w-7 h-7 rounded-full bg-admin-bg-elevated/95 hover:bg-admin-bg-base border border-admin-border text-admin-text-primary shadow-md flex items-center justify-center transition-all opacity-85 hover:opacity-100 hover:scale-105 active:scale-95 cursor-pointer"
+                title="التمرير لليسار"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
@@ -430,18 +508,32 @@ export function CatalogImportModal({ isOpen, onClose, categories }: CatalogImpor
                                 ? `${item.options.length} خيارات`
                                 : 'صنف أساسي'}
                             </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleQuickAdd(item);
-                              }}
-                              disabled={importMutation.isPending}
-                              className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-admin-bg-base border border-admin-border hover:border-admin-accent hover:bg-admin-accent hover:text-white text-admin-text-primary font-bold transition-all disabled:opacity-50"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>إضافة</span>
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingCatalogItem(item);
+                                  setIsEditModalOpen(true);
+                                }}
+                                className="p-1 rounded-lg bg-admin-bg-base border border-admin-border hover:border-admin-accent hover:text-admin-accent text-admin-text-secondary transition-all cursor-pointer"
+                                title="تعديل بيانات الصنف الأساسي"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickAdd(item);
+                                }}
+                                disabled={importMutation.isPending}
+                                className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-admin-bg-base border border-admin-border hover:border-admin-accent hover:bg-admin-accent hover:text-white text-admin-text-primary font-bold transition-all disabled:opacity-50 cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>إضافة</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -505,5 +597,25 @@ export function CatalogImportModal({ isOpen, onClose, categories }: CatalogImpor
         </motion.div>
       </div>
     </AnimatePresence>
+
+      {/* Edit Master Catalog Item Modal */}
+      <EditCatalogItemModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingCatalogItem(null);
+        }}
+        item={editingCatalogItem}
+        existingCategories={catalogCategories.map((c) => c.name)}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['master-catalog'] });
+          queryClient.invalidateQueries({ queryKey: ['master-catalog-categories'] });
+        }}
+        onDeleted={() => {
+          queryClient.invalidateQueries({ queryKey: ['master-catalog'] });
+          queryClient.invalidateQueries({ queryKey: ['master-catalog-categories'] });
+        }}
+      />
+    </>
   );
 }

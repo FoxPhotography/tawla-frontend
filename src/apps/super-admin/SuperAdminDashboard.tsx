@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Key, LogOut, Coffee, Sliders, CreditCard
-} from 'lucide-react';
+, BookOpen } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
 import { socket } from '../../shared/services/socket';
@@ -19,6 +19,7 @@ import SerialsTab from './components/SerialsTab';
 import SettingsTab from './components/SettingsTab';
 import TransactionsTab from './components/TransactionsTab';
 import RestaurantDetailsModal from './components/RestaurantDetailsModal';
+import CatalogManagementTab from './components/CatalogManagementTab';
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -27,12 +28,12 @@ export default function SuperAdminDashboard() {
   const { user, token: currentToken, logout } = useAuthStore();
   
   const urlTab = (searchParams.get('tab') as any) || 'restaurants';
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'serials' | 'settings' | 'transactions'>(
-    ['restaurants', 'transactions', 'serials', 'settings'].includes(urlTab) ? urlTab : 'restaurants'
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'serials' | 'settings' | 'transactions' | 'catalog'>(
+    ['restaurants', 'transactions', 'serials', 'settings', 'catalog'].includes(urlTab) ? urlTab : 'restaurants'
   );
   const [selectedRest, setSelectedRest] = useState<any | null>(null);
 
-  const handleTabChange = (tabId: 'restaurants' | 'serials' | 'settings' | 'transactions') => {
+  const handleTabChange = (tabId: 'restaurants' | 'serials' | 'settings' | 'transactions' | 'catalog') => {
     setActiveTab(tabId);
     setSearchParams({ tab: tabId });
   };
@@ -206,6 +207,7 @@ export default function SuperAdminDashboard() {
 
   const navItems = [
     { id: 'restaurants' as const, label: 'الاشتراكات والمطاعم', icon: Coffee },
+    { id: 'catalog' as const, label: 'كتالوج الأصناف الموحد', icon: BookOpen },
     { id: 'transactions' as const, label: 'المدفوعات والتحويلات', icon: CreditCard },
     { id: 'serials' as const, label: 'أكواد التفعيل (Serials)', icon: Key },
     { id: 'settings' as const, label: 'إعدادات المنصة والأسعار', icon: Sliders }
@@ -297,6 +299,10 @@ export default function SuperAdminDashboard() {
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.2 }}
           >
+            {activeTab === 'catalog' && (
+              <CatalogManagementTab />
+            )}
+
             {activeTab === 'restaurants' && (
               <RestaurantsTab 
                 restaurants={restaurants}
