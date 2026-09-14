@@ -277,30 +277,36 @@ export default function CustomerMenu() {
     });
   }, [products, categories, searchQuery, selectedCategory]);
 
-  // ============ Progressive Chunking (12 items per batch) ============
-  const BATCH_SIZE = 12;
+  // ============ Progressive Chunking (24 items per batch, prefetch at item 20) ============
+  const BATCH_SIZE = 24;
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const lastTriggeredCountRef = useRef(0);
 
   // Reset batch count when category or search changes
   useEffect(() => {
     setVisibleCount(BATCH_SIZE);
+    lastTriggeredCountRef.current = 0;
   }, [selectedCategory, searchQuery]);
 
   const visibleProducts = useMemo(() => {
     return filteredProducts.slice(0, visibleCount);
   }, [filteredProducts, visibleCount]);
 
-  // Pre-fetch trigger on the 8th item (length - 5) to quietly stack the next 12 items in advance
+  // Pre-fetch trigger on the 20th item (length - 5) to quietly stack the next 24 items in advance without animation glitch
   const prefetchTriggerRef = useCallback((node: HTMLDivElement | null) => {
     if (!node) return;
     if (visibleCount >= filteredProducts.length) return;
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
+        if (lastTriggeredCountRef.current === visibleCount) return;
+        lastTriggeredCountRef.current = visibleCount;
         observer.disconnect();
-        setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
+        requestAnimationFrame(() => {
+          setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
+        });
       }
-    }, { rootMargin: '150px 0px' });
+    }, { rootMargin: '50px 0px' });
 
     observer.observe(node);
   }, [visibleCount, filteredProducts.length]);
@@ -1068,7 +1074,7 @@ export default function CustomerMenu() {
             
             // Ultra-light hardware-accelerated stagger (subtle & responsive for weak mobile devices)
             const staggerDelay = (idx % 3) * 0.035;
-            // Pre-fetch next 12 items when user reaches the 8th item (length - 5)
+            // Pre-fetch next 24 items when user reaches the 20th item (length - 5)
             const isPrefetchTrigger = idx === Math.max(0, visibleProducts.length - 5);
 
             return (
