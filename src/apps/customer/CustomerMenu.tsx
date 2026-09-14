@@ -1070,21 +1070,23 @@ export default function CustomerMenu() {
             const inCartItem = inCartIndex > -1 ? cart[inCartIndex] : null;
             const isAvailable = product.isAvailable;
             
-            const staggerDelay = (idx % 6) * 0.08;
+            // Ultra-light hardware-accelerated stagger (subtle & responsive for weak mobile devices)
+            const staggerDelay = (idx % 3) * 0.035;
 
             return (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, x: 42, scale: 0.90 }}
-                whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                viewport={{ once: true, margin: '0px 0px -100px 0px' }}
+                initial={{ opacity: 0, x: 18 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: '0px 0px -60px 0px' }}
                 transition={{
-                  duration: 0.42,
-                  ease: [0.16, 1, 0.3, 1],
+                  duration: 0.22,
+                  ease: 'easeOut',
                   delay: staggerDelay,
                 }}
+                style={{ willChange: 'transform, opacity' }}
                 onClick={() => !isReadOnly && isAvailable && handleProductClick(product)}
-                className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                className={`product-card transform-gpu relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 {/* Image on the Right (First child in RTL) */}
                 {product.image?.url ? (
