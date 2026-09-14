@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -278,9 +278,8 @@ export default function CustomerMenu() {
   }, [products, categories, searchQuery, selectedCategory]);
 
   // ============ Progressive Chunking (12 items per batch) ============
-  const BATCH_SIZE = 24;
+  const BATCH_SIZE = 12;
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
-  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
 
   // Reset batch count when category or search changes
   useEffect(() => {
@@ -291,22 +290,19 @@ export default function CustomerMenu() {
     return filteredProducts.slice(0, visibleCount);
   }, [filteredProducts, visibleCount]);
 
-  // IntersectionObserver for seamless infinite scrolling
-  useEffect(() => {
+  // Pre-fetch trigger on the 8th item (length - 5) to quietly stack the next 12 items in advance
+  const prefetchTriggerRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
     if (visibleCount >= filteredProducts.length) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
-        }
-      },
-      { rootMargin: '800px 0px' }
-    );
-    const el = loadMoreSentinelRef.current;
-    if (el) observer.observe(el);
-    return () => {
-      if (el) observer.unobserve(el);
-    };
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        observer.disconnect();
+        setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
+      }
+    }, { rootMargin: '150px 0px' });
+
+    observer.observe(node);
   }, [visibleCount, filteredProducts.length]);
 
   // Customization Effect
@@ -1072,10 +1068,13 @@ export default function CustomerMenu() {
             
             // Ultra-light hardware-accelerated stagger (subtle & responsive for weak mobile devices)
             const staggerDelay = (idx % 3) * 0.035;
+            // Pre-fetch next 12 items when user reaches the 8th item (length - 5)
+            const isPrefetchTrigger = idx === Math.max(0, visibleProducts.length - 5);
 
             return (
               <motion.div
                 key={product.id}
+                ref={isPrefetchTrigger ? prefetchTriggerRef : undefined}
                 initial={{ opacity: 0, x: 18 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: '0px 0px -60px 0px' }}
@@ -1168,15 +1167,7 @@ export default function CustomerMenu() {
             );
           })}
 
-            {/* Infinite Scroll Anticipatory Sentinel (Zero layout shift) */}
-            {visibleCount < filteredProducts.length && (
-              <div 
-                ref={loadMoreSentinelRef} 
-                className="col-span-full h-1 w-full pointer-events-none opacity-0 [overflow-anchor:none]" 
-                style={{ overflowAnchor: "none" }}
-                aria-hidden="true" 
-              />
-            )}
+
           </div>
         )}
       </div>
