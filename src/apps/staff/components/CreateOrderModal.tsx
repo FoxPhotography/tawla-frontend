@@ -337,13 +337,10 @@ export default function CreateOrderModal({
   const calculatedCustomTotal = useMemo(() => {
     if (!customizingProduct) return 0;
     const discInfo = getProductDiscountInfo(customizingProduct);
-    const selectedOptionValues = Object.values(selectedOptions);
-    const baseOriginalPrice = selectedOptionValues.length > 0 
-      ? selectedOptionValues[0].priceAdjustment 
-      : customizingProduct.price;
-
-    const modsOriginalPrice = Object.values(selectedModifiers).reduce((sum, m) => sum + m.price, 0);
-    const originalTotal = baseOriginalPrice + modsOriginalPrice;
+    const baseOriginalPrice = customizingProduct.originalPrice || customizingProduct.price || 0;
+    const optionsOriginalPrice = Object.values(selectedOptions).reduce((sum, opt) => sum + (opt.priceAdjustment || 0), 0);
+    const modsOriginalPrice = Object.values(selectedModifiers).reduce((sum, m) => sum + (m.price || 0), 0);
+    const originalTotal = baseOriginalPrice + optionsOriginalPrice + modsOriginalPrice;
     return Math.round(originalTotal * (1 - discInfo.percent));
   }, [customizingProduct, selectedOptions, selectedModifiers, customDiscounts]);
 
@@ -356,13 +353,10 @@ export default function CreateOrderModal({
   ) => {
     staffAudio.play('click');
     const discInfo = getProductDiscountInfo(product);
-    const selectedOptionValues = selectedOptions;
-    const baseOriginalPrice = selectedOptionValues.length > 0 
-      ? selectedOptionValues[0].priceAdjustment 
-      : product.price;
-
-    const modsOriginalPrice = (selectedModifiers || []).reduce((sum, m) => sum + m.price, 0);
-    const originalTotal = baseOriginalPrice + modsOriginalPrice;
+    const baseOriginalPrice = product.originalPrice || product.price || 0;
+    const optionsOriginalPrice = (selectedOptions || []).reduce((sum: number, opt: any) => sum + (opt.priceAdjustment || 0), 0);
+    const modsOriginalPrice = (selectedModifiers || []).reduce((sum: number, m: any) => sum + (m.price || 0), 0);
+    const originalTotal = baseOriginalPrice + optionsOriginalPrice + modsOriginalPrice;
     const calculatedPrice = Number((originalTotal * (1 - discInfo.percent)).toFixed(2));
 
     setNewOrderCart((prev) => {
@@ -1082,12 +1076,12 @@ export default function CreateOrderModal({
                         {/* Options & Modifiers display */}
                         {item.selectedOptions && item.selectedOptions.length > 0 && (
                           <div className="text-[10px] text-zinc-500 font-bold mt-1">
-                            {item.selectedOptions.map((o: any) => `${o.name}: ${o.value}`).join(' | ')}
+                            {item.selectedOptions.map((o: any) => `${o.name}: ${o.value}${o.priceAdjustment > 0 ? ` (+${o.priceAdjustment} ج.م)` : ''}`).join(' | ')}
                           </div>
                         )}
                         {item.selectedModifiers && item.selectedModifiers.length > 0 && (
                           <div className="text-[10px] text-zinc-500 font-bold mt-0.5">
-                            الإضافات: {item.selectedModifiers.map((m: any) => m.value).join(', ')}
+                            الإضافات: {item.selectedModifiers.map((m: any) => `${m.value}${m.price > 0 ? ` (+${m.price} ج.م)` : ''}`).join(', ')}
                           </div>
                         )}
                       </div>
@@ -1503,16 +1497,24 @@ export default function CreateOrderModal({
                           </div>
                           {(() => {
                             const discInfo = getProductDiscountInfo(customizingProduct);
-                            const originalOptionPrice = choice.priceAdjustment;
+                            const originalOptionPrice = choice.priceAdjustment || 0;
                             const finalOptionPrice = originalOptionPrice * (1 - discInfo.percent);
+
+                            if (originalOptionPrice === 0) {
+                              return (
+                                <span className="text-zinc-400 font-bold text-[10px]">
+                                  {option.required && choiceIdx === 0 ? 'الأساسي' : 'مجاناً'}
+                                </span>
+                              );
+                            }
 
                             return discInfo.percent > 0 ? (
                               <div className="flex items-center gap-1.5">
-                                <span className="text-zinc-400 font-mono line-through text-[10px]">{originalOptionPrice} ج.م</span>
-                                <span className="text-[#801B2C] font-mono font-black">{finalOptionPrice.toFixed(2)} ج.م</span>
+                                <span className="text-zinc-400 font-mono line-through text-[10px]">+{originalOptionPrice} ج.م</span>
+                                <span className="text-[#801B2C] font-mono font-black">+{finalOptionPrice.toFixed(2)} ج.م</span>
                               </div>
                             ) : (
-                              <span className="text-zinc-600 font-mono font-bold">{originalOptionPrice} ج.م</span>
+                              <span className="text-zinc-600 font-mono font-bold">+{originalOptionPrice} ج.م</span>
                             );
                           })()}
                         </label>
