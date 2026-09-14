@@ -211,7 +211,7 @@ export default function CustomerMenu() {
       }
       return a.order - b.order;
     });
-    return sorted.slice(0, 5);
+    return sorted.slice(0, 8);
   }, [products, categories, restaurant]);
 
   // Real-time Socket.io menu updates listener
