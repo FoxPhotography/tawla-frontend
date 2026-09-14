@@ -207,52 +207,38 @@ export default function CreateOrderModal({
 
   const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
 
-  const handleSearchCustomer = async (queryStr?: string) => {
-    const targetQuery = (queryStr !== undefined ? queryStr : (customerPhone || customerName)).trim();
-    if (!targetQuery) return;
-    staffAudio.play('action');
-    setIsSearchingCustomer(true);
-    setCustomerSearchResults([]);
-    try {
-      const res = await api.get(`/customers/lookup?query=${encodeURIComponent(targetQuery)}`);
-      if (res.data?.success && res.data.data) {
-        const data = res.data.data;
-        const c = data.customer || (data.id ? data : null);
-        const customersList = data.customers || [];
+  // Live Instant Customer Search on typing in Name or Phone
+  useEffect(() => {
+    const searchTerm = (customerPhone || customerName).trim();
+    if (searchTerm.length < 2) {
+      setCustomerSearchResults([]);
+      return;
+    }
 
-        setCustomerSearchResults(customersList);
-
-        if (c) {
-          if (c.name) setCustomerName(c.name);
-          if (c.phone) setCustomerPhone(c.phone);
-          if (c.address) setCustomerAddress(c.address);
+    const timer = setTimeout(async () => {
+      setIsSearchingCustomer(true);
+      try {
+        const res = await api.get(`/customers/lookup?query=${encodeURIComponent(searchTerm)}`);
+        if (res.data?.success && res.data.data) {
+          const data = res.data.data;
+          const customersList = data.customers || (data.customer ? [data.customer] : []);
+          setCustomerSearchResults(customersList);
           if (data.loyalty) {
             setLoyaltyStatus(data.loyalty);
-          } else {
-            setLoyaltyStatus(null);
           }
-          toast.success(`تم العثور على العميل: ${c.name || c.phone} (${c.orderCount || 1} طلبات سابقاً) 🎯`);
-        } else if (customersList.length > 0) {
-          const first = customersList[0];
-          if (first.name) setCustomerName(first.name);
-          if (first.phone) setCustomerPhone(first.phone);
-          if (first.address) setCustomerAddress(first.address);
-          toast.success(`تم تحديد العميل: ${first.name || first.phone}`);
         } else {
-          setLoyaltyStatus(null);
-          toast('لم يتم العثور على سجل سابق، سيتم حفظ العميل كعميل جديد عند إتمام الطلب.');
+          setCustomerSearchResults([]);
         }
-      } else {
-        setLoyaltyStatus(null);
-        toast('لم يتم العثور على سجل سابق.');
+      } catch (e) {
+        console.warn('[LiveCustomerSearch]:', e);
+        setCustomerSearchResults([]);
+      } finally {
+        setIsSearchingCustomer(false);
       }
-    } catch (e) {
-      setLoyaltyStatus(null);
-      console.warn('Failed to search customer:', e);
-    } finally {
-      setIsSearchingCustomer(false);
-    }
-  };
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [customerPhone, customerName]);
 
   const { data: customDiscounts = [] } = useQuery({
     queryKey: ['custom-discounts'],
@@ -562,7 +548,6 @@ export default function CreateOrderModal({
         });
         
         staffAudio.play('success');
-        toast.success('تم تسجيل وتأكيد الطلب بنجاح! 🚀');
 
         if (orderType === 'takeaway' || orderType === 'delivery') {
           onPrintReceipt(response.data.data);
@@ -854,44 +839,27 @@ export default function CreateOrderModal({
                 </div>
               )}
 
-              {/* Customer Phone Search & Name details */}
+              {/* Customer Phone & Name with Live Instant Dropdown */}
               {isDatabaseEnabled ? (
                 <div className="space-y-3 bg-white border border-zinc-200/80 p-3.5 rounded-2xl shadow-xs">
-                  {/* Phone input with search */}
-                  {/* Customer Phone Search */}
+                  {/* Customer Phone */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
                       <Phone className="w-3.5 h-3.5 text-[#801B2C]" />
-                      <span>رقم الهاتف أو الاسم (للبحث أو التسجيل):</span>
+                      <span>رقم الهاتف (يبحث تلقائياً بالرقم أو الاسم):</span>
                     </label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="tel"
-                          placeholder="أدخل رقم الموبايل للبحث..."
-                          value={customerPhone}
-                          onChange={(e) => setCustomerPhone(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleSearchCustomer(customerPhone);
-                            }
-                          }}
-                          className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl pr-3.5 pl-4 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all font-mono text-left font-bold"
-                          dir="ltr"
-                        />
-                        {isSearchingCustomer && (
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#801B2C] border-t-transparent rounded-full animate-spin" />
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSearchCustomer(customerPhone || customerName)}
-                        disabled={!customerPhone.trim() && !customerName.trim()}
-                        className="px-4 bg-[#801B2C] text-white rounded-xl text-xs font-black hover:bg-[#962436] active:scale-95 transition-all cursor-pointer flex items-center justify-center font-body shadow-xs disabled:opacity-50"
-                      >
-                        بحث
-                      </button>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        placeholder="أدخل رقم الموبايل أو الاسم..."
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl pr-3.5 pl-8 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all font-mono text-left font-bold"
+                        dir="ltr"
+                      />
+                      {isSearchingCustomer && (
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#801B2C] border-t-transparent rounded-full animate-spin" />
+                      )}
                     </div>
                   </div>
 
@@ -901,37 +869,23 @@ export default function CreateOrderModal({
                       <User className="w-3.5 h-3.5 text-[#801B2C]" />
                       <span>اسم العميل:</span>
                     </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="اسم العميل الكامل (أو ابحث بالاسم)..."
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleSearchCustomer(customerName);
-                          }
-                        }}
-                        className="flex-1 bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all placeholder:text-zinc-400 font-body font-bold"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSearchCustomer(customerName)}
-                        disabled={!customerName.trim()}
-                        className="px-3 bg-zinc-800 text-white rounded-xl text-xs font-black hover:bg-zinc-900 active:scale-95 transition-all cursor-pointer flex items-center justify-center font-body shadow-xs disabled:opacity-50"
-                        title="بحث بالاسم"
-                      >
-                        بحث
-                      </button>
-                    </div>
+                    <input
+                      type="text"
+                      placeholder="اسم العميل (يبحث تلقائياً)..."
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all placeholder:text-zinc-400 font-body font-bold"
+                    />
                   </div>
 
-                  {/* Customer Search Results Suggestions Dropdown */}
+                  {/* Live Floating Customer Suggestions Dropdown */}
                   {customerSearchResults.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-3 space-y-1.5 shadow-sm">
-                      <div className="text-[10px] font-black text-amber-900 px-1">نتائج البحث المتاحة ({customerSearchResults.length}): انقر لاختيار العميل</div>
-                      <div className="max-h-36 overflow-y-auto space-y-1.5 scrollbar-thin">
+                    <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 space-y-2 shadow-md">
+                      <div className="flex items-center justify-between text-[11px] font-black text-amber-950 px-1 font-cairo">
+                        <span>🎯 العملاء المتاحين في النظام ({customerSearchResults.length}):</span>
+                        <span className="text-[9px] text-amber-700">اضغط لاختيار العميل</span>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-amber-300">
                         {customerSearchResults.map((cust) => (
                           <button
                             key={cust.id || cust.phone}
@@ -942,12 +896,17 @@ export default function CreateOrderModal({
                               setCustomerPhone(cust.phone || '');
                               setCustomerAddress(cust.address || '');
                               setCustomerSearchResults([]);
-                              toast.success(`تم تحديد العميل: ${cust.name}`);
+                              toast.success(`تم ربط الطلب بالعميل: ${cust.name || cust.phone} 🎯`);
                             }}
-                            className="w-full text-right p-2.5 rounded-xl bg-white hover:bg-amber-100/80 border border-amber-200/80 transition-all flex items-center justify-between text-xs cursor-pointer shadow-2xs"
+                            className="w-full text-right p-2.5 rounded-xl bg-white hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-between text-xs cursor-pointer shadow-2xs group active:scale-[0.99]"
                           >
-                            <div className="font-bold text-zinc-900">{cust.name}</div>
-                            <div className="font-mono text-zinc-600 dir-ltr text-[11px]">{cust.phone}</div>
+                            <div>
+                              <div className="font-bold text-zinc-900 group-hover:text-[#801B2C]">{cust.name}</div>
+                              <div className="text-[10px] text-zinc-500">{cust.orderCount || 1} طلبات سابقاً</div>
+                            </div>
+                            <div className="font-mono text-zinc-700 dir-ltr text-[11px] font-bold bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/80">
+                              {cust.phone}
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -1267,10 +1226,10 @@ export default function CreateOrderModal({
                         type="button"
                         onClick={() => {
                           const container = document.getElementById('upsell-carousel-container');
-                          if (container) container.scrollBy({ left: -160, behavior: 'smooth' });
+                          if (container) container.scrollBy({ left: 180, behavior: 'smooth' });
                         }}
                         className="w-5 h-5 rounded-full bg-white border border-amber-300 hover:bg-amber-200/80 flex items-center justify-center text-amber-900 transition-colors shadow-2xs cursor-pointer active:scale-95"
-                        title="تمرير لليسار"
+                        title="تمرير لليمين"
                       >
                         <ChevronRight className="w-3 h-3" />
                       </button>
@@ -1278,10 +1237,10 @@ export default function CreateOrderModal({
                         type="button"
                         onClick={() => {
                           const container = document.getElementById('upsell-carousel-container');
-                          if (container) container.scrollBy({ left: 160, behavior: 'smooth' });
+                          if (container) container.scrollBy({ left: -180, behavior: 'smooth' });
                         }}
                         className="w-5 h-5 rounded-full bg-white border border-amber-300 hover:bg-amber-200/80 flex items-center justify-center text-amber-900 transition-colors shadow-2xs cursor-pointer active:scale-95"
-                        title="تمرير لليمين"
+                        title="تمرير لليسار"
                       >
                         <ChevronLeft className="w-3 h-3" />
                       </button>
