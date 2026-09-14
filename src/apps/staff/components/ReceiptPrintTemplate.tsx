@@ -41,35 +41,49 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any, station
     const tStr = new Date().toLocaleTimeString('ar-EG', { hour12: true });
 
     const rows = items.map((item: any) => `
-      <tr style="border-bottom: 1px dashed #000;">
-        <td style="padding: 4px 0; text-align: right; font-weight: bold;">
-          ${item.name}
-          <div style="font-size: 9px; color: #555;">السبب: ${item.reason}</div>
+      <tr style="border-bottom: 1px solid #000;">
+        <td style="padding: 5px 6px; text-align: right; font-weight: bold; border-left: 1px solid #000;">
+          <div>${item.name}</div>
+          <div style="font-size: 8.5px; color: #3f3f46; font-weight: normal;">السبب: ${item.reason}</div>
         </td>
-        <td style="padding: 4px 0; text-align: center; font-family: monospace;">${item.quantity}</td>
-        <td style="padding: 4px 0; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(item.refundAmount)}</td>
+        <td style="padding: 5px 6px; text-align: center; font-family: monospace; font-weight: 900; border-left: 1px solid #000;">${item.quantity}</td>
+        <td style="padding: 5px 6px; text-align: left; font-family: monospace; font-weight: 900;">${formatReceiptCurrency(item.refundAmount)}</td>
       </tr>
     `).join('');
 
     return `
       <div class="print-receipt-container" dir="rtl" style="font-family: system-ui, -apple-system, sans-serif; color: #000; background: #fff; width: 80mm; margin: 0 auto; padding: 4mm 3mm; box-sizing: border-box; font-size: 11px;">
-        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px;">
-          <h1 style="font-size: 16px; font-weight: 900; margin: 0 0 2px 0;">${restaurant?.name || 'طاولة'}</h1>
-          <h2 style="font-size: 13px; font-weight: 900; margin: 0; background: #dc2626; color: #fff; padding: 3px 0;">إيصال مرتجع أصناف (REFUND)</h2>
+        <!-- Header -->
+        <div style="text-align: center; border: 1.5px solid #000; padding: 6px; margin-bottom: 6px; background: #fff;">
+          <h1 style="font-size: 16px; font-weight: 900; margin: 0 0 4px 0;">${restaurant?.name || 'طاولة'}</h1>
+          <h2 style="font-size: 12px; font-weight: 900; margin: 0; background: #dc2626; color: #fff; padding: 4px 0; border-radius: 2px;">إيصال مرتجع أصناف (REFUND)</h2>
         </div>
 
-        <div style="font-size: 10px; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; line-height: 1.5;">
-          <div>مرتجع لأوردر: #${printingOrder.originalOrderId || printingOrder.id}</div>
-          <div>الطاولة: طاولة ${printingOrder.tableNumber || 'الاستلام'}</div>
-          <div>التاريخ: ${dStr} - ${tStr}</div>
-        </div>
+        <!-- Metadata Table -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000; font-size: 10.5px;">
+          <tbody>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4px 6px; font-weight: bold; background: #f4f4f5; width: 35%; border-left: 1px solid #000;">مرتجع لأوردر:</td>
+              <td style="padding: 4px 6px; font-weight: 900; font-family: monospace;">#${printingOrder.originalOrderId || printingOrder.id}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4px 6px; font-weight: bold; background: #f4f4f5; border-left: 1px solid #000;">الطاولة / الجهة:</td>
+              <td style="padding: 4px 6px; font-weight: bold;">طاولة ${printingOrder.tableNumber || 'الاستلام'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 6px; font-weight: bold; background: #f4f4f5; border-left: 1px solid #000;">التاريخ والوقت:</td>
+              <td style="padding: 4px 6px; font-weight: bold; font-family: monospace;">${dStr} - ${tStr}</td>
+            </tr>
+          </tbody>
+        </table>
 
-        <table style="width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 11px;">
+        <!-- Items Table -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000; font-size: 10.5px;">
           <thead>
-            <tr style="border-bottom: 1.5px solid #000;">
-              <th style="text-align: right; padding: 4px 0;">الصنف المرتجع</th>
-              <th style="text-align: center; padding: 4px 0;">العدد</th>
-              <th style="text-align: left; padding: 4px 0;">المسترد</th>
+            <tr style="background: #000; color: #fff;">
+              <th style="text-align: right; padding: 5px 6px; font-weight: 900; border-left: 1px solid #fff;">الصنف المرتجع</th>
+              <th style="text-align: center; padding: 5px 6px; font-weight: 900; width: 45px; border-left: 1px solid #fff;">العدد</th>
+              <th style="text-align: left; padding: 5px 6px; font-weight: 900;">المسترد</th>
             </tr>
           </thead>
           <tbody>
@@ -77,13 +91,28 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any, station
           </tbody>
         </table>
 
-        <div style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; margin: 6px 0; font-weight: 900; display: flex; justify-content: space-between; font-size: 13px;">
+        <!-- Total Box -->
+        <div style="border: 2px solid #dc2626; background: #fef2f2; padding: 6px 8px; margin-bottom: 6px; font-weight: 900; display: flex; justify-content: space-between; font-size: 12.5px; color: #991b1b;">
           <span>إجمالي المبلغ المسترد:</span>
           <span style="font-family: monospace;">${formatReceiptCurrency(printingOrder.totalAmount)}</span>
         </div>
 
-        <div style="text-align: center; font-size: 9px; font-weight: bold; margin-top: 8px;">
-          توقيع المسئول: ........................
+        <!-- Signature Table -->
+        <table style="width: 100%; border-collapse: collapse; margin-top: 6px; border: 1.5px solid #000; font-size: 10px;">
+          <tbody>
+            <tr>
+              <td style="width: 50%; padding: 8px 6px; text-align: center; border-left: 1px solid #000; font-weight: bold;">
+                توقيع الكاشير<br /><br />_____________________
+              </td>
+              <td style="width: 50%; padding: 8px 6px; text-align: center; font-weight: bold;">
+                توقيع المسئول<br /><br />_____________________
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="border: 1.5px solid #000; border-top: none; background: #000; color: #fff; padding: 3px; text-align: center; font-weight: 900; font-size: 9px;">
+          Powered by: tawla.site
         </div>
       </div>
     `;
@@ -98,76 +127,117 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any, station
 
     return `
       <div class="print-receipt-container" dir="rtl" style="font-family: system-ui, -apple-system, sans-serif; color: #000; background: #fff; width: 80mm; margin: 0 auto; padding: 4mm 3mm; box-sizing: border-box; font-size: 11px;">
-        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px;">
-          <h1 style="font-size: 16px; font-weight: 900; margin: 0 0 2px 0;">${restaurant?.name || 'طاولة'}</h1>
-          <h2 style="font-size: 13px; font-weight: 900; margin: 0; background: #000; color: #fff; padding: 3px 0;">تقرير تقفيل الشيفت (Z-REPORT)</h2>
+        <!-- Header Section -->
+        <div style="text-align: center; border: 1.5px solid #000; padding: 6px; margin-bottom: 6px; background: #fff;">
+          <h1 style="font-size: 17px; font-weight: 900; margin: 0 0 4px 0; color: #000;">${restaurant?.name || 'طاولة'}</h1>
+          <h2 style="font-size: 12px; font-weight: 900; margin: 0; background: #000; color: #fff; padding: 4px 0; border-radius: 2px;">تقرير تقفيل الشيفت (Z-REPORT)</h2>
         </div>
 
-        <div style="font-size: 10px; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; line-height: 1.5;">
-          <div>الكاشير: ${shift.cashierName || 'الستاف'}</div>
-          <div>التاريخ: ${dStr}</div>
-          <div>وقت البداية: ${sTime} | وقت الإغلاق: ${eTime}</div>
-          <div>إجمالي أوردرات الشيفت: ${shift.totalOrdersCount || 0} طلب</div>
-        </div>
-
-        <table style="width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 11px;">
-          <thead>
-            <tr style="border-bottom: 1.5px solid #000;">
-              <th style="text-align: right; padding: 4px 0;">طريقة الدفع</th>
-              <th style="text-align: left; padding: 4px 0;">المبلغ المجمع</th>
-            </tr>
-          </thead>
+        <!-- 1. Shift Details Table -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000; font-size: 10.5px;">
           <tbody>
-            <tr>
-              <td style="padding: 4px 0; font-weight: bold;">نقدي (Cash)</td>
-              <td style="padding: 4px 0; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(shift.totalCashSales || 0)}</td>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4px 6px; font-weight: bold; background: #f4f4f5; width: 38%; border-left: 1px solid #000;">الكاشير المسؤول:</td>
+              <td style="padding: 4px 6px; font-weight: 900;">${shift.cashierName || 'الستاف'}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4px 6px; font-weight: bold; background: #f4f4f5; border-left: 1px solid #000;">التاريخ:</td>
+              <td style="padding: 4px 6px; font-weight: bold; font-family: monospace;">${dStr}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4px 6px; font-weight: bold; background: #f4f4f5; border-left: 1px solid #000;">أوقات العمل:</td>
+              <td style="padding: 4px 6px; font-weight: bold; font-size: 9.5px;">البداية: ${sTime} | الإغلاق: ${eTime}</td>
             </tr>
             <tr>
-              <td style="padding: 4px 0; font-weight: bold;">فيزا / كارت (Card)</td>
-              <td style="padding: 4px 0; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(shift.totalCardSales || 0)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 0; font-weight: bold;">محافظ إلكترونية (Wallet)</td>
-              <td style="padding: 4px 0; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(shift.totalWalletSales || 0)}</td>
+              <td style="padding: 4px 6px; font-weight: bold; background: #f4f4f5; border-left: 1px solid #000;">إجمالي الأوردرات:</td>
+              <td style="padding: 4px 6px; font-weight: 900; font-family: monospace;">${shift.totalOrdersCount || 0} طلب</td>
             </tr>
           </tbody>
         </table>
 
-        <div style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; margin: 6px 0; font-weight: 900; line-height: 1.6;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>العهدة الابتدائية:</span>
-            <span style="font-family: monospace;">${formatReceiptCurrency(shift.startingCash || 0)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>مبيعات الكاش المجمعة:</span>
-            <span style="font-family: monospace;">${formatReceiptCurrency(shift.totalCashSales || 0)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; border-top: 1px solid #000; padding-top: 4px; margin-top: 2px;">
-            <span>النقدية المتوقعة بالدرج:</span>
-            <span style="font-family: monospace;">${formatReceiptCurrency(shift.expectedEndingCash || 0)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>النقدية الفعلية المسلمة:</span>
-            <span style="font-family: monospace;">${formatReceiptCurrency(shift.actualEndingCash || 0)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; border-top: 1px dashed #000; padding-top: 3px; margin-top: 3px;">
-            <span>المبلغ المسلم للمدير:</span>
-            <span style="font-family: monospace;">${formatReceiptCurrency(shift.cashHandedToManager || 0)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>عهدة متبقية للشيفت التالي:</span>
-            <span style="font-family: monospace;">${formatReceiptCurrency(shift.carriedOverCash !== undefined ? shift.carriedOverCash : ((shift.actualEndingCash || 0) - (shift.cashHandedToManager || 0)))}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 12px; padding-top: 4px; border-top: 1px dashed #000; margin-top: 4px;">
-            <span>نتيجة المطابقة (العجز/الزيادة):</span>
-            <span style="font-family: monospace; color: ${varAmt < 0 ? '#dc2626' : '#000'};">${varAmt === 0 ? 'مطابق (0)' : formatReceiptCurrency(varAmt)}</span>
-          </div>
-        </div>
+        <!-- 2. Payment Methods Breakdown Table -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000; font-size: 11px;">
+          <thead>
+            <tr style="background: #000; color: #fff;">
+              <th style="text-align: right; padding: 5px 6px; font-weight: 900; border-left: 1px solid #fff;">طريقة الدفع</th>
+              <th style="text-align: left; padding: 5px 6px; font-weight: 900;">المبلغ المجمع</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4.5px 6px; font-weight: bold; border-left: 1px solid #000;">نقدي (Cash)</td>
+              <td style="padding: 4.5px 6px; text-align: left; font-family: monospace; font-weight: 900;">${formatReceiptCurrency(shift.totalCashSales || 0)}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4.5px 6px; font-weight: bold; border-left: 1px solid #000;">فيزا / كارت (Card)</td>
+              <td style="padding: 4.5px 6px; text-align: left; font-family: monospace; font-weight: 900;">${formatReceiptCurrency(shift.totalCardSales || 0)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4.5px 6px; font-weight: bold; border-left: 1px solid #000;">محافظ إلكترونية (Wallet)</td>
+              <td style="padding: 4.5px 6px; text-align: left; font-family: monospace; font-weight: 900;">${formatReceiptCurrency(shift.totalWalletSales || 0)}</td>
+            </tr>
+          </tbody>
+        </table>
 
-        <div style="text-align: center; font-size: 9px; font-weight: bold; margin-top: 8px;">
-          توقيع الكاشير: ........................
-        </div>
-        <div style="border: 1px solid #000; padding: 3px; text-align: center; font-weight: 900; font-size: 9px; margin-top: 8px;">
+        <!-- 3. Cash Drawer & Reconciliation Table -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000; font-size: 11px;">
+          <thead>
+            <tr style="background: #18181b; color: #fff;">
+              <th colspan="2" style="text-align: center; padding: 4px 6px; font-weight: 900; font-size: 10.5px;">
+                تسوية وتدقيق عهدة الدرج (CASH RECONCILIATION)
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4.5px 6px; font-weight: bold; border-left: 1px solid #000;">العهدة الابتدائية:</td>
+              <td style="padding: 4.5px 6px; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(shift.startingCash || 0)}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4.5px 6px; font-weight: bold; border-left: 1px solid #000;">مبيعات الكاش المجمعة:</td>
+              <td style="padding: 4.5px 6px; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(shift.totalCashSales || 0)}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #000; background: #f4f4f5;">
+              <td style="padding: 5px 6px; font-weight: 900; border-left: 1px solid #000;">النقدية المتوقعة بالدرج:</td>
+              <td style="padding: 5px 6px; text-align: left; font-family: monospace; font-weight: 900; font-size: 11.5px;">${formatReceiptCurrency(shift.expectedEndingCash || 0)}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #000; background: #f4f4f5;">
+              <td style="padding: 5px 6px; font-weight: 900; border-left: 1px solid #000;">النقدية الفعلية المسلمة:</td>
+              <td style="padding: 5px 6px; text-align: left; font-family: monospace; font-weight: 900; font-size: 11.5px;">${formatReceiptCurrency(shift.actualEndingCash || 0)}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4.5px 6px; font-weight: bold; border-left: 1px solid #000;">المبلغ المسلم للمدير:</td>
+              <td style="padding: 4.5px 6px; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(shift.cashHandedToManager || 0)}</td>
+            </tr>
+            <tr style="border-bottom: 1.5px solid #000;">
+              <td style="padding: 4.5px 6px; font-weight: bold; border-left: 1px solid #000;">عهدة متبقية للشيفت التالي:</td>
+              <td style="padding: 4.5px 6px; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(shift.carriedOverCash !== undefined ? shift.carriedOverCash : ((shift.actualEndingCash || 0) - (shift.cashHandedToManager || 0)))}</td>
+            </tr>
+            <tr style="background: ${varAmt < 0 ? '#fef2f2' : '#f0fdf4'};">
+              <td style="padding: 6px 6px; font-weight: 900; font-size: 11.5px; border-left: 1px solid #000;">نتيجة المطابقة (العجز/الزيادة):</td>
+              <td style="padding: 6px 6px; text-align: left; font-family: monospace; font-weight: 900; font-size: 12px; color: ${varAmt < 0 ? '#dc2626' : '#166534'};">
+                ${varAmt === 0 ? 'مطابق (0)' : formatReceiptCurrency(varAmt)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 4. Signatures Box -->
+        <table style="width: 100%; border-collapse: collapse; margin-top: 6px; border: 1.5px solid #000; font-size: 10px;">
+          <tbody>
+            <tr>
+              <td style="width: 50%; padding: 8px 6px; text-align: center; border-left: 1px solid #000; font-weight: bold;">
+                توقيع الكاشير<br /><br />_____________________
+              </td>
+              <td style="width: 50%; padding: 8px 6px; text-align: center; font-weight: bold;">
+                توقيع المدير / المستلم<br /><br />_____________________
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Powered By Footer -->
+        <div style="border: 1.5px solid #000; border-top: none; background: #000; color: #fff; padding: 4px; text-align: center; font-weight: 900; font-size: 10px; letter-spacing: 0.5px;">
           Powered by: tawla.site
         </div>
       </div>
@@ -227,16 +297,16 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any, station
       : '';
 
     return `
-      <tr>
-        <td style="text-align: center; font-family: monospace; font-weight: 900; font-size: 11px; border: 1.5px solid #000; padding: 4px 6px;">${item.quantity}</td>
-        <td style="text-align: right; font-weight: bold; border: 1.5px solid #000; padding: 4px 6px;">
+      <tr style="border-bottom: 1px solid #000;">
+        <td style="text-align: center; font-family: monospace; font-weight: 900; font-size: 11px; border-left: 1px solid #000; padding: 4px 6px;">${item.quantity}</td>
+        <td style="text-align: right; font-weight: bold; border-left: 1px solid #000; padding: 4px 6px;">
           <div>${item.name}</div>
           ${optionsHtml}
           ${modifiersHtml}
           ${notesHtml}
         </td>
-        <td style="text-align: center; font-family: monospace; font-weight: bold; font-size: 10.5px; border: 1.5px solid #000; padding: 4px 6px;">${itemPrice.toFixed(2)}</td>
-        <td style="text-align: left; font-family: monospace; font-weight: 900; font-size: 10.5px; border: 1.5px solid #000; padding: 4px 6px;">${itemTotal.toFixed(2)}</td>
+        <td style="text-align: center; font-family: monospace; font-weight: bold; font-size: 10.5px; border-left: 1px solid #000; padding: 4px 6px;">${itemPrice.toFixed(2)}</td>
+        <td style="text-align: left; font-family: monospace; font-weight: 900; font-size: 10.5px; padding: 4px 6px;">${itemTotal.toFixed(2)}</td>
       </tr>
     `;
   }).join('');
@@ -245,10 +315,10 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any, station
     <div class="print-receipt-container" dir="rtl" style="font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; color: #000; background: #fff; width: 80mm; margin: 0 auto; padding: 4mm 3mm; box-sizing: border-box; line-height: 1.4; font-size: 11px;">
       
       <!-- Header section -->
-      <div style="text-align: center; padding-bottom: 8px;">
+      <div style="text-align: center; padding-bottom: 6px;">
         ${restaurant?.receiptSettings?.showLogo && restaurant?.logo?.url ? `
-          <div style="margin-bottom: 8px;">
-            <img src="${restaurant.logo.url}" alt="logo" style="margin: 0 auto; max-height: 56px; object-fit: contain; border-radius: 6px;" />
+          <div style="margin-bottom: 6px;">
+            <img src="${restaurant.logo.url}" alt="logo" style="margin: 0 auto; max-height: 56px; object-fit: contain; border-radius: 4px;" />
           </div>
         ` : ''}
         <h1 style="font-size: 16px; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase; margin: 0 0 2px 0; color: #000;">${restaurant?.name || ''}</h1>
@@ -258,38 +328,45 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any, station
       </div>
 
       ${stationBadge}
-      <!-- Big Bold Table / Area Header -->
-      <div style="text-align: center; font-weight: 900; font-size: 14px; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 4px 0; margin: 4px 0;">
+
+      <!-- Order Type Header Banner -->
+      <div style="text-align: center; font-weight: 900; font-size: 13.5px; background: #000; color: #fff; padding: 4px 0; margin-bottom: 6px; border: 1.5px solid #000; border-radius: 2px;">
         ${orderTypeHeader}
       </div>
 
-      <!-- Metadata Details -->
-      <div style="font-size: 10px; font-weight: bold; padding: 6px 0; border-bottom: 1px dashed #000; line-height: 1.5;">
-        <div style="display: flex; justify-content: space-between;">
-          <span>رقم الطلب: ${orderNumberStr}</span>
-          <span>التاريخ: ${dateStr}</span>
-        </div>
-        ${printingOrder.customerName ? `<div>العميل: ${printingOrder.customerName}</div>` : ''}
-        ${printingOrder.type === 'delivery' ? `
-          ${printingOrder.customerPhone ? `<div>الهاتف: ${printingOrder.customerPhone}</div>` : ''}
-          ${printingOrder.customerAddress ? `<div>العنوان: ${printingOrder.customerAddress}</div>` : ''}
-        ` : ''}
-        ${printingOrder.type !== 'delivery' && restaurant?.receiptSettings?.phone ? `
-          <div style="display: flex; justify-content: space-between;">
-            <span>الهاتف: ${restaurant.receiptSettings.phone}</span>
-            ${restaurant.receiptSettings.taxNumber ? `<span>الرقم الضريبي: ${restaurant.receiptSettings.taxNumber}</span>` : ''}
-          </div>
-        ` : ''}
-      </div>
+      <!-- Metadata Details Table -->
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000; font-size: 10px; font-weight: bold;">
+        <tbody>
+          <tr style="border-bottom: 1px solid #000;">
+            <td style="padding: 3.5px 6px; background: #f4f4f5; width: 45%; border-left: 1px solid #000;">رقم الطلب: ${orderNumberStr}</td>
+            <td style="padding: 3.5px 6px; font-family: monospace;">التاريخ: ${dateStr}</td>
+          </tr>
+          ${printingOrder.customerName ? `
+            <tr style="border-bottom: 1px solid #000;">
+              <td colspan="2" style="padding: 3.5px 6px;">العميل: ${printingOrder.customerName}</td>
+            </tr>
+          ` : ''}
+          ${printingOrder.type === 'delivery' ? `
+            ${printingOrder.customerPhone ? `<tr style="border-bottom: 1px solid #000;"><td colspan="2" style="padding: 3.5px 6px;">الهاتف: ${printingOrder.customerPhone}</td></tr>` : ''}
+            ${printingOrder.customerAddress ? `<tr><td colspan="2" style="padding: 3.5px 6px;">العنوان: ${printingOrder.customerAddress}</td></tr>` : ''}
+          ` : ''}
+          ${printingOrder.type !== 'delivery' && restaurant?.receiptSettings?.phone ? `
+            <tr>
+              <td style="padding: 3.5px 6px; border-left: 1px solid #000;">الهاتف: ${restaurant.receiptSettings.phone}</td>
+              <td style="padding: 3.5px 6px;">${restaurant.receiptSettings.taxNumber ? `الرقم الضريبي: ${restaurant.receiptSettings.taxNumber}` : ''}</td>
+            </tr>
+          ` : ''}
+        </tbody>
+      </table>
 
       <!-- Items Table -->
-      <table style="width: 100%; border-collapse: collapse; margin: 8px 0;">
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000;">
         <thead>
-          <tr style="background-color: #f3f4f6;">
-            <th style="width: 48px; text-align: center; font-size: 11px; text-transform: uppercase; border: 1.5px solid #000; padding: 4px 6px; font-weight: bold;">الكمية</th>
-            <th style="text-align: right; font-size: 11px; text-transform: uppercase; border: 1.5px solid #000; padding: 4px 6px; font-weight: bold;">الصنف</th>
-            <th style="width: 64px; text-align: center; font-size: 11px; text-transform: uppercase; border: 1.5px solid #000; padding: 4px 6px; font-weight: bold;">السعر</th>
-            <th style="width: 64px; text-align: left; font-size: 11px; text-transform: uppercase; border: 1.5px solid #000; padding: 4px 6px; font-weight: bold;">الإجمالي</th>
+          <tr style="background-color: #000; color: #fff;">
+            <th style="width: 44px; text-align: center; font-size: 10.5px; border-left: 1px solid #fff; padding: 4px 6px; font-weight: 900;">الكمية</th>
+            <th style="text-align: right; font-size: 10.5px; border-left: 1px solid #fff; padding: 4px 6px; font-weight: 900;">الصنف</th>
+            <th style="width: 60px; text-align: center; font-size: 10.5px; border-left: 1px solid #fff; padding: 4px 6px; font-weight: 900;">السعر</th>
+            <th style="width: 60px; text-align: left; font-size: 10.5px; padding: 4px 6px; font-weight: 900;">الإجمالي</th>
           </tr>
         </thead>
         <tbody>
@@ -297,49 +374,47 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any, station
         </tbody>
       </table>
 
-      <!-- Totals Summary -->
-      <div style="padding: 4px 0; border-top: 1px solid #000; line-height: 1.6;">
-        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px;">
-          <span>إجمالي الطلبات:</span>
-          <span style="font-family: monospace;">${formatReceiptCurrency(originalSubtotal)}</span>
-        </div>
-
-        ${taxRatePercent > 0 ? `
-          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px;">
-            <span>الضريبة (${taxRatePercent}%):</span>
-            <span style="font-family: monospace;">${formatReceiptCurrency(taxAmount)}</span>
-          </div>
-        ` : ''}
-
-        ${serviceRatePercent > 0 ? `
-          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px;">
-            <span>الخدمة (${serviceRatePercent}%):</span>
-            <span style="font-family: monospace;">${formatReceiptCurrency(serviceAmount)}</span>
-          </div>
-        ` : ''}
-
-        ${totalDiscount > 0 ? `
-          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px; color: #dc2626;">
-            <span>خصم العروض:</span>
-            <span style="font-family: monospace;">-${formatReceiptCurrency(totalDiscount)}</span>
-          </div>
-        ` : ''}
-
-        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; padding-top: 6px; border-top: 1px solid #000; margin-top: 4px;">
-          <span>المبلغ المستحق:</span>
-          <span style="font-family: monospace;">${formatReceiptCurrency(grandTotal)}</span>
-        </div>
-      </div>
+      <!-- Totals Summary Table -->
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000; font-size: 11px;">
+        <tbody>
+          <tr style="border-bottom: 1px solid #000;">
+            <td style="padding: 4px 6px; font-weight: bold; border-left: 1px solid #000;">إجمالي الطلبات:</td>
+            <td style="padding: 4px 6px; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(originalSubtotal)}</td>
+          </tr>
+          ${taxRatePercent > 0 ? `
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4px 6px; font-weight: bold; border-left: 1px solid #000;">الضريبة (${taxRatePercent}%):</td>
+              <td style="padding: 4px 6px; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(taxAmount)}</td>
+            </tr>
+          ` : ''}
+          ${serviceRatePercent > 0 ? `
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="padding: 4px 6px; font-weight: bold; border-left: 1px solid #000;">الخدمة (${serviceRatePercent}%):</td>
+              <td style="padding: 4px 6px; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(serviceAmount)}</td>
+            </tr>
+          ` : ''}
+          ${totalDiscount > 0 ? `
+            <tr style="border-bottom: 1px solid #000; color: #dc2626;">
+              <td style="padding: 4px 6px; font-weight: bold; border-left: 1px solid #000;">خصم العروض:</td>
+              <td style="padding: 4px 6px; text-align: left; font-family: monospace; font-weight: bold;">-${formatReceiptCurrency(totalDiscount)}</td>
+            </tr>
+          ` : ''}
+          <tr style="background: #000; color: #fff;">
+            <td style="padding: 6px; font-weight: 900; font-size: 13px; border-left: 1px solid #fff;">المبلغ المستحق النهائي:</td>
+            <td style="padding: 6px; text-align: left; font-family: monospace; font-weight: 900; font-size: 13.5px;">${formatReceiptCurrency(grandTotal)}</td>
+          </tr>
+        </tbody>
+      </table>
 
       <!-- Welcome Footer Text -->
-      <div style="text-align: center; margin-top: 14px; line-height: 1.4;">
+      <div style="text-align: center; margin-top: 8px; line-height: 1.4;">
         ${restaurant?.receiptSettings?.footerText ? `
           <p style="font-size: 9.5px; color: #09090b; font-weight: bold; padding: 0 8px; margin: 0 0 6px 0;">
             ${restaurant.receiptSettings.footerText}
           </p>
         ` : ''}
 
-        <div style="border: 1.5px solid #000; padding: 4px; text-align: center; font-weight: 900; font-size: 10px; margin-top: 8px; letter-spacing: 0.5px;">
+        <div style="border: 1.5px solid #000; background: #000; color: #fff; padding: 4px; text-align: center; font-weight: 900; font-size: 9.5px; letter-spacing: 0.5px;">
           Powered by: tawla.site
         </div>
 

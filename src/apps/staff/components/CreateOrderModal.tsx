@@ -65,6 +65,7 @@ export default function CreateOrderModal({
   const [loyaltyStatus, setLoyaltyStatus] = useState<any>(null);
   const [redeemLoyalty, setRedeemLoyalty] = useState(false);
   const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
   const { restaurant } = useAuthStore();
 
@@ -218,9 +219,15 @@ export default function CreateOrderModal({
           const customersList = data.customers || (data.customer ? [data.customer] : []);
           setCustomerSearchResults(customersList);
           
-          if (data.customer) {
-            if (data.customer.name && !customerName) setCustomerName(data.customer.name);
-            if (data.customer.address && !customerAddress) setCustomerAddress(data.customer.address);
+          // Auto match customer if phone or name matches
+          const exactPhoneMatch = customersList.find((c: any) => c.phone && c.phone.trim() === customerPhone.trim());
+          const exactNameMatch = customersList.find((c: any) => c.name && c.name.trim() === customerName.trim());
+          const matched = exactPhoneMatch || exactNameMatch || data.customer;
+
+          if (matched) {
+            setSelectedCustomer(matched);
+            if (matched.name && !customerName) setCustomerName(matched.name);
+            if (matched.address && !customerAddress) setCustomerAddress(matched.address);
           }
           if (data.loyalty) {
             setLoyaltyStatus(data.loyalty);
@@ -901,6 +908,7 @@ export default function CreateOrderModal({
                           type="button"
                           onClick={() => {
                             staffAudio.play('click');
+                            setSelectedCustomer(c);
                             if (c.name) setCustomerName(c.name);
                             if (c.phone) setCustomerPhone(c.phone);
                             if (c.address) setCustomerAddress(c.address);
@@ -937,15 +945,49 @@ export default function CreateOrderModal({
                   </div>
                 )}
 
-                {/* New Customer Indicator if search returns no records */}
-                {((customerPhone.trim().length >= 3) || (customerName.trim().length >= 2)) &&
-                 customerSearchResults.length === 0 &&
-                 !isSearchingCustomer && (
-                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold p-2.5 rounded-xl flex items-center gap-2 font-body">
-                    <span className="text-base">✨</span>
-                    <span>عميل جديد — سيتم تسجيل حسابه وتوثيقه تلقائياً في قاعدة البيانات عند إتمام الطلب 💾</span>
-                  </div>
-                )}
+                {/* Dynamic Customer Status Badge */}
+                {(() => {
+                  const currentPhone = customerPhone.trim();
+                  const currentName = customerName.trim();
+                  
+                  if (!currentPhone && !currentName) return null;
+
+                  const matched = selectedCustomer || customerSearchResults.find((c: any) => 
+                    (c.phone && currentPhone && c.phone === currentPhone) ||
+                    (c.name && currentName && c.name === currentName)
+                  );
+
+                  if (matched) {
+                    return (
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] font-bold p-2.5 rounded-xl flex items-center justify-between font-body shadow-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">👤</span>
+                          <span>
+                            عميل مسجل سابقاً ({matched.name || 'العميل'}) — {matched.orderCount || 1} طلب سابق
+                          </span>
+                        </div>
+                        <span className="text-[10px] bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
+                          موثق بالحساب 💾
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  if (isSearchingCustomer) return null;
+
+                  if (currentPhone.length >= 3 || currentName.length >= 2) {
+                    if (customerSearchResults.length === 0) {
+                      return (
+                        <div className="bg-blue-50 border border-blue-200 text-blue-900 text-[11px] font-bold p-2.5 rounded-xl flex items-center gap-2 font-body shadow-xs">
+                          <span className="text-base">👤</span>
+                          <span>عميل جديد — سيتم تسجيل حسابه وتوثيقه تلقائياً في قاعدة البيانات عند إتمام الطلب 💾</span>
+                        </div>
+                      );
+                    }
+                  }
+
+                  return null;
+                })()}
 
                 {/* Customer Address */}
                 <div className="space-y-1.5">
