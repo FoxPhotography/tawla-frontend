@@ -7,10 +7,12 @@ import { api } from '../../../shared/services/api';
 import type { Category } from '../../../shared/types';
 import { ImageUploadZone } from './ImageUploadZone.js';
 import { ImageCropperModal } from './ImageCropperModal.js';
+import ConfirmModal from '../../../shared/components/ConfirmModal.js';
 import { useAuthStore } from '../../../shared/store/authStore';
 
 export default function CategoriesTab() {
   const queryClient = useQueryClient();
+  const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const [catName, setCatName] = useState('');
   const [catDesc, setCatDesc] = useState('');
@@ -472,6 +474,26 @@ export default function CategoriesTab() {
           onCancel={handleCropCancel}
         />
       )}
+    
+      {/* Category Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={() => {
+          if (categoryToDelete) {
+            deleteCatMutation.mutate(categoryToDelete.id, {
+              onSettled: () => setCategoryToDelete(null),
+            });
+          }
+        }}
+        title="حذف القسم"
+        message={`هل تريد حذف قسم "${categoryToDelete?.name || ''}"؟ سيتم إلغاء تصنيف منتجاته.`}
+        confirmText="نعم، احذف القسم"
+        cancelText="إلغاء"
+        variant="danger"
+        isLoading={deleteCatMutation.isPending}
+      />
+
     </div>
   );
 }

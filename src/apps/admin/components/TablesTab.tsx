@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ConfirmModal from '../../../shared/components/ConfirmModal.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { PlusCircle, Trash2, Download } from 'lucide-react';
@@ -8,6 +9,7 @@ import type { Table } from '../../../shared/types';
 
 export default function TablesTab() {
   const queryClient = useQueryClient();
+  const [tableToDelete, setTableToDelete] = useState<{ id: string; number: number } | null>(null);
 
   const [tableNum, setTableNum] = useState('');
   const [tableLabel, setTableLabel] = useState('');
@@ -187,6 +189,26 @@ export default function TablesTab() {
           )}
         </div>
       </div>
+    
+      {/* Table Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!tableToDelete}
+        onClose={() => setTableToDelete(null)}
+        onConfirm={() => {
+          if (tableToDelete) {
+            deleteTableMutation.mutate(tableToDelete.id, {
+              onSettled: () => setTableToDelete(null),
+            });
+          }
+        }}
+        title="حذف الطاولة"
+        message={`هل أنت متأكد من حذف طاولة رقم ${tableToDelete?.number || ''}؟`}
+        confirmText="نعم، احذف الطاولة"
+        cancelText="إلغاء"
+        variant="danger"
+        isLoading={deleteTableMutation.isPending}
+      />
+
     </div>
   );
 }

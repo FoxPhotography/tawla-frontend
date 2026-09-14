@@ -5,9 +5,11 @@ import { Edit2, Trash2, Eye, EyeOff, Users, CheckCircle2, XCircle } from 'lucide
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import { socket } from '../../../shared/services/socket';
+import ConfirmModal from '../../../shared/components/ConfirmModal.js';
 
 export default function StaffTab() {
   const queryClient = useQueryClient();
+  const [staffToDelete, setStaffToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const [staffName, setStaffName] = useState('');
   const [staffUsername, setStaffUsername] = useState('');
@@ -400,6 +402,26 @@ export default function StaffTab() {
           </div>
         </div>
       </div>
+    
+      {/* Staff Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!staffToDelete}
+        onClose={() => setStaffToDelete(null)}
+        onConfirm={() => {
+          if (staffToDelete) {
+            deleteStaffMutation.mutate(staffToDelete.id, {
+              onSettled: () => setStaffToDelete(null),
+            });
+          }
+        }}
+        title="حذف حساب الموظف"
+        message={`هل أنت متأكد من حذف حساب "${staffToDelete?.name || ''}" نهائياً؟`}
+        confirmText="نعم، احذف الحساب"
+        cancelText="إلغاء"
+        variant="danger"
+        isLoading={deleteStaffMutation.isPending}
+      />
+
     </div>
   );
 }

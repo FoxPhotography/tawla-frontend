@@ -16,6 +16,7 @@ import {
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
 import type { Category } from '../../../shared/types';
+import CustomSelect from './CustomSelect.js';
 
 interface CatalogOptionChoice {
   name: string;
@@ -273,20 +274,19 @@ export function CatalogImportModal({ isOpen, onClose, categories }: CatalogImpor
               </div>
 
               {/* Target Category Selector */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-[240px]">
                 <span className="text-xs text-admin-text-muted font-bold whitespace-nowrap">القسم المستهدف:</span>
-                <select
-                  value={targetCategoryOption}
-                  onChange={(e) => setTargetCategoryOption(e.target.value)}
-                  className="bg-admin-bg-elevated border border-admin-border text-admin-text-primary text-xs rounded-xl px-3 py-2 focus:border-admin-accent focus:outline-none transition-colors font-bold"
-                >
-                  <option value="auto">مطابقة الأقسام تلقائياً (موصى به)</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1 min-w-[200px]">
+                  <CustomSelect
+                    value={targetCategoryOption}
+                    onChange={(val: string) => setTargetCategoryOption(val)}
+                    options={[
+                      { value: 'auto', label: 'مطابقة الأقسام تلقائياً (موصى به)' },
+                      ...categories.map((c) => ({ value: c.id, label: c.name }))
+                    ]}
+                    className="text-xs"
+                  />
+                </div>
               </div>
             </div>
 

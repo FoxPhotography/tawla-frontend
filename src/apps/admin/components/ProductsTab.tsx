@@ -12,6 +12,7 @@ import { ImageUploadZone } from './ImageUploadZone.js';
 import { ImageCropperModal } from './ImageCropperModal.js';
 import { CatalogImportModal } from './CatalogImportModal.js';
 import CustomSelect from './CustomSelect.js';
+import ConfirmModal from '../../../shared/components/ConfirmModal.js';
 
 export default function ProductsTab() {
   const queryClient = useQueryClient();
@@ -29,6 +30,7 @@ export default function ProductsTab() {
   const [prodImagePreview, setProdImagePreview] = useState<string | null>(null);
   const [editingProdId, setEditingProdId] = useState<string | null>(null);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Custom Options/Modifiers states
   const [options, setOptions] = useState<ProductOption[]>([]);
@@ -1006,6 +1008,26 @@ export default function ProductsTab() {
           onCancel={handleCropCancel}
         />
       )}
+
+      
+      {/* Product Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={() => {
+          if (productToDelete) {
+            deleteProdMutation.mutate(productToDelete.id, {
+              onSettled: () => setProductToDelete(null),
+            });
+          }
+        }}
+        title="حذف المنتج"
+        message={`هل أنت متأكد من حذف المنتج "${productToDelete?.name || ''}"؟ لا يمكن التراجع عن هذه الخطوة.`}
+        confirmText="نعم، احذف المنتج"
+        cancelText="إلغاء"
+        variant="danger"
+        isLoading={deleteProdMutation.isPending}
+      />
 
       {/* Master Catalog Import Modal */}
       <CatalogImportModal
