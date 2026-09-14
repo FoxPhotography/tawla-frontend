@@ -300,7 +300,7 @@ export default function CustomerMenu() {
           setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
         }
       },
-      { rootMargin: '1200px 0px' }
+      { rootMargin: '350px 0px' }
     );
     const el = loadMoreSentinelRef.current;
     if (el) observer.observe(el);
@@ -1064,17 +1064,27 @@ export default function CustomerMenu() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {visibleProducts.map((product) => {
+            {visibleProducts.map((product, idx) => {
             const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
             const inCartIndex = !isCustom ? cart.findIndex(i => i.product.id === product.id) : -1;
             const inCartItem = inCartIndex > -1 ? cart[inCartIndex] : null;
             const isAvailable = product.isAvailable;
             
+            const batchIndex = idx % BATCH_SIZE;
+            const staggerDelay = Math.min(batchIndex * 0.035, 0.35);
+            
             return (
-              <div
+              <motion.div
                 key={product.id}
+                initial={{ opacity: 0, x: 28, scale: 0.94 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{
+                  duration: 0.32,
+                  ease: [0.22, 1, 0.36, 1],
+                  delay: staggerDelay,
+                }}
                 onClick={() => !isReadOnly && isAvailable && handleProductClick(product)}
-                className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'} transition-all duration-150`}
+                className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 {/* Image on the Right (First child in RTL) */}
                 {product.image?.url ? (
@@ -1152,17 +1162,22 @@ export default function CustomerMenu() {
                 {!isAvailable && (
                   <div className="out-of-stock-tag">نفذ حالياً</div>
                 )}
-              </div>
+              </motion.div>
             );
           })}
 
-            {/* Infinite Scroll Anticipatory Sentinel (zero layout shift) */}
+            {/* Infinite Scroll Anticipatory Sentinel */}
             {visibleCount < filteredProducts.length && (
               <div 
                 ref={loadMoreSentinelRef} 
-                className="col-span-full h-px w-full pointer-events-none opacity-0" 
-                aria-hidden="true" 
-              />
+                className="col-span-full py-3 flex items-center justify-center pointer-events-none" 
+                aria-hidden="true"
+              >
+                <div className="flex items-center gap-2 text-[10px] font-bold text-customer-text-muted bg-customer-bg-elevated/80 border border-customer-border/60 px-3 py-1 rounded-full shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-customer-accent animate-ping" />
+                  <span>المزيد من الأصناف...</span>
+                </div>
+              </div>
             )}
           </div>
         )}
