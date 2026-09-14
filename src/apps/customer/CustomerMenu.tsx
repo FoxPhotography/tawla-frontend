@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {Search, Bell, Receipt, Plus, Minus, 
-  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X, Gift, Trophy, Lock, Loader2
+  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X, Gift, Trophy, Lock
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -13,20 +13,6 @@ import CartFAB from './components/CartFAB';
 import CartDrawer from './components/CartDrawer';
 import OrderConfirmationModal from './components/OrderConfirmationModal';
 import MyOrdersDrawer from './components/MyOrdersDrawer';
-
-// ============ Framer Motion Animations ============
-const productCardVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.055,
-      duration: 0.38,
-      ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number]
-    }
-  })
-};
 
 const addButtonTap = {
   scale: [1, 0.88, 1.05, 1],
@@ -292,7 +278,7 @@ export default function CustomerMenu() {
   }, [products, categories, searchQuery, selectedCategory]);
 
   // ============ Progressive Chunking (12 items per batch) ============
-  const BATCH_SIZE = 12;
+  const BATCH_SIZE = 16;
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
 
@@ -314,7 +300,7 @@ export default function CustomerMenu() {
           setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
         }
       },
-      { rootMargin: '300px' }
+      { rootMargin: '1200px 0px' }
     );
     const el = loadMoreSentinelRef.current;
     if (el) observer.observe(el);
@@ -1078,22 +1064,17 @@ export default function CustomerMenu() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {visibleProducts.map((product, idx) => {
+            {visibleProducts.map((product) => {
             const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
             const inCartIndex = !isCustom ? cart.findIndex(i => i.product.id === product.id) : -1;
             const inCartItem = inCartIndex > -1 ? cart[inCartIndex] : null;
             const isAvailable = product.isAvailable;
             
             return (
-              <motion.div
-                layout
+              <div
                 key={product.id}
-                variants={productCardVariants}
-                initial="hidden"
-                animate="visible"
-                custom={idx}
                 onClick={() => !isReadOnly && isAvailable && handleProductClick(product)}
-                className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'} transition-all duration-150`}
               >
                 {/* Image on the Right (First child in RTL) */}
                 {product.image?.url ? (
@@ -1171,18 +1152,17 @@ export default function CustomerMenu() {
                 {!isAvailable && (
                   <div className="out-of-stock-tag">نفذ حالياً</div>
                 )}
-              </motion.div>
+              </div>
             );
           })}
 
-            {/* Infinite Scroll Loader Sentinel */}
+            {/* Infinite Scroll Anticipatory Sentinel (zero layout shift) */}
             {visibleCount < filteredProducts.length && (
-              <div ref={loadMoreSentinelRef} className="col-span-full py-6 flex items-center justify-center">
-                <div className="flex items-center gap-2 text-xs font-bold text-customer-text-muted bg-customer-bg-elevated border border-customer-border px-4 py-2 rounded-full shadow-xs">
-                  <Loader2 className="w-4 h-4 animate-spin text-customer-accent" />
-                  <span>جاري عرض المزيد من الأصناف...</span>
-                </div>
-              </div>
+              <div 
+                ref={loadMoreSentinelRef} 
+                className="col-span-full h-px w-full pointer-events-none opacity-0" 
+                aria-hidden="true" 
+              />
             )}
           </div>
         )}

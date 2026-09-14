@@ -11,6 +11,7 @@ import type { Category, Product, ProductOption, ProductModifier } from '../../..
 import { ImageUploadZone } from './ImageUploadZone.js';
 import { ImageCropperModal } from './ImageCropperModal.js';
 import { CatalogImportModal } from './CatalogImportModal.js';
+import { EditProductModal } from './EditProductModal.js';
 import CustomSelect from './CustomSelect.js';
 import ConfirmModal from '../../../shared/components/ConfirmModal.js';
 
@@ -28,7 +29,7 @@ export default function ProductsTab() {
   const [prodCatId, setProdCatId] = useState('');
   const [prodImage, setProdImage] = useState<File | null>(null);
   const [prodImagePreview, setProdImagePreview] = useState<string | null>(null);
-  const [editingProdId, setEditingProdId] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<{ id: string; name: string } | null>(null);
 
@@ -90,26 +91,22 @@ export default function ProductsTab() {
     setProdCatId('');
     setProdImage(null);
     setProdImagePreview(null);
-    setEditingProdId(null);
     setOptions([]);
     setModifiers([]);
   };
 
-  // Product Mutation (Create/Update)
+  // Product Mutation (Create)
   const prodMutation = useMutation({
     mutationFn: async (fd: FormData) => {
-      if (editingProdId) {
-        return api.put(`/products/${editingProdId}`, fd);
-      }
       return api.post('/products', fd);
     },
     onSuccess: () => {
-      toast.success(editingProdId ? 'تم تعديل المنتج بنجاح.' : 'تم إضافة المنتج بنجاح.');
+      toast.success('تم إضافة المنتج بنجاح.');
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       resetProdForm();
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'فشل حفظ المنتج.');
+      toast.error(err.response?.data?.error || 'فشل إضافة المنتج.');
     },
   });
 
@@ -469,7 +466,7 @@ export default function ProductsTab() {
         <div className="bg-admin-bg-elevated border border-admin-border rounded-xl p-6 shadow-admin-card space-y-5 h-fit lg:col-span-1">
           <h3 className="font-extrabold text-admin-text-primary text-sm flex items-center gap-2">
             <Plus className="w-4 h-4 text-admin-accent" />
-            <span>{editingProdId ? 'تعديل الصنف المحدد' : 'إضافة صنف جديد للمينيو'}</span>
+            <span>إضافة صنف جديد للمينيو</span>
           </h3>
 
           <form onSubmit={submitProduct} className="space-y-4">
@@ -674,18 +671,10 @@ export default function ProductsTab() {
                 {prodMutation.isPending ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <span>{editingProdId ? 'حفظ التعديلات' : 'إضافة المنتج للمينيو'}</span>
+                  <span>إضافة المنتج للمينيو</span>
                 )}
               </motion.button>
-              {editingProdId && (
-                <button
-                  type="button"
-                  onClick={resetProdForm}
-                  className="bg-admin-bg-subtle text-admin-text-secondary border border-admin-border py-2 px-4 rounded-lg text-xs font-semibold hover:bg-admin-bg-base transition-colors cursor-pointer"
-                >
-                  إلغاء
-                </button>
-              )}
+              
             </div>
           </form>
         </div>
@@ -963,17 +952,9 @@ export default function ProductsTab() {
                                   {/* Actions */}
                                   <div className="flex items-center gap-1">
                                     <button
-                                      onClick={() => {
-                                        setEditingProdId(prod.id);
-                                        setProdName(prod.name);
-                                        setProdDesc(prod.description || '');
-                                        setProdPrice(String(prod.price));
-                                        setProdCatId(prod.categoryId);
-                                        setProdImagePreview(prod.image?.url || null);
-                                        setOptions(prod.options || []);
-                                        setModifiers(prod.modifiers || []);
-                                      }}
+                                      onClick={() => setEditingProduct(prod)}
                                       className="p-1.5 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-admin-accent transition-colors cursor-pointer"
+                                      title="تعديل الصنف"
                                     >
                                       <Edit2 className="w-3.5 h-3.5" />
                                     </button>
@@ -1034,6 +1015,18 @@ export default function ProductsTab() {
         isOpen={isCatalogModalOpen}
         onClose={() => setIsCatalogModalOpen(false)}
         categories={categories}
+      />
+
+      {/* Edit Product Pop-up Modal */}
+      <EditProductModal
+        product={editingProduct}
+        categories={categories}
+        isOpen={!!editingProduct}
+        onClose={() => setEditingProduct(null)}
+        onSuccess={() => {
+          setEditingProduct(null);
+          queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+        }}
       />
     </div>
   );
