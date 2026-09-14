@@ -21,10 +21,10 @@ export default function AuditLogsTab() {
   const totalPages = Math.ceil(total / limit);
 
   const getActionColor = (action: string) => {
-    if (action.includes('DELETE')) return 'bg-red-500/10 text-red-500 border-red-500/20';
-    if (action.includes('CREATE')) return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-    if (action.includes('UPDATE') || action.includes('TOGGLE')) return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-    return 'bg-zinc-800 text-zinc-300';
+    if (action.includes('DELETE') || action.includes('CANCEL') || action.includes('REFUND')) return 'bg-red-500/10 text-red-600 border-red-500/20';
+    if (action.includes('CREATE') || action.includes('START_SHIFT')) return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+    if (action.includes('UPDATE') || action.includes('TOGGLE') || action.includes('CLOSE_SHIFT')) return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+    return 'bg-zinc-100 text-zinc-700 border-zinc-200';
   };
 
   const getActionTextAr = (action: string) => {
@@ -40,6 +40,12 @@ export default function AuditLogsTab() {
       case 'CREATE_STAFF': return 'إضافة موظف';
       case 'UPDATE_STAFF': return 'تعديل موظف';
       case 'DELETE_STAFF': return 'حذف موظف';
+      case 'START_SHIFT': return 'بدء وردية';
+      case 'CLOSE_SHIFT': return 'تقفيل وردية';
+      case 'REFUND_ORDER': return 'استرجاع طلب';
+      case 'CANCEL_ORDER': return 'إلغاء طلب';
+      case 'CREATE_EXPENSE': return 'إضافة مصروف';
+      case 'DELETE_EXPENSE': return 'حذف مصروف';
       default: return action;
     }
   };
