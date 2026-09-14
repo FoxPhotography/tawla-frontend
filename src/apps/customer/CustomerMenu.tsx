@@ -2,9 +2,8 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, Bell, Receipt, Plus, Minus, 
-  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X, Gift, Trophy, Lock
+import {Search, Bell, Receipt, Plus, Minus, 
+  UtensilsCrossed, Clock, FolderPlus, ShoppingBag, CheckCircle2, X, Gift, Trophy, Lock, Loader2
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { api } from '../../shared/services/api';
@@ -211,7 +210,7 @@ export default function CustomerMenu() {
       }
       return a.order - b.order;
     });
-    return sorted.slice(0, 8);
+    return sorted.slice(0, 10);
   }, [products, categories, restaurant]);
 
   // Real-time Socket.io menu updates listener
@@ -291,6 +290,38 @@ export default function CustomerMenu() {
       return a.order - b.order;
     });
   }, [products, categories, searchQuery, selectedCategory]);
+
+  // ============ Progressive Chunking (12 items per batch) ============
+  const BATCH_SIZE = 12;
+  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+
+  // Reset batch count when category or search changes
+  useEffect(() => {
+    setVisibleCount(BATCH_SIZE);
+  }, [selectedCategory, searchQuery]);
+
+  const visibleProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
+
+  // IntersectionObserver for seamless infinite scrolling
+  useEffect(() => {
+    if (visibleCount >= filteredProducts.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
+        }
+      },
+      { rootMargin: '300px' }
+    );
+    const el = loadMoreSentinelRef.current;
+    if (el) observer.observe(el);
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [visibleCount, filteredProducts.length]);
 
   // Customization Effect
   useEffect(() => {
@@ -1047,7 +1078,7 @@ export default function CustomerMenu() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {filteredProducts.map((product, idx) => {
+            {visibleProducts.map((product, idx) => {
             const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
             const inCartIndex = !isCustom ? cart.findIndex(i => i.product.id === product.id) : -1;
             const inCartItem = inCartIndex > -1 ? cart[inCartIndex] : null;
@@ -1069,6 +1100,8 @@ export default function CustomerMenu() {
                   <img 
                     src={product.image.url} 
                     alt={product.name} 
+                    loading="lazy"
+                    decoding="async"
                     className="product-img" 
                   />
                 ) : (
@@ -1141,6 +1174,16 @@ export default function CustomerMenu() {
               </motion.div>
             );
           })}
+
+            {/* Infinite Scroll Loader Sentinel */}
+            {visibleCount < filteredProducts.length && (
+              <div ref={loadMoreSentinelRef} className="col-span-full py-6 flex items-center justify-center">
+                <div className="flex items-center gap-2 text-xs font-bold text-customer-text-muted bg-customer-bg-elevated border border-customer-border px-4 py-2 rounded-full shadow-xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-customer-accent" />
+                  <span>جاري عرض المزيد من الأصناف...</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
