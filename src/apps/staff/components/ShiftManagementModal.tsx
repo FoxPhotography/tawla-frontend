@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Clock, X, DollarSign, CreditCard, Wallet, Printer, Lock, RefreshCw, UserCheck, Check, Sliders
+  Clock, X, DollarSign, CreditCard, Wallet, Printer, Lock, RefreshCw, UserCheck, Check, Sliders, PlayCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
@@ -21,6 +21,7 @@ export default function ShiftManagementModal({
   restaurant,
 }: ShiftManagementModalProps) {
   const queryClient = useQueryClient();
+  const [startingCash, setStartingCash] = useState<string>('');
   const [actualEndingCash, setActualEndingCash] = useState<string>('');
   const [cashHandedToManager, setCashHandedToManager] = useState<string>('0');
   const [handoverMode, setHandoverMode] = useState<'drawer' | 'manager' | 'custom'>('drawer');
@@ -37,6 +38,7 @@ export default function ShiftManagementModal({
   });
 
   const currentShift = shiftData?.shift;
+  const lastCarriedCash = shiftData?.lastCarriedCash || 0;
   const liveStats = shiftData?.liveStats || {
     totalOrdersCount: 0,
     totalCashSales: 0,
@@ -46,12 +48,36 @@ export default function ShiftManagementModal({
     totalSales: 0,
   };
 
-  // Pre-fill expected cash when modal opens or stats change
+  // Pre-fill starting cash when starting shift
   useEffect(() => {
-    if (liveStats.expectedEndingCash !== undefined && actualEndingCash === '') {
+    if (!currentShift && lastCarriedCash !== undefined && startingCash === '') {
+      setStartingCash(String(lastCarriedCash));
+    }
+  }, [currentShift, lastCarriedCash, startingCash]);
+
+  // Pre-fill expected cash when closing shift
+  useEffect(() => {
+    if (currentShift && liveStats.expectedEndingCash !== undefined && actualEndingCash === '') {
       setActualEndingCash(String(liveStats.expectedEndingCash));
     }
-  }, [liveStats.expectedEndingCash]);
+  }, [currentShift, liveStats.expectedEndingCash, actualEndingCash]);
+
+  // Start Shift Mutation
+  const startShiftMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await api.post('/shifts/start', payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      staffAudio.play('success');
+      toast.success('تم بدء الورديّة وتسجيل توقيت البداية بنجاح 🟢');
+      queryClient.invalidateQueries({ queryKey: ['current-shift'] });
+      onClose();
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'فشل بدء الشيفت.');
+    },
+  });
 
   // Close Shift Mutation
   const closeShiftMutation = useMutation({
@@ -67,14 +93,14 @@ export default function ShiftManagementModal({
       const closedShift = data.data;
       if (closedShift) {
         const zReportOrder = {
-          id: 'Z-REPORT-' + closedShift.cashierName,
+          id: 'Z-REPORT-' + (closedShift.cashierName || 'STAFF'),
           tableNumber: 0,
           type: 'z_report',
-          customerName: `تقفيل شيفت - ${closedShift.cashierName}`,
+          customerName: `تقفيل شيفت - ${closedShift.cashierName || 'الستاف'}`,
           createdAt: closedShift.endTime || new Date().toISOString(),
           shiftDetails: closedShift,
           items: [],
-          totalAmount: closedShift.totalCashSales + closedShift.totalCardSales + closedShift.totalWalletSales
+          totalAmount: (closedShift.totalCashSales || 0) + (closedShift.totalCardSales || 0) + (closedShift.totalWalletSales || 0)
         };
         printReceiptIframe(zReportOrder, restaurant);
       }
@@ -110,6 +136,19 @@ export default function ShiftManagementModal({
   const handleCustomHandoverChange = (val: string) => {
     setHandoverMode('custom');
     setCashHandedToManager(val);
+  };
+
+  const handleStartShift = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cash = Number(startingCash);
+    if (isNaN(cash) || cash < 0) {
+      toast.error('يرجى إدخال مبلغ عهدة البداية بشكل صحيح.');
+      return;
+    }
+    startShiftMutation.mutate({
+      startingCash: cash,
+      notes: shiftNotes,
+    });
   };
 
   const handleCloseShift = (e: React.FormEvent) => {
@@ -150,18 +189,26 @@ export default function ShiftManagementModal({
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-gradient-to-r from-zinc-50 via-white to-zinc-50">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#801B2C]/10 border border-[#801B2C]/20 flex items-center justify-center text-[#801B2C]">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                currentShift ? 'bg-[#801B2C]/10 border border-[#801B2C]/20 text-[#801B2C]' : 'bg-emerald-100 border border-emerald-200 text-emerald-800'
+              }`}>
                 <Clock className="w-5 h-5" />
               </div>
               <div>
                 <h2 className="text-base font-black text-zinc-900 flex items-center gap-2">
-                  إدارة وتقفيل الشيفت وتسليم العهدة
-                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                    Z-Report
-                  </span>
+                  {currentShift ? 'إدارة وتقفيل الشيفت وتسليم العهدة' : 'بدء ورديّة جديدة واستلام الخزينة'}
+                  {currentShift && (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                      Z-Report
+                    </span>
+                  )}
                 </h2>
                 <p className="text-xs text-zinc-500 font-medium">
-                  الكاشير: <strong className="text-zinc-800">{currentShift?.cashierName || 'الستاف'}</strong> | عهدة البداية: <strong className="text-emerald-700">{currentShift?.startingCash || 0} ج.م</strong>
+                  {currentShift ? (
+                    <>الكاشير: <strong className="text-zinc-800">{currentShift?.cashierName || 'الستاف'}</strong> | عهدة البداية: <strong className="text-emerald-700">{currentShift?.startingCash || 0} ج.م</strong></>
+                  ) : (
+                    <>استلام الورديّة وتسجيل توقيت البداية الفعلي عند استلام الدرج</>
+                  )}
                 </p>
               </div>
             </div>
@@ -177,212 +224,271 @@ export default function ShiftManagementModal({
           {/* Modal Body */}
           <div className="p-6 overflow-y-auto space-y-5">
             
-            {/* Live Payment Method Breakdown Grid */}
-            <div className="grid grid-cols-3 gap-3">
-              
-              {/* Cash Sales */}
-              <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-3.5 space-y-1">
-                <div className="flex items-center justify-between text-emerald-800 text-xs font-bold">
-                  <span>نقدي (Cash)</span>
-                  <DollarSign className="w-4 h-4" />
-                </div>
-                <div className="text-lg font-mono font-black text-emerald-950">
-                  {liveStats.totalCashSales.toLocaleString('en-US')} <span className="text-[10px] font-sans">ج.م</span>
-                </div>
-              </div>
-
-              {/* Card Sales */}
-              <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3.5 space-y-1">
-                <div className="flex items-center justify-between text-blue-800 text-xs font-bold">
-                  <span>فيزا (Card)</span>
-                  <CreditCard className="w-4 h-4" />
-                </div>
-                <div className="text-lg font-mono font-black text-blue-950">
-                  {liveStats.totalCardSales.toLocaleString('en-US')} <span className="text-[10px] font-sans">ج.م</span>
-                </div>
-              </div>
-
-              {/* Mobile Wallet Sales */}
-              <div className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-3.5 space-y-1">
-                <div className="flex items-center justify-between text-purple-800 text-xs font-bold">
-                  <span>محافظ (Wallet)</span>
-                  <Wallet className="w-4 h-4" />
-                </div>
-                <div className="text-lg font-mono font-black text-purple-950">
-                  {liveStats.totalWalletSales.toLocaleString('en-US')} <span className="text-[10px] font-sans">ج.م</span>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Expected Cash Summary Banner */}
-            <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 flex items-center justify-between text-xs font-bold">
-              <div className="space-y-0.5">
-                <div className="text-zinc-500">النقدية المتوقعة بالدرج (Expected Cash):</div>
-                <div className="text-zinc-900 font-normal">عهدة بداية الشيفت ({currentShift?.startingCash || 0} ج) + مبيعات الكاش ({liveStats.totalCashSales} ج)</div>
-              </div>
-              <div className="text-lg font-mono font-black text-[#801B2C]">
-                {liveStats.expectedEndingCash.toLocaleString('en-US')} ج.م
-              </div>
-            </div>
-
-            {/* Shift Closure Form */}
-            <form onSubmit={handleCloseShift} className="space-y-4 border-t border-zinc-100 pt-4">
-              
-              {/* Step 1: Actual Cash Entry */}
-              <div>
-                <label className="block text-xs font-bold text-zinc-800 mb-1">
-                  المبلغ الفعلي الموجود بالدرج الآن (ج.م) *
-                </label>
-                <input
-                  type="number"
-                  value={actualEndingCash}
-                  onChange={(e) => {
-                    setActualEndingCash(e.target.value);
-                    if (handoverMode === 'manager') setCashHandedToManager(e.target.value);
-                  }}
-                  placeholder="أدخل المبلغ النقدي المتبقي بعد عد النقدية..."
-                  className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-zinc-900 focus:outline-none focus:border-[#801B2C]"
-                  required
-                />
-              </div>
-
-              {/* Step 2: Custom Branded Checkbox Selector Cards */}
-              <div className="space-y-3 pt-1">
-                <label className="block text-xs font-bold text-zinc-800 flex items-center gap-1.5">
-                  <Sliders className="w-4 h-4 text-[#801B2C]" />
-                  <span>طريقة توزيع نقدية الدرج:</span>
-                </label>
-
-                <div className="grid grid-cols-2 gap-3">
-                  
-                  {/* Card 1: Keep in Drawer */}
-                  <div
-                    onClick={handleKeepAllInDrawer}
-                    className={`relative p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
-                      handoverMode === 'drawer'
-                        ? 'bg-[#801B2C]/5 border-[#801B2C] shadow-sm'
-                        : 'bg-zinc-50/70 border-zinc-200/80 hover:bg-zinc-100/60'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
-                        <RefreshCw className="w-4 h-4" />
-                      </div>
-
-                      {/* Custom Branded Checkbox */}
-                      <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
-                        handoverMode === 'drawer'
-                          ? 'bg-[#801B2C] border-[#801B2C] text-white'
-                          : 'border-zinc-300 bg-white'
-                      }`}>
-                        {handoverMode === 'drawer' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-bold text-zinc-900">ترك المبلغ بالدرج للشيفت القادم</div>
-                      <div className="text-[11px] text-zinc-500 mt-0.5">تمرير النقدية بالكامل كعهدة ابتدائية آلياً</div>
-                    </div>
-                  </div>
-
-                  {/* Card 2: Handover to Manager */}
-                  <div
-                    onClick={handleHandoverAllToManager}
-                    className={`relative p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
-                      handoverMode === 'manager'
-                        ? 'bg-[#801B2C]/5 border-[#801B2C] shadow-sm'
-                        : 'bg-zinc-50/70 border-zinc-200/80 hover:bg-zinc-100/60'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
-                        <UserCheck className="w-4 h-4" />
-                      </div>
-
-                      {/* Custom Branded Checkbox */}
-                      <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
-                        handoverMode === 'manager'
-                          ? 'bg-[#801B2C] border-[#801B2C] text-white'
-                          : 'border-zinc-300 bg-white'
-                      }`}>
-                        {handoverMode === 'manager' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-bold text-zinc-900">تسليم المبلغ بالكامل للمدير</div>
-                      <div className="text-[11px] text-zinc-500 mt-0.5">تفريغ الدرج وتصفير العهدة للشيفت القادم</div>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Handover & Carried Over Summary Display */}
-                <div className="grid grid-cols-2 gap-3 pt-1">
+            {!currentShift ? (
+              /* START SHIFT FORM */
+              <div className="space-y-5">
+                <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3 text-xs font-bold text-emerald-900">
+                  <PlayCircle className="w-6 h-6 text-emerald-700 flex-shrink-0" />
                   <div>
-                    <label className="block text-[11px] font-bold text-zinc-700 mb-1">
-                      المبلغ المسلّم للمدير (ج.م):
+                    <div className="font-black text-sm text-emerald-950">لا يوجد شيفت مفتوح حالياً</div>
+                    <div className="text-emerald-800 font-medium mt-0.5">
+                      عند الضغط على "بدء الورديّة الآن" سيتم فتح الشيفت وحساب مدته فوراً بدءاً من هذه اللحظة.
+                    </div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleStartShift} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-800 mb-1">
+                      عهدة بداية الشيفت بالنقدية بالدرج (ج.م) *
                     </label>
                     <input
                       type="number"
-                      value={cashHandedToManager}
-                      onChange={(e) => handleCustomHandoverChange(e.target.value)}
-                      min="0"
-                      max={actualNum}
-                      className="w-full bg-white border border-zinc-300 focus:border-[#801B2C] rounded-xl px-3 py-2 text-xs font-mono font-bold text-zinc-900 focus:outline-none text-left dir-ltr"
+                      value={startingCash}
+                      onChange={(e) => setStartingCash(e.target.value)}
+                      placeholder="أدخل مبلغ عهدة البداية بالدرج..."
+                      className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-zinc-900 focus:outline-none focus:border-[#801B2C]"
+                      required
                     />
+                    <p className="text-[11px] text-zinc-500 font-medium mt-1">
+                      العهدة المتبقية الموصى بها من الشيفت السابق: <strong className="text-emerald-700">{lastCarriedCash} ج.م</strong>
+                    </p>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-zinc-700 mb-1">
-                      العهدة المتبقية بالدرج للشيفت القادم:
-                    </label>
-                    <div className="w-full bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-mono font-black text-emerald-950 text-left dir-ltr">
-                      {carriedOverNum.toLocaleString('en-US')} ج.م
+                    <label className="block text-xs font-bold text-zinc-700 mb-1">ملاحظات استلام الشيفت (اختياري)</label>
+                    <textarea
+                      value={shiftNotes}
+                      onChange={(e) => setShiftNotes(e.target.value)}
+                      rows={2}
+                      placeholder="أضف أي ملاحظات لاستلام الخزينة أو الوردية..."
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#801B2C]"
+                    />
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={startShiftMutation.isPending}
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-emerald-700/20 transition-all cursor-pointer"
+                  >
+                    <PlayCircle className="w-4 h-4" />
+                    <span>{startShiftMutation.isPending ? 'جاري الفتح...' : 'بدء الورديّة واستلام الدرج الآن 🟢'}</span>
+                  </motion.button>
+                </form>
+              </div>
+            ) : (
+              /* CLOSE SHIFT FORM */
+              <div className="space-y-5">
+                {/* Live Payment Method Breakdown Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  
+                  {/* Cash Sales */}
+                  <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-3.5 space-y-1">
+                    <div className="flex items-center justify-between text-emerald-800 text-xs font-bold">
+                      <span>نقدي (Cash)</span>
+                      <DollarSign className="w-4 h-4" />
+                    </div>
+                    <div className="text-lg font-mono font-black text-emerald-950">
+                      {liveStats.totalCashSales.toLocaleString('en-US')} <span className="text-[10px] font-sans">ج.م</span>
                     </div>
                   </div>
+
+                  {/* Card Sales */}
+                  <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3.5 space-y-1">
+                    <div className="flex items-center justify-between text-blue-800 text-xs font-bold">
+                      <span>فيزا (Card)</span>
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <div className="text-lg font-mono font-black text-blue-950">
+                      {liveStats.totalCardSales.toLocaleString('en-US')} <span className="text-[10px] font-sans">ج.م</span>
+                    </div>
+                  </div>
+
+                  {/* Mobile Wallet Sales */}
+                  <div className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-3.5 space-y-1">
+                    <div className="flex items-center justify-between text-purple-800 text-xs font-bold">
+                      <span>محافظ (Wallet)</span>
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                    <div className="text-lg font-mono font-black text-purple-950">
+                      {liveStats.totalWalletSales.toLocaleString('en-US')} <span className="text-[10px] font-sans">ج.م</span>
+                    </div>
+                  </div>
+
                 </div>
-              </div>
 
-              {/* Live Variance Calculation Banner */}
-              {actualEndingCash !== '' && (
-                <div className={`p-3 rounded-xl text-xs font-bold flex items-center justify-between border ${
-                  variance === 0
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                    : variance > 0
-                    ? 'bg-blue-50 text-blue-800 border-blue-200'
-                    : 'bg-red-50 text-red-800 border-red-200'
-                }`}>
-                  <span>نتيجة المطابقة:</span>
-                  <span className="font-mono font-black text-sm">
-                    {variance === 0 ? 'مطابق تماماً (لا يوجد عجز)' : variance > 0 ? `زيادة بالنقدية: +${variance} ج.م` : `عجز بالنقدية: ${variance} ج.م`}
-                  </span>
+                {/* Expected Cash Summary Banner */}
+                <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 flex items-center justify-between text-xs font-bold">
+                  <div className="space-y-0.5">
+                    <div className="text-zinc-500">النقدية المتوقعة بالدرج (Expected Cash):</div>
+                    <div className="text-zinc-900 font-normal">عهدة بداية الشيفت ({currentShift?.startingCash || 0} ج) + مبيعات الكاش ({liveStats.totalCashSales} ج)</div>
+                  </div>
+                  <div className="text-lg font-mono font-black text-[#801B2C]">
+                    {liveStats.expectedEndingCash.toLocaleString('en-US')} ج.م
+                  </div>
                 </div>
-              )}
 
-              <div>
-                <label className="block text-xs font-bold text-zinc-700 mb-1">ملاحظات الشيفت (اختياري)</label>
-                <textarea
-                  value={shiftNotes}
-                  onChange={(e) => setShiftNotes(e.target.value)}
-                  rows={2}
-                  placeholder="أضف أي ملاحظات أو تفاصيل تسليم العهدة..."
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#801B2C]"
-                />
+                {/* Shift Closure Form */}
+                <form onSubmit={handleCloseShift} className="space-y-4 border-t border-zinc-100 pt-4">
+                  
+                  {/* Step 1: Actual Cash Entry */}
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-800 mb-1">
+                      المبلغ الفعلي الموجود بالدرج الآن (ج.م) *
+                    </label>
+                    <input
+                      type="number"
+                      value={actualEndingCash}
+                      onChange={(e) => {
+                        setActualEndingCash(e.target.value);
+                        if (handoverMode === 'manager') setCashHandedToManager(e.target.value);
+                      }}
+                      placeholder="أدخل المبلغ النقدي المتبقي بعد عد النقدية..."
+                      className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-zinc-900 focus:outline-none focus:border-[#801B2C]"
+                      required
+                    />
+                  </div>
+
+                  {/* Step 2: Custom Branded Checkbox Selector Cards */}
+                  <div className="space-y-3 pt-1">
+                    <label className="block text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                      <Sliders className="w-4 h-4 text-[#801B2C]" />
+                      <span>طريقة توزيع نقدية الدرج:</span>
+                    </label>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      
+                      {/* Card 1: Keep in Drawer */}
+                      <div
+                        onClick={handleKeepAllInDrawer}
+                        className={`relative p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                          handoverMode === 'drawer'
+                            ? 'bg-[#801B2C]/5 border-[#801B2C] shadow-sm'
+                            : 'bg-zinc-50/70 border-zinc-200/80 hover:bg-zinc-100/60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
+                            <RefreshCw className="w-4 h-4" />
+                          </div>
+
+                          {/* Custom Branded Checkbox */}
+                          <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
+                            handoverMode === 'drawer'
+                              ? 'bg-[#801B2C] border-[#801B2C] text-white'
+                              : 'border-zinc-300 bg-white'
+                          }`}>
+                            {handoverMode === 'drawer' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-bold text-zinc-900">ترك المبلغ بالدرج للشيفت القادم</div>
+                          <div className="text-[11px] text-zinc-500 mt-0.5">تمرير النقدية بالكامل كعهدة ابتدائية آلياً</div>
+                        </div>
+                      </div>
+
+                      {/* Card 2: Handover to Manager */}
+                      <div
+                        onClick={handleHandoverAllToManager}
+                        className={`relative p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                          handoverMode === 'manager'
+                            ? 'bg-[#801B2C]/5 border-[#801B2C] shadow-sm'
+                            : 'bg-zinc-50/70 border-zinc-200/80 hover:bg-zinc-100/60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                            <UserCheck className="w-4 h-4" />
+                          </div>
+
+                          {/* Custom Branded Checkbox */}
+                          <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
+                            handoverMode === 'manager'
+                              ? 'bg-[#801B2C] border-[#801B2C] text-white'
+                              : 'border-zinc-300 bg-white'
+                          }`}>
+                            {handoverMode === 'manager' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-bold text-zinc-900">تسليم المبلغ بالكامل للمدير</div>
+                          <div className="text-[11px] text-zinc-500 mt-0.5">تفريغ الدرج وتصفير العهدة للشيفت القادم</div>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Handover & Carried Over Summary Display */}
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="block text-[11px] font-bold text-zinc-700 mb-1">
+                          المبلغ المسلّم للمدير (ج.م):
+                        </label>
+                        <input
+                          type="number"
+                          value={cashHandedToManager}
+                          onChange={(e) => handleCustomHandoverChange(e.target.value)}
+                          min="0"
+                          max={actualNum}
+                          className="w-full bg-white border border-zinc-300 focus:border-[#801B2C] rounded-xl px-3 py-2 text-xs font-mono font-bold text-zinc-900 focus:outline-none text-left dir-ltr"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-zinc-700 mb-1">
+                          العهدة المتبقية بالدرج للشيفت القادم:
+                        </label>
+                        <div className="w-full bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-mono font-black text-emerald-950 text-left dir-ltr">
+                          {carriedOverNum.toLocaleString('en-US')} ج.م
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Variance Calculation Banner */}
+                  {actualEndingCash !== '' && (
+                    <div className={`p-3 rounded-xl text-xs font-bold flex items-center justify-between border ${
+                      variance === 0
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : variance > 0
+                        ? 'bg-blue-50 text-blue-800 border-blue-200'
+                        : 'bg-red-50 text-red-800 border-red-200'
+                    }`}>
+                      <span>نتيجة المطابقة:</span>
+                      <span className="font-mono font-black text-sm">
+                        {variance === 0 ? 'مطابق تماماً (لا يوجد عجز)' : variance > 0 ? `زيادة بالنقدية: +${variance} ج.م` : `عجز بالنقدية: ${variance} ج.م`}
+                      </span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 mb-1">ملاحظات الشيفت (اختياري)</label>
+                    <textarea
+                      value={shiftNotes}
+                      onChange={(e) => setShiftNotes(e.target.value)}
+                      rows={2}
+                      placeholder="أضف أي ملاحظات أو تفاصيل تسليم العهدة..."
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#801B2C]"
+                    />
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={closeShiftMutation.isPending}
+                    className="w-full flex items-center justify-center gap-2 bg-[#801B2C] hover:bg-[#962436] text-white text-xs font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-[#801B2C]/20 transition-all cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4" />
+                    <span>{closeShiftMutation.isPending ? 'جاري التقفيل...' : 'تقفيل الشيفت وإصدار تقرير Z-Report وطباعته'}</span>
+                  </motion.button>
+                </form>
               </div>
-
-              <motion.button
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                type="submit"
-                disabled={closeShiftMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 bg-[#801B2C] hover:bg-[#962436] text-white text-xs font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-[#801B2C]/20 transition-all cursor-pointer"
-              >
-                <Lock className="w-4 h-4" />
-                <span>{closeShiftMutation.isPending ? 'جاري التقفيل...' : 'تقفيل الشيفت وإصدار تقرير Z-Report وطباعته'}</span>
-              </motion.button>
-            </form>
+            )}
 
           </div>
 
@@ -390,7 +496,7 @@ export default function ShiftManagementModal({
           <div className="px-6 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between text-xs text-zinc-500">
             <div className="flex items-center gap-1.5">
               <Printer className="w-3.5 h-3.5 text-zinc-400" />
-              <span>يتم طباعة تقرير Z-Report تلقائياً عند التقفيل</span>
+              <span>{currentShift ? 'يتم طباعة تقرير Z-Report تلقائياً عند التقفيل' : 'يتم فتح الشيفت وحساب الساعات بدقة بدءاً من الآن'}</span>
             </div>
             <button
               onClick={onClose}

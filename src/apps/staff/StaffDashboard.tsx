@@ -124,6 +124,30 @@ export default function StaffDashboard() {
     return () => window.removeEventListener('click', resumeAudio);
   }, []);
 
+  // Fetch Current Shift Data
+  const { data: shiftData } = useQuery({
+    queryKey: ['current-shift'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/shifts/current');
+        return res.data.data;
+      } catch (err) {
+        return null;
+      }
+    },
+    enabled: !!user,
+  });
+
+  const currentShift = shiftData?.shift;
+  const [hasAutoPromptedShift, setHasAutoPromptedShift] = useState(false);
+
+  useEffect(() => {
+    if (shiftData && shiftData.shift === null && !hasAutoPromptedShift) {
+      setIsShiftModalOpen(true);
+      setHasAutoPromptedShift(true);
+    }
+  }, [shiftData, hasAutoPromptedShift]);
+
   // Fetch Orders
   const { data: serverOrders = [] } = useQuery({
     queryKey: ['staff-orders'],
@@ -915,7 +939,7 @@ export default function StaffDashboard() {
               </span>
             </div>
 
-            {/* Shift Closure Trigger */}
+            {/* Shift Closure or Start Trigger */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.96 }}
@@ -923,11 +947,17 @@ export default function StaffDashboard() {
                 staffAudio.play('click');
                 setIsShiftModalOpen(true);
               }}
-              className="flex items-center gap-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-900 text-xs font-bold px-3.5 py-2.5 rounded-2xl transition-all shadow-sm cursor-pointer"
-              title="إدارة وتقفيل الشيفت الحالي"
+              className={`flex items-center gap-2 text-xs font-bold px-3.5 py-2.5 rounded-2xl transition-all shadow-sm cursor-pointer border ${
+                currentShift
+                  ? 'bg-amber-50 border-amber-200 hover:bg-amber-100 text-amber-900'
+                  : 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100 text-emerald-950 animate-pulse'
+              }`}
+              title={currentShift ? 'إدارة وتقفيل الشيفت الحالي' : 'استلام وبدء الورديّة الجديدة'}
             >
-              <Clock className="w-4 h-4 text-amber-700" />
-              <span className="hidden sm:inline">تقفيل الشيفت</span>
+              <Clock className={`w-4 h-4 ${currentShift ? 'text-amber-700' : 'text-emerald-700'}`} />
+              <span className="hidden sm:inline">
+                {currentShift ? 'تقفيل الشيفت' : 'بدء الورديّة 🟢'}
+              </span>
             </motion.button>
 
             {/* Printer Settings Trigger */}

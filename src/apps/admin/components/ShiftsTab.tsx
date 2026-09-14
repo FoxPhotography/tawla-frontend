@@ -21,6 +21,16 @@ export default function ShiftsTab() {
     },
   });
 
+  const { data: currentShiftData, refetch: refetchCurrent } = useQuery({
+    queryKey: ['admin-current-shift'],
+    queryFn: async () => {
+      const res = await api.get('/shifts/current');
+      return res.data.data;
+    },
+  });
+
+  const activeShift = currentShiftData?.shift;
+
   const shifts = shiftsData || [];
 
   const filteredShifts = shifts.filter((s: any) => {
@@ -50,6 +60,11 @@ export default function ShiftsTab() {
     toast.success(`جاري إعادة طباعة تقرير Z-Report لشيفت ${shift.cashierName}...`);
   };
 
+  const handleRefresh = () => {
+    refetch();
+    refetchCurrent();
+  };
+
   return (
     <div className="space-y-6 dir-rtl">
       
@@ -68,13 +83,63 @@ export default function ShiftsTab() {
         </div>
 
         <button
-          onClick={() => refetch()}
+          onClick={handleRefresh}
           className="flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer self-start sm:self-auto"
         >
           <RefreshCw className="w-4 h-4" />
           <span>تحديث السجل</span>
         </button>
       </div>
+
+      {/* Live Active / Inactive Shift Status Banner */}
+      {activeShift ? (
+        <motion.div 
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-50/90 border border-emerald-200/90 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold flex-shrink-0">
+              <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-ping" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-emerald-950">ورديّة نشطة حالياً (قيد التشغيل)</span>
+                <span className="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full text-[10px] border border-emerald-300">
+                  🟢 شغال
+                </span>
+              </div>
+              <p className="text-xs text-emerald-800 font-medium mt-0.5">
+                الكاشير: <strong className="text-emerald-950 font-bold">{activeShift.cashierName}</strong> | وقت البدء: <strong className="text-emerald-950 font-mono">{new Date(activeShift.startTime).toLocaleTimeString('ar-EG', { hour12: true })}</strong> | عهدة البداية: <strong className="text-emerald-950 font-mono">{(activeShift.startingCash || 0).toLocaleString('en-US')} ج.م</strong>
+              </p>
+            </div>
+          </div>
+          <div className="text-xs font-bold text-emerald-900 bg-white/90 border border-emerald-200 px-4 py-2.5 rounded-2xl font-mono self-start sm:self-auto shadow-2xs">
+            إجمالي مبيعات الشيفت الحالي: {((currentShiftData?.liveStats?.totalSales) || 0).toLocaleString('en-US')} ج.م
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div 
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-rose-50/90 border border-rose-200/90 rounded-3xl p-5 flex items-center gap-3.5 shadow-xs"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold flex-shrink-0">
+            <AlertCircle className="w-5 h-5 text-rose-600" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black text-rose-950">🔴 لا يوجد شيفت مفتوح حالياً</span>
+              <span className="bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 rounded-full text-[10px] border border-rose-200">
+                مغلق / غير نشط
+              </span>
+            </div>
+            <p className="text-xs text-rose-800 font-medium mt-0.5">
+              في انتظار تسجيل دخول الكاشير وبدء الورديّة الجديدة من شاشة الـ POS لحساب توقيت البداية بدقة.
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
