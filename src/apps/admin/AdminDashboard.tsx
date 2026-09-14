@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { 
-  FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList, UserCheck, Percent
+import {
+  DollarSign, FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList, UserCheck, Percent
 } from 'lucide-react';
 
 import { useAuthStore } from '../../shared/store/authStore';
@@ -21,6 +21,7 @@ import StaffTab from './components/StaffTab.js';
 import AuditLogsTab from './components/AuditLogsTab.js';
 import CustomersTab from './components/CustomersTab.js';
 import DiscountsTab from './components/DiscountsTab.js';
+import ExpensesTab from './components/ExpensesTab.js';
 import { useOfflineGuard } from '../../shared/hooks/useOfflineGuard.js';
 import OfflineTamperModal from '../../shared/components/OfflineTamperModal.js';
 
@@ -30,7 +31,7 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const offlineGuard = useOfflineGuard();
 
-  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers' | 'discounts'>(() => {
+  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'expenses' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers' | 'discounts'>(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
     if (tabParam === 'subscription' || params.get('status') === 'renewed') return 'subscription';
@@ -136,6 +137,7 @@ export default function AdminDashboard() {
     { id: 'tables', label: 'الطاولات & QR', icon: MapPin, premium: false },
     { id: 'orders', label: 'أرشيف الطلبات', icon: ClipboardList, premium: false },
     { id: 'customers', label: 'العملاء والهدايا', icon: Users, premium: !isFeatureAllowed('loyalty') },
+    { id: 'expenses', label: 'المصروفات والأرباح', icon: DollarSign, premium: false },
     { id: 'analytics', label: 'التقارير والتحليلات', icon: BarChart3, premium: !isFeatureAllowed('analytics') },
     { id: 'discounts', label: 'الخصومات والعروض', icon: Percent, premium: !isFeatureAllowed('customDiscounts') },
     { id: 'audit', label: 'سجلات العمليات', icon: ClipboardList, premium: !isFeatureAllowed('audit') },
@@ -224,6 +226,7 @@ export default function AdminDashboard() {
             {activeTab === 'tables' && <TablesTab />}
             {activeTab === 'orders' && <OrdersTab />}
             {activeTab === 'customers' && <CustomersTab />}
+            {activeTab === 'expenses' && <ExpensesTab />}
             {activeTab === 'analytics' && <AnalyticsTab />}
             {activeTab === 'audit' && <AuditLogsTab />}
             {activeTab === 'subscription' && <SubscriptionTab />}

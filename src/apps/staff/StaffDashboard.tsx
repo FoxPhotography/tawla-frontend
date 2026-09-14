@@ -21,6 +21,7 @@ import TablesTab from './components/TablesTab';
 import CreateOrderModal from './components/CreateOrderModal';
 import ReceiptPrintTemplate, { printReceiptIframe } from './components/ReceiptPrintTemplate';
 import PrinterSettingsModal from './components/PrinterSettingsModal';
+import ShiftManagementModal from './components/ShiftManagementModal';
 import KDSTab from './components/KDSTab';
 import { useOfflineGuard } from '../../shared/hooks/useOfflineGuard';
 import OfflineTamperModal from '../../shared/components/OfflineTamperModal';
@@ -59,6 +60,7 @@ export default function StaffDashboard() {
 
   // Receipt Printing & Silent POS State
   const [isPrinterSettingsOpen, setIsPrinterSettingsOpen] = useState(false);
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [printingOrder, setPrintingOrder] = useState<any | null>(null);
 
   const handlePrintReceipt = (order: any) => {
@@ -396,7 +398,7 @@ export default function StaffDashboard() {
       }
     };
 
-    const handleOrderStatusUpdated = (data: { orderId: string; status: string }) => {
+    const handleOrderStatusUpdated = (data: { orderId: string; status: string; tableNumber?: number }) => {
       queryClient.setQueryData(['staff-orders'], (old: any) => {
         const list = old ? [...old] : [];
         return list.map((o: any) => 
@@ -405,6 +407,22 @@ export default function StaffDashboard() {
       });
       queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
       queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
+
+      // Audio & Toast Alert for Kitchen KDS Ready Orders
+      if (data.status === 'ready') {
+        staffAudio.play('action');
+        const tblStr = data.tableNumber && data.tableNumber > 0 ? `طاولة رقم ${data.tableNumber}` : 'طلب خارجي';
+        toast.success(`🔔 ${tblStr} جاهز للاستلام من المطبخ!`, {
+          duration: 8000,
+          style: {
+            background: '#047857',
+            color: '#ffffff',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            borderRadius: '16px',
+          },
+        });
+      }
     };
 
     const handleTableStatusChanged = (data: { tableId: string; tableNumber: number; status: 'empty' | 'occupied' | 'waitingBill'; currentOrderId?: string | null }) => {
@@ -865,6 +883,21 @@ export default function StaffDashboard() {
           {/* Left Controls & Status Badges */}
           <div className="flex items-center gap-3">
             
+            {/* Shift Closure Trigger */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => {
+                staffAudio.play('click');
+                setIsShiftModalOpen(true);
+              }}
+              className="flex items-center gap-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-900 text-xs font-bold px-3.5 py-2.5 rounded-2xl transition-all shadow-sm cursor-pointer"
+              title="إدارة وتقفيل الشيفت الحالي"
+            >
+              <Clock className="w-4 h-4 text-amber-700" />
+              <span className="hidden sm:inline">تقفيل الشيفت</span>
+            </motion.button>
+
             {/* Printer Settings & Silent Printing Trigger */}
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -1099,6 +1132,13 @@ export default function StaffDashboard() {
       <PrinterSettingsModal 
         isOpen={isPrinterSettingsOpen}
         onClose={() => setIsPrinterSettingsOpen(false)}
+        restaurant={restaurant}
+      />
+
+      {/* Shift Management Modal */}
+      <ShiftManagementModal 
+        isOpen={isShiftModalOpen}
+        onClose={() => setIsShiftModalOpen(false)}
         restaurant={restaurant}
       />
 

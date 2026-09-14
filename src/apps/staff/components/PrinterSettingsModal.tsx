@@ -190,6 +190,40 @@ export default function PrinterSettingsModal({
           {/* Modal Body */}
           <div className="p-6 overflow-y-auto space-y-6">
             
+            
+            {/* Tablet Wi-Fi / IP Network Printer Card */}
+            <div className="bg-gradient-to-br from-purple-50/60 via-purple-50/20 to-white border border-purple-200/80 rounded-2xl p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-purple-600/20">
+                  <Tablet className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-black text-purple-950">
+                      طابعات شبكة الواي فاي للتابلت (Wi-Fi / LAN Network Printer)
+                    </h3>
+                    <span className="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full">
+                      No PC Required
+                    </span>
+                  </div>
+                  <p className="text-[11.5px] text-purple-900/90 leading-relaxed">
+                    إذا أردت إلغاء الكمبيوتر تماماً والطباعة لاسلكياً من التابلت، يمكنك توصيل طابعة حرارية (Wi-Fi أو كابل نت بالراوتر) وتحديد عنوان الـ IP الخاص بها لترسل لها التابلت الفواتير وبونات الشيفت مباشرة عبر الشبكة المحلية.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-purple-200/60">
+                <label className="text-xs font-bold text-zinc-700 whitespace-nowrap">عنوان الـ IP للطابعة الشبكية:</label>
+                <input
+                  type="text"
+                  placeholder="مثال: 192.168.1.200"
+                  defaultValue={localStorage.getItem('tawla_printer_ip') || ''}
+                  onChange={(e) => localStorage.setItem('tawla_printer_ip', e.target.value.trim())}
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+            </div>
+
             {/* Tablet Huawei Fix Status Card */}
             <div className="bg-gradient-to-br from-emerald-50/60 via-emerald-50/30 to-white border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
               <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-600/20">
