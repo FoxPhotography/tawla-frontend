@@ -300,7 +300,7 @@ export default function CustomerMenu() {
           setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredProducts.length));
         }
       },
-      { rootMargin: '600px 0px' }
+      { rootMargin: '800px 0px' }
     );
     const el = loadMoreSentinelRef.current;
     if (el) observer.observe(el);
@@ -1063,22 +1063,25 @@ export default function CustomerMenu() {
             <p className="text-customer-text-secondary text-sm font-medium">لا توجد منتجات مطابقة للبحث.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {visibleProducts.map((product) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 [overflow-anchor:none]" style={{ overflowAnchor: "none" }}>
+            {visibleProducts.map((product, idx) => {
             const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
             const inCartIndex = !isCustom ? cart.findIndex(i => i.product.id === product.id) : -1;
             const inCartItem = inCartIndex > -1 ? cart[inCartIndex] : null;
             const isAvailable = product.isAvailable;
             
+            const staggerDelay = (idx % 6) * 0.08;
+
             return (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, x: 36, scale: 0.92 }}
+                initial={{ opacity: 0, x: 42, scale: 0.90 }}
                 whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                viewport={{ once: true, margin: '0px 0px -40px 0px' }}
+                viewport={{ once: true, margin: '0px 0px -100px 0px' }}
                 transition={{
-                  duration: 0.38,
-                  ease: [0.22, 1, 0.36, 1],
+                  duration: 0.42,
+                  ease: [0.16, 1, 0.3, 1],
+                  delay: staggerDelay,
                 }}
                 onClick={() => !isReadOnly && isAvailable && handleProductClick(product)}
                 className={`product-card relative ${inCartItem ? 'in-cart' : ''} ${!isAvailable ? 'unavailable' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
@@ -1163,18 +1166,14 @@ export default function CustomerMenu() {
             );
           })}
 
-            {/* Infinite Scroll Anticipatory Sentinel */}
+            {/* Infinite Scroll Anticipatory Sentinel (Zero layout shift) */}
             {visibleCount < filteredProducts.length && (
               <div 
                 ref={loadMoreSentinelRef} 
-                className="col-span-full py-3 flex items-center justify-center pointer-events-none" 
-                aria-hidden="true"
-              >
-                <div className="flex items-center gap-2 text-[10px] font-bold text-customer-text-muted bg-customer-bg-elevated/80 border border-customer-border/60 px-3 py-1 rounded-full shadow-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-customer-accent animate-ping" />
-                  <span>المزيد من الأصناف...</span>
-                </div>
-              </div>
+                className="col-span-full h-1 w-full pointer-events-none opacity-0 [overflow-anchor:none]" 
+                style={{ overflowAnchor: "none" }}
+                aria-hidden="true" 
+              />
             )}
           </div>
         )}
