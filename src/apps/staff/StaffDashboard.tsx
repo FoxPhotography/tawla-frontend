@@ -885,7 +885,13 @@ export default function StaffDashboard() {
           {/* Left Controls & Unified Connection Status */}
           <div className="flex items-center gap-3">
             
-            {/* Unified Connection Status Badge */}
+            {/* Live digital clock */}
+            <span className="text-xs font-bold text-zinc-700 font-cairo bg-white border border-zinc-200/90 px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#801B2C]" />
+              <span className="tracking-wide">{formatLiveClock(currentTime)}</span>
+            </span>
+
+            {/* Unified Connection Status Badge (Next to Clock) */}
             <div className={`hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-bold font-body transition-all ${
               networkStatus === 'online' && isOnline
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-2xs'
@@ -965,12 +971,6 @@ export default function StaffDashboard() {
                 <span>تثبيت التطبيق</span>
               </motion.button>
             )}
-
-            {/* Live digital clock */}
-            <span className="text-xs font-bold text-zinc-700 font-cairo bg-white border border-zinc-200/90 px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-[#801B2C]" />
-              <span className="tracking-wide">{formatLiveClock(currentTime)}</span>
-            </span>
           </div>
         </header>
 

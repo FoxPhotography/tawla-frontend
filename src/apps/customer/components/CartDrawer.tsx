@@ -303,8 +303,8 @@ export default function CartDrawer({
                 />
               </div>
 
-              {/* Delivery Details Form */}
-              {!tableNumber && (
+              {/* Delivery Details Form (Mandatory for Delivery) */}
+              {!tableNumber ? (
                 <div className="bg-white border border-zinc-200/60 rounded-2xl p-4 space-y-4 shadow-sm">
                   <div className="flex items-center gap-2 pb-2 border-b border-zinc-100">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#801B2C]" />
@@ -355,6 +355,41 @@ export default function CartDrawer({
                       placeholder="المنطقة، اسم الشارع، رقم العمارة، الدور..."
                       className="w-full bg-white border border-zinc-200 focus:border-[#801B2C]/50 text-zinc-800 rounded-xl px-3 py-2.5 text-xs focus:outline-none placeholder:text-zinc-400 transition-colors"
                     />
+                  </div>
+                </div>
+              ) : (
+                /* Optional Customer info for Dine-In / Table Orders */
+                <div className="bg-amber-50/50 border border-amber-200/70 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-900 font-cairo">
+                    <User className="w-3.5 h-3.5 text-amber-600" />
+                    <span>بيانات العميل (اختياري - لتسجيل الطلب ورصيد الولاء)</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-zinc-600 font-bold flex items-center gap-1">
+                        <span>الاسم (اختياري)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="اسمك لتسجيل الطلب..."
+                        className="w-full bg-white border border-zinc-200 focus:border-[#801B2C]/50 text-zinc-800 rounded-xl px-3 py-2 text-xs focus:outline-none placeholder:text-zinc-400 transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-zinc-600 font-bold flex items-center gap-1">
+                        <span>رقم الموبايل (اختياري)</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="مثال: 01012345678"
+                        className="w-full bg-white border border-zinc-200 focus:border-[#801B2C]/50 text-zinc-850 rounded-xl px-3 py-2 text-xs focus:outline-none text-left placeholder:text-zinc-400 transition-colors font-mono"
+                        dir="ltr"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

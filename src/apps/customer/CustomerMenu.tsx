@@ -519,9 +519,9 @@ export default function CustomerMenu() {
           selectedModifiers: item.selectedModifiers,
         })),
         specialNotes,
-        customerName: tableNumber ? undefined : customerName,
-        customerPhone: tableNumber ? undefined : customerPhone,
-        customerAddress: tableNumber ? undefined : customerAddress,
+        customerName: customerName.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        customerAddress: customerAddress.trim() || undefined,
       };
       const response = await api.post('/orders', payload, {
         headers: { 'x-restaurant-id': restaurant?.id },

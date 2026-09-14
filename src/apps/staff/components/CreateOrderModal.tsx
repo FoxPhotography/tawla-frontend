@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  PlusCircle, ChevronDown, ShoppingBag, Search, LayoutGrid, UtensilsCrossed, 
+  PlusCircle, ChevronDown, ChevronLeft, ChevronRight, ShoppingBag, Search, LayoutGrid, UtensilsCrossed, 
   Printer, Plus, Minus, Trash2, User, Phone, MapPin, Gift, Trophy, X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -205,25 +205,46 @@ export default function CreateOrderModal({
     return 0;
   };
 
-  const handleSearchCustomer = async (phoneStr: string) => {
-    if (!phoneStr.trim()) return;
+  const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+
+  const handleSearchCustomer = async (queryStr?: string) => {
+    const targetQuery = (queryStr !== undefined ? queryStr : (customerPhone || customerName)).trim();
+    if (!targetQuery) return;
     staffAudio.play('action');
     setIsSearchingCustomer(true);
+    setCustomerSearchResults([]);
     try {
-      const res = await api.get(`/customers/lookup?phone=${encodeURIComponent(phoneStr.trim())}`);
+      const res = await api.get(`/customers/lookup?query=${encodeURIComponent(targetQuery)}`);
       if (res.data?.success && res.data.data) {
-        const c = res.data.data;
-        if (c.name) setCustomerName(c.name);
-        if (c.address) setCustomerAddress(c.address);
-        if (c.loyalty) {
-          setLoyaltyStatus(c.loyalty);
+        const data = res.data.data;
+        const c = data.customer || (data.id ? data : null);
+        const customersList = data.customers || [];
+
+        setCustomerSearchResults(customersList);
+
+        if (c) {
+          if (c.name) setCustomerName(c.name);
+          if (c.phone) setCustomerPhone(c.phone);
+          if (c.address) setCustomerAddress(c.address);
+          if (data.loyalty) {
+            setLoyaltyStatus(data.loyalty);
+          } else {
+            setLoyaltyStatus(null);
+          }
+          toast.success(`تم العثور على العميل: ${c.name || c.phone} (${c.orderCount || 1} طلبات سابقاً) 🎯`);
+        } else if (customersList.length > 0) {
+          const first = customersList[0];
+          if (first.name) setCustomerName(first.name);
+          if (first.phone) setCustomerPhone(first.phone);
+          if (first.address) setCustomerAddress(first.address);
+          toast.success(`تم تحديد العميل: ${first.name || first.phone}`);
         } else {
           setLoyaltyStatus(null);
+          toast('لم يتم العثور على سجل سابق، سيتم حفظ العميل كعميل جديد عند إتمام الطلب.');
         }
-        toast.success(`تم العثور على بيانات العميل: ${c.name || phoneStr}`);
       } else {
         setLoyaltyStatus(null);
-        toast('لم يتم العثور على سجل سابق، سيتم حفظ العميل كعميل جديد.');
+        toast('لم يتم العثور على سجل سابق.');
       }
     } catch (e) {
       setLoyaltyStatus(null);
@@ -837,18 +858,25 @@ export default function CreateOrderModal({
               {isDatabaseEnabled ? (
                 <div className="space-y-3 bg-white border border-zinc-200/80 p-3.5 rounded-2xl shadow-xs">
                   {/* Phone input with search */}
+                  {/* Customer Phone Search */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
                       <Phone className="w-3.5 h-3.5 text-[#801B2C]" />
-                      <span>رقم الهاتف (للبحث أو التسجيل):</span>
+                      <span>رقم الهاتف أو الاسم (للبحث أو التسجيل):</span>
                     </label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <input
                           type="tel"
-                          placeholder="مثال: 01012345678"
+                          placeholder="أدخل رقم الموبايل للبحث..."
                           value={customerPhone}
                           onChange={(e) => setCustomerPhone(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSearchCustomer(customerPhone);
+                            }
+                          }}
                           className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl pr-3.5 pl-4 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all font-mono text-left font-bold"
                           dir="ltr"
                         />
@@ -858,9 +886,9 @@ export default function CreateOrderModal({
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleSearchCustomer(customerPhone)}
-                        disabled={!customerPhone.trim()}
-                        className="px-4 bg-[#801B2C] text-white rounded-xl text-xs font-black hover:bg-[#962436] active:scale-95 transition-all cursor-pointer flex items-center justify-center font-body shadow-xs"
+                        onClick={() => handleSearchCustomer(customerPhone || customerName)}
+                        disabled={!customerPhone.trim() && !customerName.trim()}
+                        className="px-4 bg-[#801B2C] text-white rounded-xl text-xs font-black hover:bg-[#962436] active:scale-95 transition-all cursor-pointer flex items-center justify-center font-body shadow-xs disabled:opacity-50"
                       >
                         بحث
                       </button>
@@ -873,14 +901,58 @@ export default function CreateOrderModal({
                       <User className="w-3.5 h-3.5 text-[#801B2C]" />
                       <span>اسم العميل:</span>
                     </label>
-                    <input
-                      type="text"
-                      placeholder="اسم العميل الكامل..."
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all placeholder:text-zinc-400 font-body font-bold"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="اسم العميل الكامل (أو ابحث بالاسم)..."
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSearchCustomer(customerName);
+                          }
+                        }}
+                        className="flex-1 bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all placeholder:text-zinc-400 font-body font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSearchCustomer(customerName)}
+                        disabled={!customerName.trim()}
+                        className="px-3 bg-zinc-800 text-white rounded-xl text-xs font-black hover:bg-zinc-900 active:scale-95 transition-all cursor-pointer flex items-center justify-center font-body shadow-xs disabled:opacity-50"
+                        title="بحث بالاسم"
+                      >
+                        بحث
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Customer Search Results Suggestions Dropdown */}
+                  {customerSearchResults.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-3 space-y-1.5 shadow-sm">
+                      <div className="text-[10px] font-black text-amber-900 px-1">نتائج البحث المتاحة ({customerSearchResults.length}): انقر لاختيار العميل</div>
+                      <div className="max-h-36 overflow-y-auto space-y-1.5 scrollbar-thin">
+                        {customerSearchResults.map((cust) => (
+                          <button
+                            key={cust.id || cust.phone}
+                            type="button"
+                            onClick={() => {
+                              staffAudio.play('click');
+                              setCustomerName(cust.name || '');
+                              setCustomerPhone(cust.phone || '');
+                              setCustomerAddress(cust.address || '');
+                              setCustomerSearchResults([]);
+                              toast.success(`تم تحديد العميل: ${cust.name}`);
+                            }}
+                            className="w-full text-right p-2.5 rounded-xl bg-white hover:bg-amber-100/80 border border-amber-200/80 transition-all flex items-center justify-between text-xs cursor-pointer shadow-2xs"
+                          >
+                            <div className="font-bold text-zinc-900">{cust.name}</div>
+                            <div className="font-mono text-zinc-600 dir-ltr text-[11px]">{cust.phone}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Delivery Address */}
                   {(orderType === 'delivery' || customerPhone) && (
@@ -1181,25 +1253,53 @@ export default function CreateOrderModal({
 
             {/* Smart Upsell Recommendations Carousel */}
             {smartUpsellProducts.length > 0 && (
-              <div className="px-4 py-2.5 bg-amber-50/80 border-t border-amber-200/80 space-y-1.5 flex-shrink-0">
+              <div className="px-4 py-2.5 bg-amber-50/80 border-t border-amber-200/80 space-y-2 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black text-amber-900 flex items-center gap-1 font-cairo">
                     <Gift className="w-3.5 h-3.5 text-amber-600" />
                     <span>💡 اقتراحات الـ Upselling لزيادة متوسط الفاتورة</span>
                   </span>
-                  <span className="text-[9px] text-amber-700 font-bold font-body">إضافة سريعة بنقرة واحدة</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-amber-700 font-bold font-body hidden sm:inline">إضافة سريعة بنقرة واحدة</span>
+                    {/* Navigation buttons for mouse/non-touch users */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const container = document.getElementById('upsell-carousel-container');
+                          if (container) container.scrollBy({ left: -160, behavior: 'smooth' });
+                        }}
+                        className="w-5 h-5 rounded-full bg-white border border-amber-300 hover:bg-amber-200/80 flex items-center justify-center text-amber-900 transition-colors shadow-2xs cursor-pointer active:scale-95"
+                        title="تمرير لليسار"
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const container = document.getElementById('upsell-carousel-container');
+                          if (container) container.scrollBy({ left: 160, behavior: 'smooth' });
+                        }}
+                        className="w-5 h-5 rounded-full bg-white border border-amber-300 hover:bg-amber-200/80 flex items-center justify-center text-amber-900 transition-colors shadow-2xs cursor-pointer active:scale-95"
+                        title="تمرير لليمين"
+                      >
+                        <ChevronLeft className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                <div 
+                  id="upsell-carousel-container" 
+                  className="flex gap-2 overflow-x-auto pb-2 pt-0.5 scrollbar-thin scrollbar-thumb-amber-300 hover:scrollbar-thumb-amber-400 scrollbar-track-amber-100/70 rounded-xl"
+                >
                   {smartUpsellProducts.map((p: any) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => {
-                        staffAudio.play('action');
                         addToCart(p);
-                        toast.success(`تمت إضافة ${p.name} للطلب!`);
                       }}
-                      className="flex-shrink-0 bg-white hover:bg-amber-100/60 border border-amber-200 rounded-xl px-2.5 py-1 flex items-center gap-2 text-right transition-all cursor-pointer shadow-2xs group"
+                      className="flex-shrink-0 bg-white hover:bg-amber-100/60 border border-amber-200 rounded-xl px-2.5 py-1 flex items-center gap-2 text-right transition-all cursor-pointer shadow-2xs group select-none"
                     >
                       <div>
                         <div className="text-[11px] font-black text-zinc-900 group-hover:text-[#801B2C] line-clamp-1">{p.name}</div>
