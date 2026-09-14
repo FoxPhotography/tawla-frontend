@@ -215,7 +215,7 @@ export default function CreateOrderModal({
         toast.success(`تم العثور على بيانات العميل: ${c.name || phoneStr}`);
       } else {
         setLoyaltyStatus(null);
-        toast('لم يتم العثور على سجل سابق، سيتم حفظ العميل كعميل جديد.', { icon: 'ℹ️' });
+        toast('لم يتم العثور على سجل سابق، سيتم حفظ العميل كعميل جديد.');
       }
     } catch (e) {
       setLoyaltyStatus(null);

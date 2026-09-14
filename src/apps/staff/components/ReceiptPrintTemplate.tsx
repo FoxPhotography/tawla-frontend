@@ -79,11 +79,11 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any): string
             <span style="font-family: monospace;">${formatReceiptCurrency(shift.actualEndingCash || 0)}</span>
           </div>
           <div style="display: flex; justify-content: space-between; border-top: 1px dashed #000; padding-top: 3px; margin-top: 3px;">
-            <span>المبلغ المسلم للمدير 👔:</span>
+            <span>المبلغ المسلم للمدير:</span>
             <span style="font-family: monospace;">${formatReceiptCurrency(shift.cashHandedToManager || 0)}</span>
           </div>
           <div style="display: flex; justify-content: space-between;">
-            <span>عهدة متبقية للشيفت التالي 🔄:</span>
+            <span>عهدة متبقية للشيفت التالي:</span>
             <span style="font-family: monospace;">${formatReceiptCurrency(shift.carriedOverCash !== undefined ? shift.carriedOverCash : ((shift.actualEndingCash || 0) - (shift.cashHandedToManager || 0)))}</span>
           </div>
           <div style="display: flex; justify-content: space-between; font-size: 12px; padding-top: 4px; border-top: 1px dashed #000; margin-top: 4px;">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Clock, X, DollarSign, CreditCard, Wallet, Printer, Lock, ArrowDownRight, RefreshCw, UserCheck
+  Clock, X, DollarSign, CreditCard, Wallet, Printer, Lock, RefreshCw, UserCheck, Check, Sliders
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
@@ -23,6 +23,7 @@ export default function ShiftManagementModal({
   const queryClient = useQueryClient();
   const [actualEndingCash, setActualEndingCash] = useState<string>('');
   const [cashHandedToManager, setCashHandedToManager] = useState<string>('0');
+  const [handoverMode, setHandoverMode] = useState<'drawer' | 'manager' | 'custom'>('drawer');
   const [shiftNotes, setShiftNotes] = useState<string>('');
 
   // Fetch Current Shift Data
@@ -94,14 +95,21 @@ export default function ShiftManagementModal({
 
   const handleHandoverAllToManager = () => {
     staffAudio.play('click');
+    setHandoverMode('manager');
     setCashHandedToManager(String(actualNum));
-    toast.success('تم تحديد تسليم كامل المبلغ للمدير (تفريغ الدرج).');
+    toast.success('تم تحديد تسليم المبلغ بالكامل للمدير (تفريغ الدرج).');
   };
 
   const handleKeepAllInDrawer = () => {
     staffAudio.play('click');
+    setHandoverMode('drawer');
     setCashHandedToManager('0');
-    toast('تم تحديد ترك المبلغ بالكامل بالدرج للشيفت القادم.', { icon: '🔄' });
+    toast.success('تم تحديد ترك المبلغ بالكامل بالدرج للشيفت القادم.');
+  };
+
+  const handleCustomHandoverChange = (val: string) => {
+    setHandoverMode('custom');
+    setCashHandedToManager(val);
   };
 
   const handleCloseShift = (e: React.FormEvent) => {
@@ -229,62 +237,106 @@ export default function ShiftManagementModal({
                 <input
                   type="number"
                   value={actualEndingCash}
-                  onChange={(e) => setActualEndingCash(e.target.value)}
+                  onChange={(e) => {
+                    setActualEndingCash(e.target.value);
+                    if (handoverMode === 'manager') setCashHandedToManager(e.target.value);
+                  }}
                   placeholder="أدخل المبلغ النقدي المتبقي بعد عد النقدية..."
                   className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-zinc-900 focus:outline-none focus:border-[#801B2C]"
                   required
                 />
               </div>
 
-              {/* Step 2: Cash Handover Options (Manager vs Carried Over) */}
-              <div className="border border-purple-100 bg-purple-50/40 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-                    <UserCheck className="w-4 h-4 text-purple-700" />
-                    <span>توزيع نقدية الدرج (تسليم للمدير / عهدة متبقية للشيفت القادم):</span>
-                  </div>
-                </div>
+              {/* Step 2: Custom Branded Checkbox Selector Cards */}
+              <div className="space-y-3 pt-1">
+                <label className="block text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                  <Sliders className="w-4 h-4 text-[#801B2C]" />
+                  <span>طريقة توزيع نقدية الدرج:</span>
+                </label>
 
-                {/* Quick Action Buttons */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleHandoverAllToManager}
-                    className="flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold py-2.5 px-3 rounded-xl transition-all cursor-pointer shadow-sm"
-                  >
-                    <ArrowDownRight className="w-3.5 h-3.5" />
-                    <span>تسليم المبلغ بالكامل للمدير 👔 (تفريغ)</span>
-                  </button>
-
-                  <button
-                    type="button"
+                <div className="grid grid-cols-2 gap-3">
+                  
+                  {/* Card 1: Keep in Drawer */}
+                  <div
                     onClick={handleKeepAllInDrawer}
-                    className="flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold py-2.5 px-3 rounded-xl transition-all cursor-pointer shadow-sm"
+                    className={`relative p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                      handoverMode === 'drawer'
+                        ? 'bg-[#801B2C]/5 border-[#801B2C] shadow-sm'
+                        : 'bg-zinc-50/70 border-zinc-200/80 hover:bg-zinc-100/60'
+                    }`}
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>ترك المبلغ بالدرج للشيفت القادم 🔄</span>
-                  </button>
+                    <div className="flex items-start justify-between">
+                      <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
+                        <RefreshCw className="w-4 h-4" />
+                      </div>
+
+                      {/* Custom Branded Checkbox */}
+                      <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
+                        handoverMode === 'drawer'
+                          ? 'bg-[#801B2C] border-[#801B2C] text-white'
+                          : 'border-zinc-300 bg-white'
+                      }`}>
+                        {handoverMode === 'drawer' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-bold text-zinc-900">ترك المبلغ بالدرج للشيفت القادم</div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">تمرير النقدية بالكامل كعهدة ابتدائية آلياً</div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Handover to Manager */}
+                  <div
+                    onClick={handleHandoverAllToManager}
+                    className={`relative p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                      handoverMode === 'manager'
+                        ? 'bg-[#801B2C]/5 border-[#801B2C] shadow-sm'
+                        : 'bg-zinc-50/70 border-zinc-200/80 hover:bg-zinc-100/60'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+
+                      {/* Custom Branded Checkbox */}
+                      <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
+                        handoverMode === 'manager'
+                          ? 'bg-[#801B2C] border-[#801B2C] text-white'
+                          : 'border-zinc-300 bg-white'
+                      }`}>
+                        {handoverMode === 'manager' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-bold text-zinc-900">تسليم المبلغ بالكامل للمدير</div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">تفريغ الدرج وتصفير العهدة للشيفت القادم</div>
+                    </div>
+                  </div>
+
                 </div>
 
-                {/* Handover & Carried Over Inputs */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
+                {/* Handover & Carried Over Summary Display */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
                   <div>
                     <label className="block text-[11px] font-bold text-zinc-700 mb-1">
-                      تم تسليمه للمدير (ج.م):
+                      المبلغ المسلّم للمدير (ج.م):
                     </label>
                     <input
                       type="number"
                       value={cashHandedToManager}
-                      onChange={(e) => setCashHandedToManager(e.target.value)}
+                      onChange={(e) => handleCustomHandoverChange(e.target.value)}
                       min="0"
                       max={actualNum}
-                      className="w-full bg-white border border-purple-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-purple-950 focus:outline-none focus:border-purple-600 text-left dir-ltr"
+                      className="w-full bg-white border border-zinc-300 focus:border-[#801B2C] rounded-xl px-3 py-2 text-xs font-mono font-bold text-zinc-900 focus:outline-none text-left dir-ltr"
                     />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-zinc-700 mb-1">
-                      عهدة متبقية بالدرج للشيفت القادم:
+                      العهدة المتبقية بالدرج للشيفت القادم:
                     </label>
                     <div className="w-full bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-mono font-black text-emerald-950 text-left dir-ltr">
                       {carriedOverNum.toLocaleString('en-US')} ج.م

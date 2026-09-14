@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Printer, X, FileText, HelpCircle, Sparkles, Wifi, Check
+  Printer, X, FileText, HelpCircle, Sliders, Wifi, Check
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { printReceiptIframe } from './ReceiptPrintTemplate';
@@ -45,7 +45,7 @@ export default function PrinterSettingsModal({
     if (val) {
       toast.success('تم تفعيل الطباعة التلقائية عند استلام طلب جديد.');
     } else {
-      toast('تم إيقاف الطباعة التلقائية عند استلام طلب جديد.', { icon: 'ℹ️' });
+      toast('تم إيقاف الطباعة التلقائية عند استلام طلب جديد.');
     }
   };
 
@@ -56,7 +56,7 @@ export default function PrinterSettingsModal({
     if (val) {
       toast.success('تم تفعيل الطباعة التلقائية عند قبول الطلب.');
     } else {
-      toast('تم إيقاف الطباعة التلقائية عند قبول الطلب.', { icon: 'ℹ️' });
+      toast('تم إيقاف الطباعة التلقائية عند قبول الطلب.');
     }
   };
 
@@ -167,7 +167,7 @@ export default function PrinterSettingsModal({
             {/* Auto-Print Toggles */}
             <div className="border border-zinc-200 rounded-2xl p-4 space-y-3 bg-white">
               <h3 className="text-xs font-bold text-zinc-900 flex items-center gap-1.5 mb-1">
-                <Sparkles className="w-4 h-4 text-[#801B2C]" />
+                <Sliders className="w-4 h-4 text-[#801B2C]" />
                 <span>خيارات الطباعة التلقائية (Auto-Print)</span>
               </h3>
 
