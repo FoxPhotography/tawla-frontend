@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ShoppingBag, Edit2, Trash2, Check, GripVertical, Search, Plus, X, ListPlus, Loader2, Flame
+  ShoppingBag, Edit2, Trash2, Check, GripVertical, Search, Plus, X, ListPlus, Loader2, Flame, Library
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
@@ -10,6 +10,7 @@ import { useAuthStore } from '../../../shared/store/authStore';
 import type { Category, Product, ProductOption, ProductModifier } from '../../../shared/types';
 import { ImageUploadZone } from './ImageUploadZone.js';
 import { ImageCropperModal } from './ImageCropperModal.js';
+import { CatalogImportModal } from './CatalogImportModal.js';
 import CustomSelect from './CustomSelect.js';
 
 export default function ProductsTab() {
@@ -27,6 +28,7 @@ export default function ProductsTab() {
   const [prodImage, setProdImage] = useState<File | null>(null);
   const [prodImagePreview, setProdImagePreview] = useState<string | null>(null);
   const [editingProdId, setEditingProdId] = useState<string | null>(null);
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
 
   // Custom Options/Modifiers states
   const [options, setOptions] = useState<ProductOption[]>([]);
@@ -440,11 +442,24 @@ export default function ProductsTab() {
 
   return (
     <div className="space-y-6 text-right" dir="rtl">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-extrabold text-admin-text-primary">إدارة منتجات المينيو والخيارات المخصصة</h2>
-        <span className="bg-admin-bg-subtle text-admin-text-secondary text-xs px-3 py-1 rounded-full font-bold">
-          {products.length} صنف مسجل
-        </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-extrabold text-admin-text-primary">إدارة منتجات المنيو والخيارات المتاحة</h2>
+          <p className="text-xs text-admin-text-muted mt-0.5">أضف أصنافك الخاصة أو استورد من مكتبة الأصناف الجاهزة بضغطة زر واحدة</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsCatalogModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-admin-accent hover:bg-admin-accent/90 text-white rounded-xl text-xs font-black shadow-admin-card hover:shadow-lg transition-all active:scale-95 cursor-pointer"
+          >
+            <Library className="w-4 h-4" />
+            <span>مكتبة الأصناف الجاهزة (200+ صنف)</span>
+          </button>
+          <span className="bg-admin-bg-subtle text-admin-text-secondary text-xs px-3 py-1 rounded-full font-bold">
+            {products.length} صنف مسجل
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -991,6 +1006,13 @@ export default function ProductsTab() {
           onCancel={handleCropCancel}
         />
       )}
+
+      {/* Master Catalog Import Modal */}
+      <CatalogImportModal
+        isOpen={isCatalogModalOpen}
+        onClose={() => setIsCatalogModalOpen(false)}
+        categories={categories}
+      />
     </div>
   );
 }
