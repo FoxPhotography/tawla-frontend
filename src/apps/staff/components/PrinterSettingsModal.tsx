@@ -22,6 +22,14 @@ export default function PrinterSettingsModal({
     return localStorage.getItem('tawla_printer_ip') || '';
   });
 
+  const [barPrinterIp, setBarPrinterIp] = useState<string>(() => {
+    return localStorage.getItem('tawla_bar_printer_ip') || '';
+  });
+
+  const [localLanIp, setLocalLanIp] = useState<string>(() => {
+    return localStorage.getItem('tawla_local_lan_ip') || '';
+  });
+
   const [autoPrintNewOrders, setAutoPrintNewOrders] = useState<boolean>(() => {
     return localStorage.getItem('tawla_auto_print_new_orders') === 'true';
   });
@@ -36,6 +44,18 @@ export default function PrinterSettingsModal({
     const trimmed = val.trim();
     setPrinterIp(trimmed);
     localStorage.setItem('tawla_printer_ip', trimmed);
+  };
+
+  const handleSaveBarPrinterIp = (val: string) => {
+    const trimmed = val.trim();
+    setBarPrinterIp(trimmed);
+    localStorage.setItem('tawla_bar_printer_ip', trimmed);
+  };
+
+  const handleSaveLocalLanIp = (val: string) => {
+    const trimmed = val.trim();
+    setLocalLanIp(trimmed);
+    localStorage.setItem('tawla_local_lan_ip', trimmed);
   };
 
   const handleToggleAutoPrintNew = (val: boolean) => {
@@ -60,7 +80,7 @@ export default function PrinterSettingsModal({
     }
   };
 
-  const handleTestPrint = () => {
+  const handleTestPrint = (stationFilter: 'all' | 'kitchen' | 'bar' = 'all') => {
     staffAudio.play('action');
     const sampleOrder = {
       id: 'ORD-TEST-' + Math.floor(1000 + Math.random() * 9000),
@@ -74,6 +94,7 @@ export default function PrinterSettingsModal({
           quantity: 1,
           price: 130,
           originalPrice: 130,
+          category: 'food',
           selectedOptions: [{ name: 'الحجم', value: 'كبير' }],
           selectedModifiers: [{ name: 'إكسترا جبنة', value: 'موتزاريلا إضافية' }],
           notes: 'تسوية مقرمشة'
@@ -82,6 +103,7 @@ export default function PrinterSettingsModal({
           name: 'عصير برتقال فريش',
           quantity: 2,
           price: 35,
+          category: 'drinks',
           originalPrice: 35
         }
       ],
@@ -89,8 +111,8 @@ export default function PrinterSettingsModal({
       totalAmount: 200
     };
 
-    printReceiptIframe(sampleOrder, restaurant);
-    toast.success('جاري إرسال الفاتورة التجريبية إلى الطابعة...');
+    printReceiptIframe(sampleOrder, restaurant, stationFilter);
+    toast.success(`جاري إرسال الفاتورة التجريبية (${stationFilter === 'kitchen' ? 'طابعة المطبخ' : stationFilter === 'bar' ? 'طابعة البار' : 'الكاشير'})...`);
   };
 
   return (
@@ -150,7 +172,7 @@ export default function PrinterSettingsModal({
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="text"
-                  placeholder="مثال: 192.168.1.200"
+                  placeholder="مثال: 192.168.1.200 (طابعة المطبخ أو الكاشير)"
                   value={printerIp}
                   onChange={(e) => handleSavePrinterIp(e.target.value)}
                   className="flex-1 bg-white border border-zinc-300 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/20 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 outline-none transition-all placeholder:text-zinc-400 font-mono text-left dir-ltr"
@@ -159,6 +181,64 @@ export default function PrinterSettingsModal({
                   <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-2 rounded-xl">
                     <Check className="w-3.5 h-3.5" />
                     <span>محفوظ</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Bar & Drinks Printer IP */}
+            <div className="border border-zinc-200 rounded-2xl p-4 bg-zinc-50/50 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <Wifi className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-zinc-900">طابعة البار والمشروبات (Bar IP)</h3>
+                  <p className="text-[11px] text-zinc-500">عنوان IP الخاص بطابعة المشروبات والحلويات الموصلة بالشبكة</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="مثال: 192.168.1.201 (طابعة المشروبات)"
+                  value={barPrinterIp}
+                  onChange={(e) => handleSaveBarPrinterIp(e.target.value)}
+                  className="flex-1 bg-white border border-zinc-300 focus:border-[#801B2C] focus:ring-2 focus:ring-[#801B2C]/20 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 outline-none transition-all placeholder:text-zinc-400 font-mono text-left dir-ltr"
+                />
+                {barPrinterIp && (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-2 rounded-xl">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>محفوظ</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Local LAN Wi-Fi Gateway IP */}
+            <div className="border border-emerald-200 rounded-2xl p-4 bg-emerald-50/50 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                  <Wifi className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-emerald-950">سيرفر الربط المحلي أوفلاين (Local WLAN IP)</h3>
+                  <p className="text-[11px] text-emerald-800/80">عنوان IP للجهاز المحلي بالراوتر لمزامنة التابلت بدون إنترنت نهائياً</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="مثال: 192.168.1.100 (سيرفر الربط المحلي)"
+                  value={localLanIp}
+                  onChange={(e) => handleSaveLocalLanIp(e.target.value)}
+                  className="flex-1 bg-white border border-emerald-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-xl px-3.5 py-2.5 text-xs text-zinc-900 outline-none transition-all placeholder:text-zinc-400 font-mono text-left dir-ltr"
+                />
+                {localLanIp && (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2.5 py-2 rounded-xl">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>نشط</span>
                   </span>
                 )}
               </div>
@@ -201,24 +281,46 @@ export default function PrinterSettingsModal({
             </div>
 
             {/* Test Print Card */}
-            <div className="flex items-center justify-between bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4">
+            <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2.5">
-                <FileText className="w-5 h-5 text-amber-700" />
+                <FileText className="w-5 h-5 text-amber-700 flex-shrink-0" />
                 <div>
-                  <div className="text-xs font-bold text-amber-950">اختبار وتجربة الطباعة الآن</div>
-                  <div className="text-[11px] text-amber-800/80">اطبع إيصال تجريبي للتأكد من مظهره</div>
+                  <div className="text-xs font-bold text-amber-950">اختبار وتجربة طباعة الأقسام والمحطات (Multi-Station)</div>
+                  <div className="text-[11px] text-amber-800/80">اختبار توجيه الفواتير لطابعة الكاشير أو المطبخ أو البار</div>
                 </div>
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={handleTestPrint}
-                className="flex items-center gap-2 bg-[#801B2C] hover:bg-[#962436] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-[#801B2C]/20 transition-all cursor-pointer whitespace-nowrap"
-              >
-                <Printer className="w-4 h-4" />
-                <span>طباعة فاتورة تجريبية</span>
-              </motion.button>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handleTestPrint('all')}
+                  className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 bg-[#801B2C] hover:bg-[#962436] text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>كل الأصناف (الكاشير)</span>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handleTestPrint('kitchen')}
+                  className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-black text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>طابعة المطبخ</span>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handleTestPrint('bar')}
+                  className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>طابعة البار</span>
+                </motion.button>
+              </div>
             </div>
 
           </div>

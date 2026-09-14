@@ -218,12 +218,12 @@ export default function ShiftsTab() {
                           </span>
                         ) : variance > 0 ? (
                           <span className="bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-bold px-2.5 py-1 rounded-full w-fit font-mono">
-                            زيادة (+${variance} ج)
+                            زيادة (+{variance.toLocaleString('en-US')} ج.م)
                           </span>
                         ) : (
                           <span className="bg-red-50 text-red-800 border border-red-200 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 w-fit font-mono">
                             <AlertCircle className="w-3 h-3 text-red-600" />
-                            <span>عجز (${variance} ج)</span>
+                            <span>عجز ({variance.toLocaleString('en-US')} ج.م)</span>
                           </span>
                         )}
                       </td>

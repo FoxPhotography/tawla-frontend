@@ -15,8 +15,25 @@ export const formatReceiptCurrency = (val: number) => {
 /**
  * Generates clean, high-contrast HTML markup for an 80mm thermal receipt
  */
-export function generateReceiptHtml(printingOrder: any, restaurant: any): string {
+export function generateReceiptHtml(printingOrder: any, restaurant: any, stationFilter: 'all' | 'kitchen' | 'bar' = 'all'): string {
   if (!printingOrder) return '';
+
+  // Filter items by station if requested
+  const isDrinkOrDessert = (name: string, cat?: string) => {
+    return (name || '').match(/(عصير|كولا|بيبسي|قهوة|شاي|إسبريسو|مياه|موهيتو|مشروب|حلويات|وافل|أيس كريم)/i) ||
+           (cat || '').match(/(drinks|beverages|desserts|مشروبات|عصائر|حلويات)/i);
+  };
+
+  let targetItems = printingOrder.items || [];
+  let stationBadge = '';
+
+  if (stationFilter === 'kitchen') {
+    targetItems = targetItems.filter((i: any) => !isDrinkOrDessert(i.name, i.category));
+    stationBadge = '<div style="background:#000; color:#fff; text-align:center; padding:2px; font-weight:900; margin-bottom:4px;">بون المطبخ الرئيسي (KITCHEN)</div>';
+  } else if (stationFilter === 'bar') {
+    targetItems = targetItems.filter((i: any) => isDrinkOrDessert(i.name, i.category));
+    stationBadge = '<div style="background:#801B2C; color:#fff; text-align:center; padding:2px; font-weight:900; margin-bottom:4px;">بون البار والمشروبات (BAR)</div>';
+  }
   
   if (printingOrder.type === 'refund_receipt') {
     const items = printingOrder.items || [];
@@ -193,7 +210,7 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any): string
     orderTypeHeader = `طاولة : ${printingOrder.tableNumber}`;
   }
 
-  const itemsRows = (printingOrder.items || []).map((item: any) => {
+  const itemsRows = (targetItems || []).map((item: any) => {
     const itemPrice = item.originalPrice || item.price || 0;
     const itemTotal = itemPrice * (item.quantity || 1);
 
@@ -240,6 +257,7 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any): string
         ` : ''}
       </div>
 
+      ${stationBadge}
       <!-- Big Bold Table / Area Header -->
       <div style="text-align: center; font-weight: 900; font-size: 14px; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 4px 0; margin: 4px 0;">
         ${orderTypeHeader}
@@ -340,10 +358,10 @@ export function generateReceiptHtml(printingOrder: any, restaurant: any): string
  * 2. On PC with Chrome/Edge running with --kiosk-printing, it prints instantly in the background silently.
  * 3. The receipt document is NEVER prematurely unmounted or destroyed while print spooler renders.
  */
-export function printReceiptIframe(printingOrder: any, restaurant: any): void {
+export function printReceiptIframe(printingOrder: any, restaurant: any, stationFilter: 'all' | 'kitchen' | 'bar' = 'all'): void {
   if (!printingOrder) return;
 
-  const html = generateReceiptHtml(printingOrder, restaurant);
+  const html = generateReceiptHtml(printingOrder, restaurant, stationFilter);
   if (!html) return;
 
   let iframe = document.getElementById('receipt-print-frame') as HTMLIFrameElement | null;

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { 
   LayoutGrid, List, Printer, XCircle, CloudOff, Play, Check, CheckCheck, AlertCircle,
@@ -6,6 +7,7 @@ import {
 } from 'lucide-react';
 import type { Order } from '../../../shared/types';
 import { staffAudio } from '../services/staffAudio';
+import { api } from '../../../shared/services/api';
 
 interface OrdersTabProps {
   orders: Order[];
@@ -141,18 +143,39 @@ export default function OrdersTab({
     }
   };
 
+  // Fetch Current Shift to scope sales calculations strictly to current active shift
+  const { data: shiftData } = useQuery({
+    queryKey: ['current-shift'],
+    queryFn: async () => {
+      const res = await api.get('/shifts/current');
+      return res.data.data;
+    },
+    refetchInterval: 30000,
+  });
+
+  const currentShift = shiftData?.shift;
+
   const archiveStats = useMemo(() => {
     const archived = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
     const delivered = archived.filter(o => o.status === 'delivered');
     const cancelled = archived.filter(o => o.status === 'cancelled');
-    const totalRevenue = delivered.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+    // Filter delivered orders created during active shift (createdAt >= currentShift.startTime)
+    const shiftStartTime = currentShift?.startTime ? new Date(currentShift.startTime).getTime() : 0;
+    const shiftDelivered = delivered.filter(o => {
+      if (!shiftStartTime) return true;
+      return new Date(o.createdAt).getTime() >= shiftStartTime;
+    });
+
+    const shiftRevenue = shiftDelivered.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
     return {
       total: archived.length,
       delivered: delivered.length,
       cancelled: cancelled.length,
-      revenue: totalRevenue
+      revenue: shiftRevenue
     };
-  }, [orders]);
+  }, [orders, currentShift?.startTime]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
@@ -345,9 +368,9 @@ export default function OrdersTab({
 
           {/* Revenue and View Mode Toggle */}
           <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100">
-            {/* Total Revenue Pill */}
+            {/* Total Revenue Pill - Current Shift */}
             <div className="flex items-center gap-1.5 bg-[#801B2C]/5 border border-[#801B2C]/15 px-3 py-1.5 rounded-xl">
-              <span className="text-[11px] text-zinc-500 font-bold">إجمالي المبيعات:</span>
+              <span className="text-[11px] text-zinc-500 font-bold">مبيعات الشيفت الحالي:</span>
               <strong className="text-[#801B2C] font-black font-mono text-xs">
                 {archiveStats.revenue.toLocaleString()} ج.م
               </strong>

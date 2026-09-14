@@ -68,6 +68,14 @@ export default function CreateOrderModal({
 
   const { restaurant } = useAuthStore();
 
+  // Smart Upsell pairing recommendations for waiter/staff
+  const smartUpsellProducts = useMemo(() => {
+    if (!menuData?.products) return [];
+    return menuData.products
+      .filter((p: any) => p.price <= 60 || (p.name || '').match(/(كولا|عصير|بطاطس|قهوة|إسبريسو|وافل|شوكولاتة|بيبسي|مياه|موهيتو|جبنة)/i))
+      .slice(0, 6);
+  }, [menuData]);
+
   const activeOrderForTable = useMemo(() => {
     if (!selectedTableNumber || !orders) return null;
     return orders.find(o => 
@@ -1170,6 +1178,39 @@ export default function CreateOrderModal({
                 ))
               )}
             </div>
+
+            {/* Smart Upsell Recommendations Carousel */}
+            {smartUpsellProducts.length > 0 && (
+              <div className="px-4 py-2.5 bg-amber-50/80 border-t border-amber-200/80 space-y-1.5 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black text-amber-900 flex items-center gap-1 font-cairo">
+                    <Gift className="w-3.5 h-3.5 text-amber-600" />
+                    <span>💡 اقتراحات الـ Upselling لزيادة متوسط الفاتورة</span>
+                  </span>
+                  <span className="text-[9px] text-amber-700 font-bold font-body">إضافة سريعة بنقرة واحدة</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {smartUpsellProducts.map((p: any) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        staffAudio.play('action');
+                        addToCart(p);
+                        toast.success(`تمت إضافة ${p.name} للطلب!`);
+                      }}
+                      className="flex-shrink-0 bg-white hover:bg-amber-100/60 border border-amber-200 rounded-xl px-2.5 py-1 flex items-center gap-2 text-right transition-all cursor-pointer shadow-2xs group"
+                    >
+                      <div>
+                        <div className="text-[11px] font-black text-zinc-900 group-hover:text-[#801B2C] line-clamp-1">{p.name}</div>
+                        <div className="text-[10px] font-mono text-emerald-700 font-bold">+{p.price} ج.م</div>
+                      </div>
+                      <Plus className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Submit & Payment Panel */}
             <div className="p-5 border-t border-zinc-200/80 bg-white space-y-3 flex-shrink-0">

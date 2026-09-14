@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Printer, LogOut, LayoutGrid, MapPin, ChefHat,
-  ShoppingBag, X, Download, PlusCircle, Wifi, WifiOff,
+  ShoppingBag, X, Download, PlusCircle,
   Volume2, VolumeX, Layers, Users, Bell, Clock
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -882,9 +882,33 @@ export default function StaffDashboard() {
             </div>
           </div>
 
-          {/* Left Controls & Status Badges */}
+          {/* Left Controls & Unified Connection Status */}
           <div className="flex items-center gap-3">
             
+            {/* Unified Connection Status Badge */}
+            <div className={`hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-bold font-body transition-all ${
+              networkStatus === 'online' && isOnline
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-2xs'
+                : networkStatus === 'online' || isOnline
+                ? 'bg-amber-50 text-amber-800 border-amber-200/80 shadow-2xs'
+                : 'bg-rose-50 text-rose-800 border-rose-200/80 animate-pulse shadow-2xs'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                networkStatus === 'online' && isOnline 
+                  ? 'bg-emerald-500 animate-pulse' 
+                  : networkStatus === 'online' || isOnline 
+                  ? 'bg-amber-500' 
+                  : 'bg-rose-500'
+              }`} />
+              <span>
+                {networkStatus === 'online' && isOnline 
+                  ? 'سيرفر أونلاين' 
+                  : isOnline || networkStatus === 'online'
+                  ? 'اتصال محلي (LAN)' 
+                  : 'أوفلاين'}
+              </span>
+            </div>
+
             {/* Shift Closure Trigger */}
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -900,7 +924,7 @@ export default function StaffDashboard() {
               <span className="hidden sm:inline">تقفيل الشيفت</span>
             </motion.button>
 
-            {/* Printer Settings & Silent Printing Trigger */}
+            {/* Printer Settings Trigger */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.96 }}
@@ -941,30 +965,6 @@ export default function StaffDashboard() {
                 <span>تثبيت التطبيق</span>
               </motion.button>
             )}
-
-            {/* Network / Offline DB Sync Badge */}
-            <span className={`hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-black border transition-all ${
-              networkStatus === 'online'
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-red-50 text-red-700 border-red-200 animate-pulse'
-            }`}>
-              {networkStatus === 'online' ? (
-                <Wifi className="w-3.5 h-3.5 text-emerald-600" />
-              ) : (
-                <WifiOff className="w-3.5 h-3.5 text-red-600" />
-              )}
-              <span>{networkStatus === 'online' ? 'الشبكة متصلة' : 'أوفلاين'}</span>
-            </span>
-
-            {/* Socket Live Sync Badge */}
-            <span className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black border ${
-              isOnline
-                ? 'bg-zinc-50 text-zinc-700 border-zinc-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-              <span>{isOnline ? 'مزامنة حية' : 'إعادة اتصال...'}</span>
-            </span>
 
             {/* Live digital clock */}
             <span className="text-xs font-bold text-zinc-700 font-cairo bg-white border border-zinc-200/90 px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5">

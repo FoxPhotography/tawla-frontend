@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { 
   DollarSign, Plus, Download, Trash2, FileText, 
-  TrendingUp, TrendingDown, Users, Home, Zap, Wrench, Package, MoreHorizontal, Filter
+  TrendingUp, TrendingDown, Users, Home, Zap, Wrench, Package, MoreHorizontal, Filter, Calendar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
@@ -28,6 +28,31 @@ const filterCategoryOptions = [
   { value: 'other', label: 'مصاريف نثرية' },
 ];
 
+const filterTypeOptions = [
+  { value: 'month', label: '📅 تصفية حسب الشهر' },
+  { value: 'day', label: '📆 تصفية بيوم محدد' },
+  { value: 'custom', label: '⏳ فترة مخصصة' },
+  { value: 'all', label: '🌐 كل الأوقات' },
+];
+
+const generateMonthOptions = () => {
+  const options = [];
+  const now = new Date();
+  const monthNames = [
+    'يناير', 'فبراير', 'مارس', 'إبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  ];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const yr = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const val = `${yr}-${mo}`;
+    const label = `${monthNames[d.getMonth()]} ${yr}`;
+    options.push({ value: val, label });
+  }
+  return options;
+};
+
 const categoryNames: Record<string, { label: string; icon: any; color: string }> = {
   supplies: { label: 'خامات ومشتريات', icon: Package, color: 'bg-blue-50 text-blue-800 border-blue-200' },
   salaries: { label: 'مرتبات وعمالة', icon: Users, color: 'bg-purple-50 text-purple-800 border-purple-200' },
@@ -39,25 +64,46 @@ const categoryNames: Record<string, { label: string; icon: any; color: string }>
 
 export default function ExpensesTab() {
   const queryClient = useQueryClient();
+  
+  // Expense Entry Form State
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('supplies');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Filters State
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  // Dynamic Filters State
+  const [filterType, setFilterType] = useState<'month' | 'day' | 'custom' | 'all'>('month');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    const yr = now.getFullYear();
+    const mo = String(now.getMonth() + 1).padStart(2, '0');
+    return `${yr}-${mo}`;
+  });
+  const [singleDate, setSingleDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Fetch Expenses & Net Profit Summary
+  const monthOptions = generateMonthOptions();
+
+  // Fetch Expenses & Aggregated Summary
   const { data: expensesData, isLoading: isExpensesLoading } = useQuery({
-    queryKey: ['expenses', selectedCategory, startDate, endDate],
+    queryKey: ['expenses', filterType, selectedMonth, singleDate, startDate, endDate, selectedCategory],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
+
+      if (filterType === 'month' && selectedMonth) {
+        params.append('month', selectedMonth);
+      } else if (filterType === 'day' && singleDate) {
+        params.append('startDate', singleDate);
+        params.append('endDate', singleDate);
+      } else if (filterType === 'custom') {
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+      }
+
       const res = await api.get('/expenses?' + params.toString());
       return res.data.data;
     },
@@ -114,7 +160,19 @@ export default function ExpensesTab() {
   const handleExportExcel = async () => {
     try {
       toast.loading('جاري تحميل شيت الإكسيل...');
-      const response = await api.get('/expenses/export-excel', { responseType: 'blob' });
+      const params = new URLSearchParams();
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (filterType === 'month' && selectedMonth) {
+        params.append('month', selectedMonth);
+      } else if (filterType === 'day' && singleDate) {
+        params.append('startDate', singleDate);
+        params.append('endDate', singleDate);
+      } else if (filterType === 'custom') {
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+      }
+
+      const response = await api.get('/expenses/export-excel?' + params.toString(), { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -130,9 +188,9 @@ export default function ExpensesTab() {
     }
   };
 
-  const netProfit = expensesData?.summary?.netProfit || 0;
-  const totalSales = expensesData?.summary?.totalSales || 0;
-  const totalExpenses = expensesData?.summary?.totalExpenses || 0;
+  const totalSales = expensesData?.summary?.totalSales ?? expensesData?.totalSales ?? 0;
+  const totalExpenses = expensesData?.summary?.totalExpenses ?? expensesData?.totalExpenses ?? 0;
+  const netProfit = expensesData?.summary?.netProfit ?? expensesData?.netProfit ?? 0;
 
   return (
     <div className="space-y-6 dir-rtl">
@@ -141,47 +199,148 @@ export default function ExpensesTab() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
         {/* Total Sales */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-xs space-y-1">
-          <div className="flex items-center justify-between text-xs font-bold text-zinc-500">
+        <div className="bg-white border border-emerald-200/80 rounded-3xl p-5 shadow-xs space-y-2 relative overflow-hidden">
+          <div className="flex items-center justify-between text-xs font-bold text-zinc-600">
             <span>إجمالي مبيعات الفترة</span>
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4" />
+            </div>
           </div>
           <div className="text-2xl font-mono font-black text-emerald-950">
-            {totalSales.toLocaleString('en-US')} <span className="text-xs font-sans">ج.م</span>
+            {totalSales.toLocaleString('en-US')} <span className="text-xs font-sans font-bold text-emerald-700">ج.م</span>
+          </div>
+          <div className="text-[11px] text-zinc-400 font-medium">
+            إجمالي المبيعات الفعلية للفترة المحددة
           </div>
         </div>
 
         {/* Total Expenses */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-xs space-y-1">
-          <div className="flex items-center justify-between text-xs font-bold text-zinc-500">
+        <div className="bg-white border border-red-200/80 rounded-3xl p-5 shadow-xs space-y-2 relative overflow-hidden">
+          <div className="flex items-center justify-between text-xs font-bold text-zinc-600">
             <span>إجمالي التكاليف والمصروفات</span>
-            <TrendingDown className="w-4 h-4 text-red-600" />
+            <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+              <TrendingDown className="w-4 h-4" />
+            </div>
           </div>
           <div className="text-2xl font-mono font-black text-red-950">
-            {totalExpenses.toLocaleString('en-US')} <span className="text-xs font-sans">ج.م</span>
+            {totalExpenses.toLocaleString('en-US')} <span className="text-xs font-sans font-bold text-red-700">ج.م</span>
+          </div>
+          <div className="text-[11px] text-zinc-400 font-medium">
+            مجموع تكاليف التشغيل والخامات والمشتريات
           </div>
         </div>
 
-        {/* Net Profit */}
-        <div className={'border rounded-3xl p-5 shadow-xs space-y-1 ' + (
-          netProfit >= 0 ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950' : 'bg-red-50/60 border-red-200 text-red-950'
-        )}>
-          <div className="flex items-center justify-between text-xs font-bold">
-            <span>صافي الأرباح الفعلي (Net Profit)</span>
-            <DollarSign className="w-4 h-4" />
+        {/* Net Profit - Luxury Tawla Brand Burgundy Gradient Card */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#801B2C] via-[#962436] to-[#5C1320] text-white p-5 rounded-3xl border border-[#801B2C]/30 shadow-lg shadow-[#801B2C]/20 flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between z-10">
+            <span className="text-xs font-bold text-amber-200 tracking-wide bg-amber-400/10 border border-amber-400/20 px-2.5 py-0.5 rounded-full">
+              صافي الأرباح الفعلي (Net Profit)
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+              <DollarSign className="w-4 h-4 text-amber-300" />
+            </div>
           </div>
-          <div className="text-2xl font-mono font-black">
-            {netProfit.toLocaleString('en-US')} <span className="text-xs font-sans">ج.م</span>
+          <div className="z-10 text-2xl font-mono font-black text-white">
+            {netProfit.toLocaleString('en-US')} <span className="text-xs font-sans font-bold text-amber-200">ج.م</span>
+          </div>
+          <div className="z-10 text-[11px] text-zinc-200/80 font-medium">
+            {netProfit >= 0 ? 'ربح صافي للفترة بعد خصم كافة التكاليف' : 'عجز / خسارة صافية للفترة المحددة'}
           </div>
         </div>
 
+      </div>
+
+      {/* Dynamic Filters Control Bar */}
+      <div className="bg-white border border-zinc-200/80 rounded-3xl p-4 shadow-xs space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-[#801B2C]" />
+            <span className="text-xs font-black text-zinc-900">فلترة البيانات وحسابات الفترة:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Filter Mode Selector */}
+            <div className="w-48">
+              <CustomSelect
+                value={filterType}
+                onChange={(val) => setFilterType(val as any)}
+                options={filterTypeOptions}
+              />
+            </div>
+
+            {/* Month Selector */}
+            {filterType === 'month' && (
+              <div className="w-44">
+                <CustomSelect
+                  value={selectedMonth}
+                  onChange={(val) => setSelectedMonth(val)}
+                  options={monthOptions}
+                />
+              </div>
+            )}
+
+            {/* Specific Day Selector */}
+            {filterType === 'day' && (
+              <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5">
+                <Calendar className="w-4 h-4 text-zinc-400" />
+                <input
+                  type="date"
+                  value={singleDate}
+                  onChange={(e) => setSingleDate(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-zinc-800 outline-none cursor-pointer"
+                />
+              </div>
+            )}
+
+            {/* Custom Date Range Selector */}
+            {filterType === 'custom' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 text-xs font-bold text-zinc-800 outline-none"
+                  placeholder="من تاريخ"
+                />
+                <span className="text-xs text-zinc-400 font-bold">إلى</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 text-xs font-bold text-zinc-800 outline-none"
+                  placeholder="إلى تاريخ"
+                />
+              </div>
+            )}
+
+            {/* Category Filter */}
+            <div className="w-44">
+              <CustomSelect
+                value={selectedCategory}
+                onChange={(val) => setSelectedCategory(val)}
+                options={filterCategoryOptions}
+              />
+            </div>
+
+            {/* Export Excel Button */}
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>تصدير إكسيل</span>
+            </button>
+
+          </div>
+        </div>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Expense Entry Form */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-xs space-y-4 h-fit">
+        <div className="bg-white border border-zinc-200/80 rounded-3xl p-6 shadow-xs space-y-4 h-fit">
           <div className="flex items-center gap-2 pb-3 border-b border-zinc-100">
             <Plus className="w-5 h-5 text-[#801B2C]" />
             <h2 className="text-sm font-black text-zinc-900">تسجيل مصروف جديد</h2>
@@ -258,53 +417,20 @@ export default function ExpensesTab() {
           </form>
         </div>
 
-        {/* Expenses List & Filter */}
-        <div className="lg:col-span-2 bg-white border border-zinc-200 rounded-3xl p-6 shadow-xs space-y-4">
+        {/* Expenses List */}
+        <div className="lg:col-span-2 bg-white border border-zinc-200/80 rounded-3xl p-6 shadow-xs space-y-4">
           
-          {/* Filters Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-100">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-zinc-400" />
-              <span className="text-xs font-bold text-zinc-800">تصفية المصروفات:</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="w-44">
-                <CustomSelect
-                  value={selectedCategory}
-                  onChange={(val) => setSelectedCategory(val)}
-                  options={filterCategoryOptions}
-                />
-              </div>
-
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700"
-              />
-              <span className="text-xs text-zinc-400">إلى</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700"
-              />
-
-              <button
-                onClick={handleExportExcel}
-                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>إكسيل</span>
-              </button>
-            </div>
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+            <h2 className="text-sm font-black text-zinc-900">سجل المصروفات والتكاليف المسجلة</h2>
+            <span className="text-xs font-bold text-zinc-500">
+              العدد: <span className="font-mono text-zinc-900">{expensesData?.expenses?.length || 0}</span>
+            </span>
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto max-h-[420px] scrollbar-thin scrollbar-thumb-zinc-200">
+          <div className="overflow-x-auto max-h-[460px] scrollbar-thin scrollbar-thumb-zinc-200">
             {isExpensesLoading ? (
-              <div className="text-center py-10 text-xs text-zinc-400">جاري تحميل المصروفات...</div>
+              <div className="text-center py-10 text-xs text-zinc-400 font-bold">جاري تحميل المصروفات...</div>
             ) : !expensesData?.expenses || expensesData.expenses.length === 0 ? (
               <div className="text-center py-12 text-zinc-400 space-y-2">
                 <FileText className="w-8 h-8 mx-auto text-zinc-300" />
@@ -364,6 +490,7 @@ export default function ExpensesTab() {
             )}
           </div>
         </div>
+
       </div>
     </div>
   );
