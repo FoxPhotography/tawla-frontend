@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  DollarSign, FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList, UserCheck, Percent
+  DollarSign, FolderPlus, ShoppingBag, MapPin, BarChart3, LogOut, Crown, Users, ClipboardList, UserCheck, Percent, Clock
 } from 'lucide-react';
 
 import { useAuthStore } from '../../shared/store/authStore';
@@ -22,6 +22,7 @@ import AuditLogsTab from './components/AuditLogsTab.js';
 import CustomersTab from './components/CustomersTab.js';
 import DiscountsTab from './components/DiscountsTab.js';
 import ExpensesTab from './components/ExpensesTab.js';
+import ShiftsTab from './components/ShiftsTab.js';
 import { useOfflineGuard } from '../../shared/hooks/useOfflineGuard.js';
 import OfflineTamperModal from '../../shared/components/OfflineTamperModal.js';
 
@@ -31,13 +32,14 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const offlineGuard = useOfflineGuard();
 
-  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'expenses' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers' | 'discounts'>(() => {
+  const [activeTab, setActiveTab] = useState<'categories' | 'products' | 'tables' | 'orders' | 'expenses' | 'shifts' | 'analytics' | 'subscription' | 'staff' | 'audit' | 'customers' | 'discounts'>(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
     if (tabParam === 'subscription' || params.get('status') === 'renewed') return 'subscription';
     if (tabParam === 'products') return 'products';
     if (tabParam === 'tables') return 'tables';
     if (tabParam === 'orders') return 'orders';
+    if (tabParam === 'shifts') return 'shifts';
     if (tabParam === 'analytics') return 'analytics';
     if (tabParam === 'staff') return 'staff';
     if (tabParam === 'audit') return 'audit';
@@ -138,6 +140,7 @@ export default function AdminDashboard() {
     { id: 'orders', label: 'أرشيف الطلبات', icon: ClipboardList, premium: false },
     { id: 'customers', label: 'العملاء والهدايا', icon: Users, premium: !isFeatureAllowed('loyalty') },
     { id: 'expenses', label: 'المصروفات والأرباح', icon: DollarSign, premium: false },
+    { id: 'shifts', label: 'سجل الورديات', icon: Clock, premium: false },
     { id: 'analytics', label: 'التقارير والتحليلات', icon: BarChart3, premium: !isFeatureAllowed('analytics') },
     { id: 'discounts', label: 'الخصومات والعروض', icon: Percent, premium: !isFeatureAllowed('customDiscounts') },
     { id: 'audit', label: 'سجلات العمليات', icon: ClipboardList, premium: !isFeatureAllowed('audit') },
@@ -227,6 +230,7 @@ export default function AdminDashboard() {
             {activeTab === 'orders' && <OrdersTab />}
             {activeTab === 'customers' && <CustomersTab />}
             {activeTab === 'expenses' && <ExpensesTab />}
+            {activeTab === 'shifts' && <ShiftsTab />}
             {activeTab === 'analytics' && <AnalyticsTab />}
             {activeTab === 'audit' && <AuditLogsTab />}
             {activeTab === 'subscription' && <SubscriptionTab />}
