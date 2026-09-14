@@ -8,7 +8,7 @@ import {
   Coffee,
   UtensilsCrossed,
   Layers,
-  Sparkles,
+  PlusCircle,
   Loader2,
   ChevronLeft,
   ChevronRight,
@@ -408,7 +408,7 @@ export default function CatalogManagementTab() {
                       )}
                       {item.modifiers && item.modifiers.length > 0 && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-                          <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+                          <PlusCircle className="w-2.5 h-2.5 text-amber-700" />
                           <span>{item.modifiers.length} إضافات</span>
                         </span>
                       )}
