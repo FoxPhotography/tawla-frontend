@@ -388,10 +388,34 @@ export default function CustomerMenu() {
     setCustomizingProduct(null);
   };
 
+  const normalizeProductOptions = (prod: Product): Product => {
+    if (!prod.options || prod.options.length === 0) return prod;
+    const numPrice = Number(prod.price) || 0;
+    if (numPrice <= 0) return prod;
+
+    const normalizedOptions = prod.options.map((opt) => {
+      if (opt.required && opt.choices && opt.choices.length > 0) {
+        const firstAdj = Number(opt.choices[0].priceAdjustment) || 0;
+        if (firstAdj === numPrice) {
+          return {
+            ...opt,
+            choices: opt.choices.map((c) => ({
+              ...c,
+              priceAdjustment: Math.max(0, (Number(c.priceAdjustment) || 0) - numPrice),
+            })),
+          };
+        }
+      }
+      return opt;
+    });
+
+    return { ...prod, options: normalizedOptions };
+  };
+
   const handleProductClick = (product: Product) => {
     const isCustom = (product.options && product.options.length > 0) || (product.modifiers && product.modifiers.length > 0);
     if (isCustom) {
-      setCustomizingProduct(product);
+      setCustomizingProduct(normalizeProductOptions(product));
     } else {
       addToCart(product);
     }

@@ -189,12 +189,29 @@ export function EditProductModal({
       return toast.error('يرجى ملء جميع الحقول المطلوبة.');
     }
 
+    const numPrice = Number(price) || 0;
+    const normalizedOptions = options.map((opt) => {
+      if (opt.required && opt.choices && opt.choices.length > 0 && numPrice > 0) {
+        const firstAdj = Number(opt.choices[0].priceAdjustment) || 0;
+        if (firstAdj === numPrice) {
+          return {
+            ...opt,
+            choices: opt.choices.map((c) => ({
+              ...c,
+              priceAdjustment: Math.max(0, (Number(c.priceAdjustment) || 0) - numPrice),
+            })),
+          };
+        }
+      }
+      return opt;
+    });
+
     const fd = new FormData();
     fd.append('name', name);
     fd.append('description', desc);
     fd.append('price', price);
     fd.append('categoryId', catId);
-    fd.append('options', JSON.stringify(options));
+    fd.append('options', JSON.stringify(normalizedOptions));
     fd.append('modifiers', JSON.stringify(modifiers));
 
     if (image) {
@@ -362,6 +379,9 @@ export function EditProductModal({
                       />
                       <span>اختيار إجباري للعميل</span>
                     </label>
+                    <p className="text-[9px] text-admin-text-secondary">
+                      أدخل فرق السعر عن السعر الأساسي ({price || 0} ج.م) — ضع 0 للمقاس الأساسي ليكون بنفس السعر
+                    </p>
 
                     <div className="space-y-2">
                       {opt.choices.map((choice, cIdx) => (
@@ -373,13 +393,19 @@ export function EditProductModal({
                             placeholder="الخيار"
                             className="flex-1 bg-admin-bg-base border border-admin-border text-admin-text-primary text-[10px] rounded-lg px-2.5 py-1.5 focus:outline-none"
                           />
-                          <input
-                            type="number"
-                            value={choice.priceAdjustment}
-                            onChange={(e) => updateOptionChoicePrice(gIdx, cIdx, Number(e.target.value))}
-                            placeholder="سعر المقاس"
-                            className="w-20 bg-admin-bg-base border border-admin-border text-admin-text-primary text-[10px] rounded-lg px-2.5 py-1.5 focus:outline-none text-left font-mono"
-                          />
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              value={choice.priceAdjustment}
+                              onChange={(e) => updateOptionChoicePrice(gIdx, cIdx, Number(e.target.value))}
+                              placeholder="+فرق السعر"
+                              title="فرق السعر عن السعر الأساسي للمنتج"
+                              className="w-16 bg-admin-bg-base border border-admin-border text-admin-text-primary text-[10px] rounded-lg px-2 py-1.5 focus:outline-none text-left font-mono"
+                            />
+                            <span className="text-[9px] text-zinc-400 font-mono whitespace-nowrap bg-admin-bg-base/60 px-1.5 py-1 rounded border border-admin-border/50" title="السعر الإجمالي لهذا المقاس">
+                              = {(Number(price || 0) + Number(choice.priceAdjustment || 0))} ج
+                            </span>
+                          </div>
                           <button type="button" onClick={() => removeOptionChoice(gIdx, cIdx)} className="text-zinc-400 hover:text-red-500 p-1">
                             <X className="w-3 h-3" />
                           </button>
