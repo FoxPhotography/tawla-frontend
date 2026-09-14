@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  LogOut, LayoutGrid, MapPin, ChefHat,
+  Printer, LogOut, LayoutGrid, MapPin, ChefHat,
   ShoppingBag, X, Download, PlusCircle, Wifi, WifiOff,
   Volume2, VolumeX, Layers, Users, Bell, Clock
 } from 'lucide-react';
@@ -19,7 +19,8 @@ import LiveAlertsSidebar, { type LiveAlert } from './components/LiveAlertsSideba
 import OrdersTab from './components/OrdersTab';
 import TablesTab from './components/TablesTab';
 import CreateOrderModal from './components/CreateOrderModal';
-import ReceiptPrintTemplate from './components/ReceiptPrintTemplate';
+import ReceiptPrintTemplate, { printReceiptIframe } from './components/ReceiptPrintTemplate';
+import PrinterSettingsModal from './components/PrinterSettingsModal';
 import KDSTab from './components/KDSTab';
 import { useOfflineGuard } from '../../shared/hooks/useOfflineGuard';
 import OfflineTamperModal from '../../shared/components/OfflineTamperModal';
@@ -56,16 +57,14 @@ export default function StaffDashboard() {
     }
   };
 
-  // Receipt Printing State
+  // Receipt Printing & Silent POS State
+  const [isPrinterSettingsOpen, setIsPrinterSettingsOpen] = useState(false);
   const [printingOrder, setPrintingOrder] = useState<any | null>(null);
 
   const handlePrintReceipt = (order: any) => {
     staffAudio.play('action');
     setPrintingOrder(order);
-    setTimeout(() => {
-      window.print();
-      setPrintingOrder(null);
-    }, 250);
+    printReceiptIframe(order, restaurant);
   };
 
   // Toast Notification States
@@ -256,6 +255,13 @@ export default function StaffDashboard() {
         toast.success('تم تحديث حالة الطلب بنجاح.');
         queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
         queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
+
+        if (localStorage.getItem('tawla_auto_print_accept_orders') === 'true' && (variables.nextStatus === 'accepted' || variables.nextStatus === 'preparing')) {
+          const orderToPrint = combinedOrders.find((o: any) => o.id === variables.orderId);
+          if (orderToPrint) {
+            printReceiptIframe(orderToPrint, restaurant);
+          }
+        }
       }
     },
     onError: (err: any) => {
@@ -366,6 +372,15 @@ export default function StaffDashboard() {
         });
       }
       
+      // Auto-print receipt if enabled
+      if (localStorage.getItem('tawla_auto_print_new_orders') === 'true') {
+        try {
+          printReceiptIframe(data.order, restaurant);
+        } catch (e) {
+          console.warn('[AutoPrint]: error printing new order', e);
+        }
+      }
+
       const isDelivery = data.order.type === 'delivery';
       staffAudio.play(isDelivery ? 'delivery_order' : 'new_order');
       setNewOrderDetails(data.order);
@@ -850,6 +865,21 @@ export default function StaffDashboard() {
           {/* Left Controls & Status Badges */}
           <div className="flex items-center gap-3">
             
+            {/* Printer Settings & Silent Printing Trigger */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => {
+                staffAudio.play('click');
+                setIsPrinterSettingsOpen(true);
+              }}
+              className="flex items-center gap-2 bg-white border border-zinc-200/90 hover:bg-zinc-50 text-zinc-700 text-xs font-bold px-3.5 py-2.5 rounded-2xl transition-all shadow-sm cursor-pointer"
+              title="إعدادات طابعة الفواتير والطباعة المباشرة"
+            >
+              <Printer className="w-4 h-4 text-[#801B2C]" />
+              <span className="hidden sm:inline">إعدادات الطابعة</span>
+            </motion.button>
+
             {/* Waiter Ordering Trigger (Prominent Royal Burgundy Button) */}
             <motion.button
               whileHover={{ scale: 1.02, boxShadow: '0 8px 20px -4px rgba(128, 27, 44, 0.25)' }}
@@ -1062,6 +1092,13 @@ export default function StaffDashboard() {
       {/* Hidden Receipt Printing Template */}
       <ReceiptPrintTemplate 
         printingOrder={printingOrder}
+        restaurant={restaurant}
+      />
+
+      {/* Thermal Printer Settings Modal */}
+      <PrinterSettingsModal 
+        isOpen={isPrinterSettingsOpen}
+        onClose={() => setIsPrinterSettingsOpen(false)}
         restaurant={restaurant}
       />
 

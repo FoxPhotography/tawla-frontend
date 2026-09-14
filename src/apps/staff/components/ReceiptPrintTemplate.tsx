@@ -1,16 +1,320 @@
 import { createPortal } from 'react-dom';
 
-interface ReceiptPrintTemplateProps {
+export interface ReceiptPrintTemplateProps {
   printingOrder: any | null;
   restaurant: any;
 }
 
+/**
+ * Formats numbers to Egyptian Pounds currency string
+ */
+export const formatReceiptCurrency = (val: number) => {
+  return (Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+};
+
+/**
+ * Generates clean, high-contrast HTML markup for an 80mm thermal receipt
+ */
+export function generateReceiptHtml(printingOrder: any, restaurant: any): string {
+  if (!printingOrder) return '';
+
+  const isTakeaway = printingOrder.type === 'takeaway' || printingOrder.tableNumber === 0;
+  const serviceRatePercent = isTakeaway ? 0 : (restaurant?.receiptSettings?.serviceRate ?? 0);
+  const taxRatePercent = restaurant?.receiptSettings?.taxRate ?? 0;
+  
+  const originalSubtotal = (printingOrder.items || []).reduce(
+    (acc: number, item: any) => acc + (item.originalPrice || item.price || 0) * (item.quantity || 1), 
+    0
+  );
+  const currentItemsTotal = (printingOrder.items || []).reduce(
+    (acc: number, item: any) => acc + (item.price || 0) * (item.quantity || 1), 
+    0
+  );
+  const scheduledDiscount = Math.max(0, originalSubtotal - currentItemsTotal);
+  const manualDiscount = printingOrder.discountAmount || 0;
+  const totalDiscount = scheduledDiscount + manualDiscount;
+  const afterDiscount = Math.max(0, originalSubtotal - totalDiscount);
+
+  const taxAmount = afterDiscount * (taxRatePercent / 100);
+  const serviceAmount = afterDiscount * (serviceRatePercent / 100);
+  const grandTotal = afterDiscount + taxAmount + serviceAmount;
+
+  const orderNumberStr = printingOrder.id ? `#${printingOrder.id.slice(-6).toUpperCase()}` : '#000000';
+  const dateStr = printingOrder.createdAt 
+    ? new Date(printingOrder.createdAt).toLocaleDateString('ar-EG', { dateStyle: 'short' }) 
+    : new Date().toLocaleDateString('ar-EG', { dateStyle: 'short' });
+  const timeStr = new Date().toLocaleTimeString('ar-EG', { hour12: true });
+
+  let orderTypeHeader = '';
+  if (printingOrder.type === 'delivery') {
+    orderTypeHeader = 'الطلب : توصيل (دليفري)';
+  } else if (printingOrder.type === 'takeaway') {
+    orderTypeHeader = 'الطلب : خارجي (تيك أواي)';
+  } else {
+    orderTypeHeader = `طاولة : ${printingOrder.tableNumber}`;
+  }
+
+  const itemsRows = (printingOrder.items || []).map((item: any) => {
+    const itemPrice = item.originalPrice || item.price || 0;
+    const itemTotal = itemPrice * (item.quantity || 1);
+
+    const optionsHtml = item.selectedOptions && item.selectedOptions.length > 0
+      ? `<div style="font-size: 8.5px; color: #27272a; font-weight: 500; margin-top: 1px;">- ${item.selectedOptions.map((o: any) => `${o.name}: ${o.value}`).join(', ')}</div>`
+      : '';
+
+    const modifiersHtml = item.selectedModifiers && item.selectedModifiers.length > 0
+      ? `<div style="font-size: 8.5px; color: #27272a; font-weight: 500; margin-top: 1px;">- الإضافات: ${item.selectedModifiers.map((m: any) => m.value).join(', ')}</div>`
+      : '';
+
+    const notesHtml = item.notes
+      ? `<div style="font-size: 8.5px; color: #27272a; font-style: italic; font-weight: 500; margin-top: 1px;">* ملاحظة: ${item.notes}</div>`
+      : '';
+
+    return `
+      <tr>
+        <td style="text-align: center; font-family: monospace; font-weight: 900; font-size: 11px; border: 1.5px solid #000; padding: 4px 6px;">${item.quantity}</td>
+        <td style="text-align: right; font-weight: bold; border: 1.5px solid #000; padding: 4px 6px;">
+          <div>${item.name}</div>
+          ${optionsHtml}
+          ${modifiersHtml}
+          ${notesHtml}
+        </td>
+        <td style="text-align: center; font-family: monospace; font-weight: bold; font-size: 10.5px; border: 1.5px solid #000; padding: 4px 6px;">${itemPrice.toFixed(2)}</td>
+        <td style="text-align: left; font-family: monospace; font-weight: 900; font-size: 10.5px; border: 1.5px solid #000; padding: 4px 6px;">${itemTotal.toFixed(2)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="print-receipt-container" dir="rtl" style="font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; color: #000; background: #fff; width: 80mm; margin: 0 auto; padding: 4mm 3mm; box-sizing: border-box; line-height: 1.4; font-size: 11px;">
+      
+      <!-- Header section -->
+      <div style="text-align: center; padding-bottom: 8px;">
+        ${restaurant?.receiptSettings?.showLogo && restaurant?.logo?.url ? `
+          <div style="margin-bottom: 8px;">
+            <img src="${restaurant.logo.url}" alt="logo" style="margin: 0 auto; max-height: 56px; object-fit: contain; border-radius: 6px;" />
+          </div>
+        ` : ''}
+        <h1 style="font-size: 16px; font-weight: 900; letter-spacing: -0.5px; text-transform: uppercase; margin: 0 0 2px 0; color: #000;">${restaurant?.name || ''}</h1>
+        ${restaurant?.receiptSettings?.headerText ? `
+          <p style="font-size: 10px; color: #18181b; font-weight: bold; line-height: 1.2; margin: 4px auto 0 auto; max-width: 90%;">${restaurant.receiptSettings.headerText}</p>
+        ` : ''}
+      </div>
+
+      <!-- Big Bold Table / Area Header -->
+      <div style="text-align: center; font-weight: 900; font-size: 14px; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 4px 0; margin: 4px 0;">
+        ${orderTypeHeader}
+      </div>
+
+      <!-- Metadata Details -->
+      <div style="font-size: 10px; font-weight: bold; padding: 6px 0; border-bottom: 1px dashed #000; line-height: 1.5;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>رقم الطلب: ${orderNumberStr}</span>
+          <span>التاريخ: ${dateStr}</span>
+        </div>
+        ${printingOrder.customerName ? `<div>العميل: ${printingOrder.customerName}</div>` : ''}
+        ${printingOrder.type === 'delivery' ? `
+          ${printingOrder.customerPhone ? `<div>الهاتف: ${printingOrder.customerPhone}</div>` : ''}
+          ${printingOrder.customerAddress ? `<div>العنوان: ${printingOrder.customerAddress}</div>` : ''}
+        ` : ''}
+        ${printingOrder.type !== 'delivery' && restaurant?.receiptSettings?.phone ? `
+          <div style="display: flex; justify-content: space-between;">
+            <span>الهاتف: ${restaurant.receiptSettings.phone}</span>
+            ${restaurant.receiptSettings.taxNumber ? `<span>الرقم الضريبي: ${restaurant.receiptSettings.taxNumber}</span>` : ''}
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- Items Table -->
+      <table style="width: 100%; border-collapse: collapse; margin: 8px 0;">
+        <thead>
+          <tr style="background-color: #f3f4f6;">
+            <th style="width: 48px; text-align: center; font-size: 11px; text-transform: uppercase; border: 1.5px solid #000; padding: 4px 6px; font-weight: bold;">الكمية</th>
+            <th style="text-align: right; font-size: 11px; text-transform: uppercase; border: 1.5px solid #000; padding: 4px 6px; font-weight: bold;">الصنف</th>
+            <th style="width: 64px; text-align: center; font-size: 11px; text-transform: uppercase; border: 1.5px solid #000; padding: 4px 6px; font-weight: bold;">السعر</th>
+            <th style="width: 64px; text-align: left; font-size: 11px; text-transform: uppercase; border: 1.5px solid #000; padding: 4px 6px; font-weight: bold;">الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsRows}
+        </tbody>
+      </table>
+
+      <!-- Totals Summary -->
+      <div style="padding: 4px 0; border-top: 1px solid #000; line-height: 1.6;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px;">
+          <span>إجمالي الطلبات:</span>
+          <span style="font-family: monospace;">${formatReceiptCurrency(originalSubtotal)}</span>
+        </div>
+
+        ${taxRatePercent > 0 ? `
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px;">
+            <span>الضريبة (${taxRatePercent}%):</span>
+            <span style="font-family: monospace;">${formatReceiptCurrency(taxAmount)}</span>
+          </div>
+        ` : ''}
+
+        ${serviceRatePercent > 0 ? `
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px;">
+            <span>الخدمة (${serviceRatePercent}%):</span>
+            <span style="font-family: monospace;">${formatReceiptCurrency(serviceAmount)}</span>
+          </div>
+        ` : ''}
+
+        ${totalDiscount > 0 ? `
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 11px; color: #dc2626;">
+            <span>خصم العروض:</span>
+            <span style="font-family: monospace;">-${formatReceiptCurrency(totalDiscount)}</span>
+          </div>
+        ` : ''}
+
+        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; padding-top: 6px; border-top: 1px solid #000; margin-top: 4px;">
+          <span>المبلغ المستحق:</span>
+          <span style="font-family: monospace;">${formatReceiptCurrency(grandTotal)}</span>
+        </div>
+      </div>
+
+      <!-- Welcome Footer Text -->
+      <div style="text-align: center; margin-top: 14px; line-height: 1.4;">
+        ${restaurant?.receiptSettings?.footerText ? `
+          <p style="font-size: 9.5px; color: #09090b; font-weight: bold; padding: 0 8px; margin: 0 0 6px 0;">
+            ${restaurant.receiptSettings.footerText}
+          </p>
+        ` : ''}
+
+        <div style="border: 1.5px solid #000; padding: 4px; text-align: center; font-weight: 900; font-size: 10px; margin-top: 8px; letter-spacing: 0.5px;">
+          Powered by: tawla.site
+        </div>
+
+        <div style="font-size: 8px; font-weight: bold; color: #18181b; font-family: monospace; padding-top: 4px;">
+          وقت الطباعة : ${timeStr}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Bulletproof print function using an isolated hidden iframe.
+ * This guarantees:
+ * 1. Huawei and Android tablets print ONLY the thermal receipt (never the dashboard or webpage).
+ * 2. On PC with Chrome/Edge running with --kiosk-printing, it prints instantly in the background silently.
+ * 3. The receipt document is NEVER prematurely unmounted or destroyed while print spooler renders.
+ */
+export function printReceiptIframe(printingOrder: any, restaurant: any): void {
+  if (!printingOrder) return;
+
+  const html = generateReceiptHtml(printingOrder, restaurant);
+  if (!html) return;
+
+  let iframe = document.getElementById('receipt-print-frame') as HTMLIFrameElement | null;
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.id = 'receipt-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-9999px';
+    iframe.style.left = '-9999px';
+    iframe.style.width = '80mm';
+    iframe.style.height = '100px';
+    iframe.style.border = 'none';
+    iframe.style.zIndex = '-9999';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+  }
+
+  const doc = iframe.contentWindow?.document || iframe.contentDocument;
+  if (!doc) {
+    console.warn('[ReceiptPrinter]: could not access iframe document, fallback to window.print');
+    window.print();
+    return;
+  }
+
+  const fullDocument = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>فاتورة طاولة</title>
+        <style>
+          @page {
+            size: 80mm auto;
+            margin: 0 !important;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 80mm !important;
+            background: #fff !important;
+            color: #000 !important;
+            font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif !important;
+            direction: rtl;
+          }
+        </style>
+      </head>
+      <body>
+        ${html}
+      </body>
+    </html>
+  `;
+
+  doc.open();
+  doc.write(fullDocument);
+  doc.close();
+
+  const doPrint = () => {
+    try {
+      iframe?.contentWindow?.focus();
+      iframe?.contentWindow?.print();
+    } catch (e) {
+      console.warn('[ReceiptPrinter]: iframe.print() failed, falling back to window.print()', e);
+      window.print();
+    }
+  };
+
+  // Wait for images to load if logo exists
+  const images = iframe.contentDocument?.images || [];
+  if (images.length === 0) {
+    setTimeout(doPrint, 150);
+  } else {
+    let loaded = 0;
+    let printed = false;
+    const checkAndPrint = () => {
+      loaded++;
+      if (loaded >= images.length && !printed) {
+        printed = true;
+        setTimeout(doPrint, 100);
+      }
+    };
+
+    for (let i = 0; i < images.length; i++) {
+      if (images[i].complete) {
+        checkAndPrint();
+      } else {
+        images[i].onload = checkAndPrint;
+        images[i].onerror = checkAndPrint;
+      }
+    }
+
+    // Safety timeout after 400ms
+    setTimeout(() => {
+      if (!printed) {
+        printed = true;
+        doPrint();
+      }
+    }, 400);
+  }
+}
+
+/**
+ * Standard React Component fallback for backwards compatibility
+ */
 export default function ReceiptPrintTemplate({ printingOrder, restaurant }: ReceiptPrintTemplateProps) {
   if (!printingOrder) return null;
-
-  const formatCurrency = (val: number) => {
-    return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
-  };
 
   return createPortal(
     <>
@@ -25,7 +329,7 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
             padding: 0 !important;
             background: white !important;
             color: black !important;
-            font-family: 'Segoe UI', Arial, sans-serif !important;
+            font-family: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif !important;
             width: 80mm !important;
           }
           #root, header, aside, main, footer, .toast, .no-print, [role="dialog"] {
@@ -40,207 +344,11 @@ export default function ReceiptPrintTemplate({ printingOrder, restaurant }: Rece
             background: white !important;
           }
         }
-        
-        /* Table Styles from the image */
-        .receipt-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 8px 0;
-        }
-        .receipt-table th, .receipt-table td {
-          border: 1.5px solid #000 !important;
-          padding: 4px 6px !important;
-          font-weight: bold !important;
-          color: #000 !important;
-          vertical-align: middle !important;
-        }
-        .receipt-table th {
-          font-size: 11px !important;
-          text-transform: uppercase;
-          background-color: #f3f4f6 !important;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        .receipt-table td {
-          font-size: 10.5px !important;
-        }
       `}} />
-      <div className="print-receipt-container hidden print:block text-black bg-white leading-relaxed text-[11px]" dir="rtl" style={{ fontFamily: "'Segoe UI', Arial, sans-serif" }}>
-        
-        {/* Header section */}
-        <div className="text-center pb-2">
-          {/* Logo if active */}
-          {restaurant?.receiptSettings?.showLogo && restaurant?.logo?.url && (
-            <div className="mb-2">
-              <img src={restaurant.logo.url} alt="logo" className="mx-auto max-h-14 object-contain rounded-md" />
-            </div>
-          )}
-          {/* Restaurant Name */}
-          <h1 className="text-base font-black tracking-tight uppercase mb-0.5 text-black">{restaurant?.name}</h1>
-          {/* Header Text */}
-          {restaurant?.receiptSettings?.headerText && (
-            <p className="text-[10px] text-zinc-900 leading-tight mt-1 max-w-[90%] mx-auto font-bold">{restaurant.receiptSettings.headerText}</p>
-          )}
-        </div>
-
-        {/* Big Bold Table / Area Header like in the image */}
-        <div className="text-center font-black text-sm border-t-2 border-b-2 border-black py-1 my-1">
-          {printingOrder.type === 'delivery' ? (
-            <span>الطلب : توصيل (دليفري)</span>
-          ) : printingOrder.type === 'takeaway' ? (
-            <span>الطلب : خارجي (تيك أواي)</span>
-          ) : (
-            <span>طاولة : {printingOrder.tableNumber}</span>
-          )}
-        </div>
-
-        {/* Metadata Details */}
-        <div className="text-[10px] font-bold py-1.5 space-y-0.5 border-b border-dashed border-black">
-          <div className="flex justify-between">
-            <span>رقم الطلب: #{printingOrder.id.slice(-6).toUpperCase()}</span>
-            <span>التاريخ: {new Date(printingOrder.createdAt).toLocaleDateString('ar-EG', { dateStyle: 'short' })}</span>
-          </div>
-          {printingOrder.customerName && (
-            <div>العميل: {printingOrder.customerName}</div>
-          )}
-          {printingOrder.type === 'delivery' && (
-            <>
-              {printingOrder.customerPhone && <div>الهاتف: {printingOrder.customerPhone}</div>}
-              {printingOrder.customerAddress && <div>العنوان: {printingOrder.customerAddress}</div>}
-            </>
-          )}
-          {printingOrder.type !== 'delivery' && restaurant?.receiptSettings?.phone && (
-            <div className="flex justify-between">
-              <span>الهاتف: {restaurant.receiptSettings.phone}</span>
-              {restaurant.receiptSettings.taxNumber && (
-                <span>الرقم الضريبي: {restaurant.receiptSettings.taxNumber}</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Items Table */}
-        <table className="receipt-table">
-          <thead>
-            <tr>
-              <th className="w-12 text-center">الكمية</th>
-              <th className="text-right">الصنف</th>
-              <th className="w-16 text-center">السعر</th>
-              <th className="w-16 text-left">الإجمالي</th>
-            </tr>
-          </thead>
-          <tbody>
-            {printingOrder.items.map((item: any, idx: number) => {
-              return (
-                 <tr key={idx}>
-                  <td className="text-center font-mono font-black text-[11px]">{item.quantity}</td>
-                  <td className="text-right font-bold">
-                    <div>{item.name}</div>
-                    {item.selectedOptions && item.selectedOptions.length > 0 && (
-                      <div className="text-[8.5px] text-zinc-800 font-medium">
-                        - {item.selectedOptions.map((o: any) => `${o.name}: ${o.value}`).join(', ')}
-                      </div>
-                    )}
-                    {item.selectedModifiers && item.selectedModifiers.length > 0 && (
-                      <div className="text-[8.5px] text-zinc-800 font-medium">
-                        - الإضافات: {item.selectedModifiers.map((m: any) => m.value).join(', ')}
-                      </div>
-                    )}
-                    {item.notes && (
-                      <div className="text-[8.5px] text-zinc-800 mr-1 font-medium italic">
-                        * ملاحظة: {item.notes}
-                      </div>
-                    )}
-                  </td>
-                  <td className="text-center font-mono font-bold">
-                    {(item.originalPrice || item.price).toFixed(2)}
-                  </td>
-                  <td className="text-left font-mono font-black">
-                    {((item.originalPrice || item.price) * item.quantity).toFixed(2)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-
-        {/* Totals Summary */}
-        {(() => {
-          const isTakeaway = printingOrder.type === 'takeaway' || printingOrder.tableNumber === 0;
-          const serviceRatePercent = isTakeaway ? 0 : (restaurant?.receiptSettings?.serviceRate ?? 0);
-          const taxRatePercent = restaurant?.receiptSettings?.taxRate ?? 0;
-          
-          const originalSubtotal = printingOrder.items.reduce((acc: number, item: any) => acc + (item.originalPrice || item.price) * item.quantity, 0);
-          const currentItemsTotal = printingOrder.items.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
-          const scheduledDiscount = Math.max(0, originalSubtotal - currentItemsTotal);
-          const manualDiscount = printingOrder.discountAmount || 0;
-          const totalDiscount = scheduledDiscount + manualDiscount;
-          const afterDiscount = Math.max(0, originalSubtotal - totalDiscount);
-
-          const taxAmount = afterDiscount * (taxRatePercent / 100);
-          const serviceAmount = afterDiscount * (serviceRatePercent / 100);
-          const grandTotal = afterDiscount + taxAmount + serviceAmount;
-
-          return (
-            <div className="space-y-1 py-1 border-t border-black">
-              {/* Items Subtotal */}
-              <div className="flex justify-between font-bold text-[11px]">
-                <span>إجمالي الطلبات:</span>
-                <span className="font-mono">{formatCurrency(originalSubtotal)}</span>
-              </div>
-              
-              {/* VAT Tax */}
-              {taxRatePercent > 0 && (
-                <div className="flex justify-between font-bold text-[11px]">
-                  <span>الضريبة ({taxRatePercent}%):</span>
-                  <span className="font-mono">{formatCurrency(taxAmount)}</span>
-                </div>
-              )}
-
-              {/* Service Charge */}
-              {serviceRatePercent > 0 && (
-                <div className="flex justify-between font-bold text-[11px]">
-                  <span>الخدمة ({serviceRatePercent}%):</span>
-                  <span className="font-mono">{formatCurrency(serviceAmount)}</span>
-                </div>
-              )}
-
-              {/* Discount under Service charge */}
-              {totalDiscount > 0 && (
-                <div className="flex justify-between font-bold text-[11px]" style={{ color: '#dc2626' }}>
-                  <span>خصم العروض:</span>
-                  <span className="font-mono">-{formatCurrency(totalDiscount)}</span>
-                </div>
-              )}
-
-              {/* Grand Total - Large & Bold */}
-              <div className="flex justify-between text-sm font-black pt-1.5 border-t border-black">
-                <span>المبلغ المستحق:</span>
-                <span className="font-mono">{formatCurrency(grandTotal)}</span>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Welcome Footer Text */}
-        <div className="text-center mt-3.5 space-y-1.5">
-          {restaurant?.receiptSettings?.footerText && (
-            <p className="text-[9.5px] text-zinc-950 font-bold px-2 leading-relaxed">
-              {restaurant.receiptSettings.footerText}
-            </p>
-          )}
-
-          {/* Powered by branded boxed footer */}
-          <div style={{ border: '1.5px solid #000', padding: '4px', textAlign: 'center', fontWeight: '900', fontSize: '10px', marginTop: '10px', letterSpacing: '0.5px' }}>
-            Powered by: tawla.site
-          </div>
-          
-          {/* Printing Time */}
-          <div className="text-[8px] font-bold text-zinc-900 font-mono pt-1">
-            وقت الطباعة : {new Date().toLocaleTimeString('ar-EG', { hour12: true })}
-          </div>
-        </div>
-      </div>
+      <div 
+        dangerouslySetInnerHTML={{ __html: generateReceiptHtml(printingOrder, restaurant) }} 
+        className="hidden print:block"
+      />
     </>,
     document.body
   );
