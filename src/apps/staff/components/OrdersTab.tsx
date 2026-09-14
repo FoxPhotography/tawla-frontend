@@ -17,6 +17,7 @@ interface OrdersTabProps {
   onUpdateOrder: (orderId: string, items: any[], status?: string) => Promise<void>;
   isUpdatePending: boolean;
   isDeliveryEnabled?: boolean;
+  onRefundOrder?: (order: any) => void;
 }
 
 const listContainerVariants: Variants = {

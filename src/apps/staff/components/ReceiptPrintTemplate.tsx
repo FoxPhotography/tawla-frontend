@@ -17,6 +17,61 @@ export const formatReceiptCurrency = (val: number) => {
  */
 export function generateReceiptHtml(printingOrder: any, restaurant: any): string {
   if (!printingOrder) return '';
+  
+  if (printingOrder.type === 'refund_receipt') {
+    const items = printingOrder.items || [];
+    const dStr = new Date().toLocaleDateString('ar-EG', { dateStyle: 'short' });
+    const tStr = new Date().toLocaleTimeString('ar-EG', { hour12: true });
+
+    const rows = items.map((item: any) => `
+      <tr style="border-bottom: 1px dashed #000;">
+        <td style="padding: 4px 0; text-align: right; font-weight: bold;">
+          ${item.name}
+          <div style="font-size: 9px; color: #555;">السبب: ${item.reason}</div>
+        </td>
+        <td style="padding: 4px 0; text-align: center; font-family: monospace;">${item.quantity}</td>
+        <td style="padding: 4px 0; text-align: left; font-family: monospace; font-weight: bold;">${formatReceiptCurrency(item.refundAmount)}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <div class="print-receipt-container" dir="rtl" style="font-family: system-ui, -apple-system, sans-serif; color: #000; background: #fff; width: 80mm; margin: 0 auto; padding: 4mm 3mm; box-sizing: border-box; font-size: 11px;">
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px;">
+          <h1 style="font-size: 16px; font-weight: 900; margin: 0 0 2px 0;">${restaurant?.name || 'طاولة'}</h1>
+          <h2 style="font-size: 13px; font-weight: 900; margin: 0; background: #dc2626; color: #fff; padding: 3px 0;">إيصال مرتجع أصناف (REFUND)</h2>
+        </div>
+
+        <div style="font-size: 10px; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; line-height: 1.5;">
+          <div>مرتجع لأوردر: #${printingOrder.originalOrderId || printingOrder.id}</div>
+          <div>الطاولة: طاولة ${printingOrder.tableNumber || 'الاستلام'}</div>
+          <div>التاريخ: ${dStr} - ${tStr}</div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 11px;">
+          <thead>
+            <tr style="border-bottom: 1.5px solid #000;">
+              <th style="text-align: right; padding: 4px 0;">الصنف المرتجع</th>
+              <th style="text-align: center; padding: 4px 0;">العدد</th>
+              <th style="text-align: left; padding: 4px 0;">المسترد</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+
+        <div style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; margin: 6px 0; font-weight: 900; display: flex; justify-content: space-between; font-size: 13px;">
+          <span>إجمالي المبلغ المسترد:</span>
+          <span style="font-family: monospace;">${formatReceiptCurrency(printingOrder.totalAmount)}</span>
+        </div>
+
+        <div style="text-align: center; font-size: 9px; font-weight: bold; margin-top: 8px;">
+          توقيع المسئول: ........................
+        </div>
+      </div>
+    `;
+  }
+
   if (printingOrder.type === 'z_report') {
     const shift = printingOrder.shiftDetails || {};
     const sTime = shift.startTime ? new Date(shift.startTime).toLocaleTimeString('ar-EG', { hour12: true }) : '';

@@ -1,3 +1,4 @@
+import PartialRefundModal from './components/PartialRefundModal';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -61,6 +62,7 @@ export default function StaffDashboard() {
   // Receipt Printing & Silent POS State
   const [isPrinterSettingsOpen, setIsPrinterSettingsOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+  const [refundOrder, setRefundOrder] = useState<any>(null);
   const [printingOrder, setPrintingOrder] = useState<any | null>(null);
 
   const handlePrintReceipt = (order: any) => {
@@ -1089,6 +1091,7 @@ export default function StaffDashboard() {
                     orderFilter={orderFilter}
                     onSetOrderFilter={setOrderFilter}
                     onPrintReceipt={handlePrintReceipt}
+          onRefundOrder={(ord) => setRefundOrder(ord)}
                     onUpdateStatus={(id, status) => updateStatusMutation.mutate({ orderId: id, nextStatus: status })}
                     isStatusPending={updateStatusMutation.isPending}
                     onUpdateOrder={(id, items, status) => updateOrderMutation.mutateAsync({ orderId: id, items, status })}
@@ -1136,6 +1139,13 @@ export default function StaffDashboard() {
       />
 
       {/* Shift Management Modal */}
+      <PartialRefundModal 
+        isOpen={!!refundOrder}
+        onClose={() => setRefundOrder(null)}
+        order={refundOrder}
+        restaurant={restaurant}
+      />
+
       <ShiftManagementModal 
         isOpen={isShiftModalOpen}
         onClose={() => setIsShiftModalOpen(false)}

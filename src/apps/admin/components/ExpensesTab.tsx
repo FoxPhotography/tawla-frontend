@@ -2,46 +2,63 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { 
-  DollarSign, Plus, Trash2, Download, TrendingUp, TrendingDown, 
-  PieChart, Users, Home, Zap, ShoppingBag, Wrench, FileText, Filter
+  DollarSign, Plus, Download, Trash2, FileText, 
+  TrendingUp, TrendingDown, Users, Home, Zap, Wrench, Package, MoreHorizontal, Filter
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../shared/services/api';
+import CustomSelect from './CustomSelect';
+
+const categoryOptions = [
+  { value: 'supplies', label: 'خامات ومشتريات (Supplies)' },
+  { value: 'salaries', label: 'مرتبات وعمالة (Salaries)' },
+  { value: 'rent', label: 'إيجار المكان (Rent)' },
+  { value: 'utilities', label: 'كهرباء ومرافق (Utilities)' },
+  { value: 'maintenance', label: 'صيانة ومعدات (Maintenance)' },
+  { value: 'other', label: 'مصاريف نثرية (Other)' },
+];
+
+const filterCategoryOptions = [
+  { value: 'all', label: 'جميع التصنيفات' },
+  { value: 'supplies', label: 'خامات ومشتريات' },
+  { value: 'salaries', label: 'مرتبات وعمالة' },
+  { value: 'rent', label: 'إيجار المكان' },
+  { value: 'utilities', label: 'كهرباء ومرافق' },
+  { value: 'maintenance', label: 'صيانة ومعدات' },
+  { value: 'other', label: 'مصاريف نثرية' },
+];
+
+const categoryNames: Record<string, { label: string; icon: any; color: string }> = {
+  supplies: { label: 'خامات ومشتريات', icon: Package, color: 'bg-blue-50 text-blue-800 border-blue-200' },
+  salaries: { label: 'مرتبات وعمالة', icon: Users, color: 'bg-purple-50 text-purple-800 border-purple-200' },
+  rent: { label: 'إيجار المكان', icon: Home, color: 'bg-amber-50 text-amber-800 border-amber-200' },
+  utilities: { label: 'كهرباء ومرافق', icon: Zap, color: 'bg-amber-50 text-amber-800 border-amber-200' },
+  maintenance: { label: 'صيانة ومعدات', icon: Wrench, color: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  other: { label: 'مصاريف نثرية', icon: MoreHorizontal, color: 'bg-zinc-100 text-zinc-800 border-zinc-200' },
+};
 
 export default function ExpensesTab() {
   const queryClient = useQueryClient();
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-
-  // Form State
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<'salaries' | 'rent' | 'utilities' | 'supplies' | 'maintenance' | 'other'>('supplies');
   const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('supplies');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Fetch Expenses
+  // Filters State
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Fetch Expenses & Net Profit Summary
   const { data: expensesData, isLoading: isExpensesLoading } = useQuery({
     queryKey: ['expenses', selectedCategory, startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
-      const res = await api.get(`/expenses?${params.toString()}`);
-      return res.data.data;
-    },
-  });
-
-  // Fetch Net Profit Report
-  const { data: reportData } = useQuery({
-    queryKey: ['net-profit-report', startDate, endDate],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-      const res = await api.get(`/expenses/net-profit?${params.toString()}`);
+      const res = await api.get('/expenses?' + params.toString());
       return res.data.data;
     },
   });
@@ -53,208 +70,149 @@ export default function ExpensesTab() {
       return res.data;
     },
     onSuccess: () => {
-      toast.success('تمت إضافة المصروف بنجاح.');
+      toast.success('تم تسجيل المصروف بنجاح.');
       setTitle('');
       setAmount('');
       setNotes('');
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['net-profit-report'] });
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'فشل إضافة المصروف.');
+      toast.error(err.response?.data?.error || 'فشل تسجيل المصروف.');
     },
   });
 
   // Delete Expense Mutation
   const deleteExpenseMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.delete(`/expenses/${id}`);
+      const res = await api.delete('/expenses/' + id);
       return res.data;
     },
     onSuccess: () => {
-      toast.success('تم حذف المصروف بنجاح.');
+      toast.success('تم حذف المصروف.');
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['net-profit-report'] });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'فشل حذف المصروف.');
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddExpense = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !amount || Number(amount) <= 0) {
-      toast.error('يرجى إدخال عنوان المصروف والمبلغ بشكل صحيح.');
+    if (!title || !amount) {
+      toast.error('يرجى ملء جميع الحقول المطلوبة.');
       return;
     }
     addExpenseMutation.mutate({
-      title: title.trim(),
-      category,
+      title,
       amount: Number(amount),
+      category,
+      notes,
       date,
-      notes: notes.trim(),
     });
   };
 
   const handleExportExcel = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-
-      const response = await fetch(`/api/expenses/export-excel?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('فشل تنزيل ملف الإكسيل');
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Tawla_Expenses_Report_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-
-      toast.success('تم تصدير شيت الإكسيل بنجاح.');
+      toast.loading('جاري تحميل شيت الإكسيل...');
+      const response = await api.get('/expenses/export-excel', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'تقرير_المصروفات_' + new Date().toISOString().split('T')[0] + '.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.dismiss();
+      toast.success('تم تحميل شيت الإكسيل بنجاح.');
     } catch (err) {
-      toast.error('حدث خطأ أثناء تصدير شيت الإكسيل.');
+      toast.dismiss();
+      toast.error('فشل تصدير ملف الإكسيل.');
     }
   };
 
-  const categoryNames: Record<string, { label: string; icon: any; color: string }> = {
-    salaries: { label: 'مرتبات وعمالة', icon: Users, color: 'bg-blue-50 text-blue-700 border-blue-200' },
-    rent: { label: 'إيجار المكان', icon: Home, color: 'bg-purple-50 text-purple-700 border-purple-200' },
-    utilities: { label: 'كهرباء ومرافق', icon: Zap, color: 'bg-amber-50 text-amber-700 border-amber-200' },
-    supplies: { label: 'خامات ومشتريات', icon: ShoppingBag, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    maintenance: { label: 'صيانة ومعدات', icon: Wrench, color: 'bg-orange-50 text-orange-700 border-orange-200' },
-    other: { label: 'مصاريف نثرية', icon: FileText, color: 'bg-zinc-50 text-zinc-700 border-zinc-200' },
-  };
-
-  const netProfit = reportData?.netProfit ?? 0;
-  const totalSales = reportData?.totalSales ?? 0;
-  const totalExpenses = reportData?.totalExpenses ?? 0;
+  const netProfit = expensesData?.summary?.netProfit || 0;
+  const totalSales = expensesData?.summary?.totalSales || 0;
+  const totalExpenses = expensesData?.summary?.totalExpenses || 0;
 
   return (
-    <div className="space-y-6 font-body" dir="rtl">
+    <div className="space-y-6 dir-rtl">
       
-      {/* Header & Excel Download */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-zinc-200/80 shadow-xs">
-        <div>
-          <h2 className="text-lg font-black text-zinc-900 font-heading flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-[#801B2C]" />
-            <span>إدارة المصروفات والتكاليف وتحديد صافي الربح</span>
-          </h2>
-          <p className="text-xs text-zinc-500 font-medium mt-1">
-            تسجيل كافة التكاليف التشغيلية وحساب صافي الربح الفعلي للمكان مع تصدير شيت إكسيل مجمع.
-          </p>
-        </div>
-
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={handleExportExcel}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer whitespace-nowrap"
-        >
-          <Download className="w-4 h-4" />
-          <span>تصدير شيت إكسيل (Excel)</span>
-        </motion.button>
-      </div>
-
-      {/* Financial Overview Cards */}
+      {/* Top Banner & KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Sales Card */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-zinc-500">إجمالي المبيعات (Sales)</span>
-            <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5" />
-            </div>
+        
+        {/* Total Sales */}
+        <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-bold text-zinc-500">
+            <span>إجمالي مبيعات الفترة</span>
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-mono font-black text-emerald-700">
-            {totalSales.toLocaleString('en-US')} <span className="text-xs font-body font-bold text-zinc-500">ج.م</span>
+          <div className="text-2xl font-mono font-black text-emerald-950">
+            {totalSales.toLocaleString('en-US')} <span className="text-xs font-sans">ج.م</span>
           </div>
-          <div className="text-[11px] text-zinc-400 font-medium">الطلبات المسلمة والمسواة فقط</div>
         </div>
 
-        {/* Expenses Card */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-zinc-500">إجمالي المصروفات (Expenses)</span>
-            <div className="w-9 h-9 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
-              <TrendingDown className="w-5 h-5" />
-            </div>
+        {/* Total Expenses */}
+        <div className="bg-white border border-zinc-200 rounded-3xl p-5 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-xs font-bold text-zinc-500">
+            <span>إجمالي التكاليف والمصروفات</span>
+            <TrendingDown className="w-4 h-4 text-red-600" />
           </div>
-          <div className="text-2xl font-mono font-black text-red-600">
-            {totalExpenses.toLocaleString('en-US')} <span className="text-xs font-body font-bold text-zinc-500">ج.م</span>
+          <div className="text-2xl font-mono font-black text-red-950">
+            {totalExpenses.toLocaleString('en-US')} <span className="text-xs font-sans">ج.م</span>
           </div>
-          <div className="text-[11px] text-zinc-400 font-medium">مجموع التكاليف التشغيلية المدخلة</div>
         </div>
 
-        {/* Net Profit Card */}
-        <div className={`border rounded-3xl p-5 shadow-xs space-y-2 ${
-          netProfit >= 0 ? 'bg-gradient-to-br from-emerald-950 via-[#801B2C] to-zinc-900 text-white border-[#801B2C]' : 'bg-red-950 text-white border-red-800'
-        }`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold opacity-80">صافي الربح الفعلي (Net Profit)</span>
-            <div className="w-9 h-9 rounded-2xl bg-white/10 flex items-center justify-center text-white">
-              <PieChart className="w-5 h-5" />
-            </div>
+        {/* Net Profit */}
+        <div className={'border rounded-3xl p-5 shadow-xs space-y-1 ' + (
+          netProfit >= 0 ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950' : 'bg-red-50/60 border-red-200 text-red-950'
+        )}>
+          <div className="flex items-center justify-between text-xs font-bold">
+            <span>صافي الأرباح الفعلي (Net Profit)</span>
+            <DollarSign className="w-4 h-4" />
           </div>
           <div className="text-2xl font-mono font-black">
-            {netProfit.toLocaleString('en-US')} <span className="text-xs font-body font-bold opacity-80">ج.م</span>
+            {netProfit.toLocaleString('en-US')} <span className="text-xs font-sans">ج.م</span>
           </div>
-          <div className="text-[11px] opacity-70 font-medium">المبيعات - المصروفات</div>
         </div>
+
       </div>
 
-      {/* Add Expense Form & Filters Container */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Add New Expense Form */}
-        <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-xs space-y-4">
-          <h3 className="text-sm font-black text-zinc-900 font-heading flex items-center gap-2">
-            <Plus className="w-4 h-4 text-[#801B2C]" />
-            <span>تسجيل مصروف جديد</span>
-          </h3>
+        {/* Expense Entry Form */}
+        <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-xs space-y-4 h-fit">
+          <div className="flex items-center gap-2 pb-3 border-b border-zinc-100">
+            <Plus className="w-5 h-5 text-[#801B2C]" />
+            <h2 className="text-sm font-black text-zinc-900">تسجيل مصروف جديد</h2>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleAddExpense} className="space-y-3.5">
             <div>
-              <label className="block text-xs font-bold text-zinc-700 mb-1">عنوان المصروف</label>
+              <label className="block text-xs font-bold text-zinc-700 mb-1">بيان/عنوان المصروف *</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="مثال: فاتورة كهرباء شهر سبتمبر / خامات وافل"
+                placeholder="مثال: شراء خضروات، فواتير كهرباء..."
                 className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#801B2C]"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-zinc-700 mb-1">التصنيف</label>
-              <select
+              <label className="block text-xs font-bold text-zinc-700 mb-1">التصنيف *</label>
+              <CustomSelect
                 value={category}
-                onChange={(e: any) => setCategory(e.target.value)}
-                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-[#801B2C]"
-              >
-                <option value="supplies">خامات ومشتريات (Supplies)</option>
-                <option value="salaries">مرتبات وعمالة (Salaries)</option>
-                <option value="rent">إيجار المكان (Rent)</option>
-                <option value="utilities">كهرباء ومرافق (Utilities)</option>
-                <option value="maintenance">صيانة ومعدات (Maintenance)</option>
-                <option value="other">مصاريف نثرية (Other)</option>
-              </select>
+                onChange={(val) => setCategory(val)}
+                options={categoryOptions}
+                required
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-zinc-700 mb-1">المبلغ (ج.م)</label>
+                <label className="block text-xs font-bold text-zinc-700 mb-1">المبلغ (ج.م) *</label>
                 <input
                   type="number"
                   value={amount}
@@ -311,33 +269,35 @@ export default function ExpensesTab() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 text-xs font-bold text-zinc-700"
-              >
-                <option value="all">جميع التصنيفات</option>
-                <option value="supplies">خامات ومشتريات</option>
-                <option value="salaries">مرتبات وعمالة</option>
-                <option value="rent">إيجار</option>
-                <option value="utilities">كهرباء ومرافق</option>
-                <option value="maintenance">صيانة</option>
-                <option value="other">نثرية</option>
-              </select>
+              <div className="w-44">
+                <CustomSelect
+                  value={selectedCategory}
+                  onChange={(val) => setSelectedCategory(val)}
+                  options={filterCategoryOptions}
+                />
+              </div>
 
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 text-xs font-medium text-zinc-700"
+                className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700"
               />
               <span className="text-xs text-zinc-400">إلى</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 text-xs font-medium text-zinc-700"
+                className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700"
               />
+
+              <button
+                onClick={handleExportExcel}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>إكسيل</span>
+              </button>
             </div>
           </div>
 
@@ -375,7 +335,7 @@ export default function ExpensesTab() {
                           {exp.notes && <div className="text-[10px] text-zinc-400 font-normal">{exp.notes}</div>}
                         </td>
                         <td className="p-3">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-bold border ${catInfo.color}`}>
+                          <span className={'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-bold border ' + catInfo.color}>
                             <CatIcon className="w-3 h-3" />
                             <span>{catInfo.label}</span>
                           </span>
