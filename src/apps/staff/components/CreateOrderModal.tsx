@@ -111,16 +111,7 @@ export default function CreateOrderModal({
   const isDeliveryAllowedByPlan = allowedPlans.includes(plan);
   const isDeliveryEnabled = isDeliveryAllowedByPlan && restaurant?.settings?.isDeliveryEnabled !== false;
 
-  const isLoyaltyFeatureAllowed = () => {
-    if (!systemSettings) return false;
-    const allowedPlansForLoyalty = systemSettings.features?.loyalty || ['pro'];
-    return allowedPlansForLoyalty.includes(plan);
-  };
 
-  const isDatabaseEnabled = isLoyaltyFeatureAllowed() && 
-    (restaurant?.loyaltySettings?.mode === 'database_only' || 
-     restaurant?.loyaltySettings?.mode === 'loyalty_enabled' || 
-     restaurant?.loyaltySettings?.enabled === true);
 
   // Helper to find initial invoice subtotal for discount calculation
   const getInitialInvoiceSubtotal = () => {
@@ -206,11 +197,14 @@ export default function CreateOrderModal({
   };
 
   const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+  const [activeSearchField, setActiveSearchField] = useState<'phone' | 'name'>('phone');
 
   // Live Instant Customer Search on typing in Name or Phone
   useEffect(() => {
-    const searchTerm = (customerPhone || customerName).trim();
-    if (searchTerm.length < 2) {
+    const term = activeSearchField === 'phone' ? customerPhone.trim() : customerName.trim();
+    const fallbackTerm = term || (activeSearchField === 'phone' ? customerName.trim() : customerPhone.trim());
+    
+    if (fallbackTerm.length < 2) {
       setCustomerSearchResults([]);
       return;
     }
@@ -218,11 +212,16 @@ export default function CreateOrderModal({
     const timer = setTimeout(async () => {
       setIsSearchingCustomer(true);
       try {
-        const res = await api.get(`/customers/lookup?query=${encodeURIComponent(searchTerm)}`);
+        const res = await api.get(`/customers/search?query=${encodeURIComponent(fallbackTerm)}`);
         if (res.data?.success && res.data.data) {
           const data = res.data.data;
           const customersList = data.customers || (data.customer ? [data.customer] : []);
           setCustomerSearchResults(customersList);
+          
+          if (data.customer) {
+            if (data.customer.name && !customerName) setCustomerName(data.customer.name);
+            if (data.customer.address && !customerAddress) setCustomerAddress(data.customer.address);
+          }
           if (data.loyalty) {
             setLoyaltyStatus(data.loyalty);
           }
@@ -235,10 +234,10 @@ export default function CreateOrderModal({
       } finally {
         setIsSearchingCustomer(false);
       }
-    }, 200);
+    }, 250);
 
     return () => clearTimeout(timer);
-  }, [customerPhone, customerName]);
+  }, [customerPhone, customerName, activeSearchField]);
 
   const { data: customDiscounts = [] } = useQuery({
     queryKey: ['custom-discounts'],
@@ -840,95 +839,128 @@ export default function CreateOrderModal({
               )}
 
               {/* Customer Phone & Name with Live Instant Dropdown */}
-              {isDatabaseEnabled ? (
-                <div className="space-y-3 bg-white border border-zinc-200/80 p-3.5 rounded-2xl shadow-xs">
-                  {/* Customer Phone */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
-                      <Phone className="w-3.5 h-3.5 text-[#801B2C]" />
-                      <span>رقم الهاتف (يبحث تلقائياً بالرقم أو الاسم):</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="tel"
-                        placeholder="أدخل رقم الموبايل أو الاسم..."
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl pr-3.5 pl-8 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all font-mono text-left font-bold"
-                        dir="ltr"
-                      />
-                      {isSearchingCustomer && (
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#801B2C] border-t-transparent rounded-full animate-spin" />
-                      )}
-                    </div>
+              <div className="space-y-3 bg-white border border-zinc-200/80 p-3.5 rounded-2xl shadow-xs">
+                {/* Customer Phone */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
+                    <Phone className="w-3.5 h-3.5 text-[#801B2C]" />
+                    <span>رقم الهاتف (يبحث تلقائياً بالرقم أو الاسم):</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      placeholder="أدخل رقم الموبايل أو الاسم..."
+                      value={customerPhone}
+                      onChange={(e) => {
+                        setCustomerPhone(e.target.value);
+                        setActiveSearchField('phone');
+                      }}
+                      className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl pr-3.5 pl-8 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all font-mono text-left font-bold"
+                      dir="ltr"
+                    />
+                    {isSearchingCustomer && activeSearchField === 'phone' && (
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#801B2C] border-t-transparent rounded-full animate-spin" />
+                    )}
                   </div>
+                </div>
 
-                  {/* Customer Name */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
-                      <User className="w-3.5 h-3.5 text-[#801B2C]" />
-                      <span>اسم العميل:</span>
-                    </label>
+                {/* Customer Name */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
+                    <User className="w-3.5 h-3.5 text-[#801B2C]" />
+                    <span>اسم العميل:</span>
+                  </label>
+                  <div className="relative">
                     <input
                       type="text"
                       placeholder="اسم العميل (يبحث تلقائياً)..."
                       value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
+                      onChange={(e) => {
+                        setCustomerName(e.target.value);
+                        setActiveSearchField('name');
+                      }}
                       className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all placeholder:text-zinc-400 font-body font-bold"
                     />
+                    {isSearchingCustomer && activeSearchField === 'name' && (
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#801B2C] border-t-transparent rounded-full animate-spin" />
+                    )}
                   </div>
+                </div>
 
-                  {/* Live Floating Customer Suggestions Dropdown */}
-                  {customerSearchResults.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 space-y-2 shadow-md">
-                      <div className="flex items-center justify-between text-[11px] font-black text-amber-950 px-1 font-cairo">
-                        <span>🎯 العملاء المتاحين في النظام ({customerSearchResults.length}):</span>
-                        <span className="text-[9px] text-amber-700">اضغط لاختيار العميل</span>
+                {/* Floating Instant Customer Search Results Dropdown */}
+                {customerSearchResults && customerSearchResults.length > 0 && (
+                  <div className="relative z-30">
+                    <div className="bg-white border-2 border-[#801B2C] rounded-2xl shadow-xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-zinc-100 font-body">
+                      <div className="bg-rose-50/80 px-3 py-1.5 text-[10px] font-black text-[#801B2C] flex items-center justify-between">
+                        <span>نتائج العثور في قاعدة البيانات ({customerSearchResults.length})</span>
+                        <span className="text-[9px] text-zinc-400 font-normal">اضغط لاختيار العميل</span>
                       </div>
-                      <div className="max-h-40 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-amber-300">
-                        {customerSearchResults.map((cust) => (
-                          <button
-                            key={cust.id || cust.phone}
-                            type="button"
-                            onClick={() => {
-                              staffAudio.play('click');
-                              setCustomerName(cust.name || '');
-                              setCustomerPhone(cust.phone || '');
-                              setCustomerAddress(cust.address || '');
-                              setCustomerSearchResults([]);
-                              toast.success(`تم ربط الطلب بالعميل: ${cust.name || cust.phone} 🎯`);
-                            }}
-                            className="w-full text-right p-2.5 rounded-xl bg-white hover:bg-amber-100 border border-amber-200 transition-all flex items-center justify-between text-xs cursor-pointer shadow-2xs group active:scale-[0.99]"
-                          >
-                            <div>
-                              <div className="font-bold text-zinc-900 group-hover:text-[#801B2C]">{cust.name}</div>
-                              <div className="text-[10px] text-zinc-500">{cust.orderCount || 1} طلبات سابقاً</div>
+                      {customerSearchResults.map((c: any) => (
+                        <button
+                          key={c.id || c.phone}
+                          type="button"
+                          onClick={() => {
+                            staffAudio.play('click');
+                            if (c.name) setCustomerName(c.name);
+                            if (c.phone) setCustomerPhone(c.phone);
+                            if (c.address) setCustomerAddress(c.address);
+                            setCustomerSearchResults([]);
+                          }}
+                          className="w-full text-right px-3.5 py-2.5 hover:bg-rose-50 transition-colors flex items-center justify-between group cursor-pointer"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-black text-zinc-900 group-hover:text-[#801B2C] flex items-center gap-1.5">
+                              <span>{c.name || 'عميل مسجل'}</span>
+                              {(c.orderCount > 0 || c.totalSpent > 0) && (
+                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-bold">
+                                  {c.orderCount || 1} طلب سابق
+                                </span>
+                              )}
                             </div>
-                            <div className="font-mono text-zinc-700 dir-ltr text-[11px] font-bold bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/80">
-                              {cust.phone}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
+                            {c.phone && (
+                              <div className="text-[11px] text-zinc-600 font-mono" dir="ltr">
+                                📞 {c.phone}
+                              </div>
+                            )}
+                            {c.address && (
+                              <div className="text-[10px] text-zinc-400 truncate max-w-xs">
+                                📍 {c.address}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-[#801B2C] font-bold group-hover:underline bg-rose-100/60 px-2 py-1 rounded-lg">
+                            اختيار ↵
+                          </span>
+                        </button>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Delivery Address */}
-                  {(orderType === 'delivery' || customerPhone) && (
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
-                        <MapPin className="w-3.5 h-3.5 text-[#801B2C]" />
-                        <span>عنوان التوصيل بالتفصيل:</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="المنطقة، الشارع، البناية، رقم الشقة..."
-                        value={customerAddress}
-                        onChange={(e) => setCustomerAddress(e.target.value)}
-                        className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all placeholder:text-zinc-400 font-body font-bold"
-                      />
-                    </div>
-                  )}
+                {/* New Customer Indicator if search returns no records */}
+                {((customerPhone.trim().length >= 3) || (customerName.trim().length >= 2)) &&
+                 customerSearchResults.length === 0 &&
+                 !isSearchingCustomer && (
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold p-2.5 rounded-xl flex items-center gap-2 font-body">
+                    <span className="text-base">✨</span>
+                    <span>عميل جديد — سيتم تسجيل حسابه وتوثيقه تلقائياً في قاعدة البيانات عند إتمام الطلب 💾</span>
+                  </div>
+                )}
+
+                {/* Customer Address */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
+                    <MapPin className="w-3.5 h-3.5 text-[#801B2C]" />
+                    <span>عنوان التوصيل بالتفصيل {orderType !== 'delivery' && '(اختياري)'}:</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="المنطقة، الشارع، البناية، رقم الشقة..."
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]/20 transition-all placeholder:text-zinc-400 font-body font-bold"
+                  />
+                </div>
 
                   {/* Loyalty Progress Card */}
                   {loyaltyStatus && loyaltyStatus.enabled && (
@@ -1046,54 +1078,6 @@ export default function CreateOrderModal({
                     </div>
                   )}
                 </div>
-              ) : (
-                orderType === 'delivery' && (
-                  <div className="space-y-3 bg-white border border-zinc-200/80 p-3.5 rounded-2xl shadow-xs">
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
-                        <Phone className="w-3.5 h-3.5 text-[#801B2C]" />
-                        <span>رقم هاتف العميل:</span>
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="مثال: 01012345678"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl pr-3.5 pl-4 py-2.5 outline-none focus:border-[#801B2C] font-mono text-left font-bold"
-                        dir="ltr"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
-                        <User className="w-3.5 h-3.5 text-[#801B2C]" />
-                        <span>اسم العميل:</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="اسم العميل الكامل..."
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] font-body font-bold"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-black text-zinc-700 flex items-center gap-1.5 font-body">
-                        <MapPin className="w-3.5 h-3.5 text-[#801B2C]" />
-                        <span>عنوان التوصيل بالتفصيل:</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="المنطقة، الشارع، البناية، رقم الشقة..."
-                        value={customerAddress}
-                        onChange={(e) => setCustomerAddress(e.target.value)}
-                        className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#801B2C] font-body font-bold"
-                      />
-                    </div>
-                  </div>
-                )
-              )}
 
               {/* Special Notes */}
               <div className="space-y-1.5">
