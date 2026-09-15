@@ -47,16 +47,36 @@ export function useOfflineGuard(): OfflineGuardStatus {
       return;
     }
 
+    // Sanity check against existing recorded order timestamps
+    try {
+      const rawOrders = localStorage.getItem('tawla_offline_orders');
+      if (rawOrders) {
+        const orders = JSON.parse(rawOrders);
+        for (const ord of orders) {
+          if (ord.createdAt && new Date(ord.createdAt).getTime() > now + 60_000) {
+            setIsClockTampered(true);
+            setReason('clock_tampered');
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore JSON parse error
+    }
+
     // Update forward monotonic tick
     localStorage.setItem(LAST_KNOWN_TICK_KEY, now.toString());
     setIsClockTampered(false);
 
-    // 2. Subscription Expiry Check
+    // 2. Subscription Expiry Check (Both Online & Offline)
+    const subStatus = restaurant?.subscription?.status;
+    const isExplicitlyExpired = subStatus === 'expired' || subStatus === 'inactive';
     const expiryTimestamp = offlineLease?.expiresAt 
       ? offlineLease.expiresAt 
       : (restaurant?.subscription?.expiresAt ? new Date(restaurant.subscription.expiresAt).getTime() : 0);
+    const isDateExpired = expiryTimestamp > 0 && now > expiryTimestamp;
 
-    if (expiryTimestamp > 0 && now > expiryTimestamp) {
+    if (isExplicitlyExpired || isDateExpired) {
       setIsLeaseExpired(true);
       setReason('subscription_expired');
       return;
@@ -83,8 +103,10 @@ export function useOfflineGuard(): OfflineGuardStatus {
     } else {
       // If back online, clear offline timer and update sync
       localStorage.removeItem(OFFLINE_START_KEY);
-      setIsLeaseExpired(false);
-      setReason(null);
+      if (!isExplicitlyExpired && !isDateExpired) {
+        setIsLeaseExpired(false);
+        setReason(null);
+      }
       setRemainingHours(maxOfflineHours);
     }
   }, [restaurant, offlineLease, lastServerSyncTime, maxOfflineHours, plan, isPaid]);

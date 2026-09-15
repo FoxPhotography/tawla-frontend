@@ -511,6 +511,18 @@ export default function CreateOrderModal({
       return;
     }
 
+    // Security: Check if subscription has expired
+    const currentRestaurant = useAuthStore.getState().restaurant;
+    const currentLease = useAuthStore.getState().offlineLease;
+    const expiryTimestamp = currentLease?.expiresAt 
+      ? currentLease.expiresAt 
+      : (currentRestaurant?.subscription?.expiresAt ? new Date(currentRestaurant.subscription.expiresAt).getTime() : 0);
+    const subStatus = currentRestaurant?.subscription?.status;
+    if (subStatus === 'expired' || subStatus === 'inactive' || (expiryTimestamp > 0 && Date.now() > expiryTimestamp)) {
+      toast.error('عذراً، لا يمكن تسجيل أي طلب لانتهاء فترة اشتراك المطعم. يرجى التجديد.');
+      return;
+    }
+
     setIsSubmitting(true);
     staffAudio.play('action');
 
@@ -539,6 +551,48 @@ export default function CreateOrderModal({
       customerName: customerName || undefined,
       customerPhone: customerPhone || undefined,
       customerAddress: customerAddress || undefined,
+    };
+
+    const saveLocallyAndComplete = () => {
+      try {
+        const offlineId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const localOrder = {
+          ...orderPayload,
+          id: offlineId,
+          isOffline: true
+        };
+
+        const existingOffline = JSON.parse(localStorage.getItem('tawla_offline_orders') || '[]');
+        existingOffline.push(localOrder);
+        localStorage.setItem('tawla_offline_orders', JSON.stringify(existingOffline));
+
+        if (orderType === 'dine_in') {
+          updateLocalTableStatus(Number(selectedTableNumber), 'occupied', offlineId);
+        }
+
+        staffAudio.play('success');
+        toast.success('تم حفظ الطلب محلياً بنجاح (وضع LAN / الأوفلاين) 🟢');
+
+        if (orderType === 'takeaway' || orderType === 'delivery') {
+          onPrintReceipt(localOrder);
+        }
+
+        onOrderCreated();
+        setNewOrderCart([]);
+        setNewOrderSpecialNotes('');
+        setCustomerName('');
+        setCustomerPhone('');
+        setCustomerAddress('');
+        setDiscountAmount(0);
+        setLoyaltyStatus(null);
+        setRedeemLoyalty(false);
+        setSelectedTableNumber('');
+        onClose();
+      } catch (e) {
+        toast.error('فشل في حفظ الطلب محلياً.');
+      } finally {
+        setIsSubmitting(false);
+      }
     };
 
     if (networkStatus === 'online') {
@@ -584,51 +638,17 @@ export default function CreateOrderModal({
         setSelectedTableNumber('');
         onClose();
       } catch (err: any) {
+        // Automatic failover to offline order if network is unavailable
+        if (!navigator.onLine || !err.response) {
+          saveLocallyAndComplete();
+          return;
+        }
         toast.error(err.response?.data?.error || 'فشل في إرسال الطلب، تأكد من الاتصال.');
       } finally {
         setIsSubmitting(false);
       }
     } else {
-      // Offline fallback
-      try {
-        const offlineId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const localOrder = {
-          ...orderPayload,
-          id: offlineId,
-          isOffline: true
-        };
-
-        const existingOffline = JSON.parse(localStorage.getItem('tawla_offline_orders') || '[]');
-        existingOffline.push(localOrder);
-        localStorage.setItem('tawla_offline_orders', JSON.stringify(existingOffline));
-
-        if (orderType === 'dine_in') {
-          updateLocalTableStatus(Number(selectedTableNumber), 'occupied', offlineId);
-        }
-
-        staffAudio.play('success');
-        toast.success('تم حفظ الطلب محلياً بنجاح (يعمل بدون إنترنت).');
-
-        if (orderType === 'takeaway' || orderType === 'delivery') {
-          onPrintReceipt(localOrder);
-        }
-
-        onOrderCreated();
-        setNewOrderCart([]);
-        setNewOrderSpecialNotes('');
-        setCustomerName('');
-        setCustomerPhone('');
-        setCustomerAddress('');
-        setDiscountAmount(0);
-        setLoyaltyStatus(null);
-        setRedeemLoyalty(false);
-        setSelectedTableNumber('');
-        onClose();
-      } catch (e) {
-        toast.error('فشل في حفظ الطلب محلياً.');
-      } finally {
-        setIsSubmitting(false);
-      }
+      saveLocallyAndComplete();
     }
   };
 

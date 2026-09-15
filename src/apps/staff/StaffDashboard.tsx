@@ -14,6 +14,7 @@ import { socket } from '../../shared/services/socket';
 import { useAuthStore } from '../../shared/store/authStore';
 import type { Order, Table } from '../../shared/types';
 import { getOfflineOrders, syncOfflineOrders } from '../../shared/services/offlineOrders';
+import { getLocalActiveShift, setLocalActiveShift, getLastCarriedCash, computeShiftLiveStats, syncOfflineShifts } from '../../shared/services/offlineShifts';
 import { staffAudio } from './services/staffAudio';
 
 import LiveAlertsSidebar, { type LiveAlert } from './components/LiveAlertsSidebar';
@@ -91,8 +92,40 @@ export default function StaffDashboard() {
   const [preselectedTableNumber, setPreselectedTableNumber] = useState<number | ''>('');
   const [checkoutTable, setCheckoutTable] = useState<Table | null>(null);
 
+  // Capture PWA beforeinstallprompt
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) {
+      toast('لتثبيت التطبيق على جهازك: اضغط خيارات المتصفح (⋮) ثم اختر "تثبيت التطبيق" أو "إضافة للشاشة الرئيسية".', { icon: '📲' });
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      toast.success('جاري تثبيت تطبيق طاولة على جهازك بنجاح! 🎉');
+      setDeferredPrompt(null);
+    }
+  };
+
   const handleStartOrderForTable = (tableNumber: number) => {
-    if (!currentShift) {
+    // 1. Hard-guard: block operations if subscription expired or clock tampered
+    if (!offlineGuard.isOfflinePermitted) {
+      staffAudio.play('action');
+      toast.error('عذراً، النظام متوقف لانتهاء فترة اشتراك المطعم. يرجى التجديد.');
+      return;
+    }
+
+    // 2. Check active shift (server or local offline)
+    const active = currentShift || getLocalActiveShift();
+    if (!active) {
       staffAudio.play('action');
       toast.error('يجب بدء الوردية واستلام العهدة أولاً قبل تسجيل أي طلب جديد.');
       setIsShiftModalOpen(true);
@@ -130,29 +163,49 @@ export default function StaffDashboard() {
     return () => window.removeEventListener('click', resumeAudio);
   }, []);
 
-  // Fetch Current Shift Data
+  // Fetch Current Shift Data (with Offline/LAN fallback)
   const { data: shiftData } = useQuery({
     queryKey: ['current-shift'],
     queryFn: async () => {
       try {
         const res = await api.get('/shifts/current');
-        return res.data.data;
+        const data = res.data.data;
+        if (data?.shift) {
+          setLocalActiveShift(data.shift);
+        }
+        return data;
       } catch (err) {
+        const localShift = getLocalActiveShift();
+        if (localShift) {
+          return {
+            shift: localShift,
+            lastCarriedCash: getLastCarriedCash(),
+            liveStats: computeShiftLiveStats(localShift, []),
+          };
+        }
         return null;
       }
     },
     enabled: !!user,
   });
 
-  const currentShift = shiftData?.shift;
+  const activeLocal = getLocalActiveShift();
+  const currentShift = shiftData?.shift || activeLocal;
   const [hasAutoPromptedShift, setHasAutoPromptedShift] = useState(false);
 
   useEffect(() => {
-    if (shiftData && shiftData.shift === null && !hasAutoPromptedShift) {
+    if (shiftData && shiftData.shift === null && !activeLocal && !hasAutoPromptedShift) {
       setIsShiftModalOpen(true);
       setHasAutoPromptedShift(true);
     }
-  }, [shiftData, hasAutoPromptedShift]);
+  }, [shiftData, activeLocal, hasAutoPromptedShift]);
+
+  // Auto-sync offline shifts when back online
+  useEffect(() => {
+    if (networkStatus === 'online' && restaurant?.id) {
+      syncOfflineShifts(restaurant.id);
+    }
+  }, [networkStatus, restaurant?.id]);
 
   // Fetch Orders
   const { data: serverOrders = [] } = useQuery({
@@ -719,27 +772,6 @@ export default function StaffDashboard() {
     }
   };
 
-  // PWA Install prompt capture
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      console.log('beforeinstallprompt event fired');
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    staffAudio.play('click');
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-    }
-  };
-
   const handleDismissAlert = (alertId: string) => {
     staffAudio.play('click');
     setAlerts(prev => prev.filter(a => a.id !== alertId));
@@ -1084,7 +1116,13 @@ export default function StaffDashboard() {
               whileHover={{ scale: 1.02, boxShadow: '0 8px 20px -4px rgba(128, 27, 44, 0.25)' }}
               whileTap={{ scale: 0.96 }}
               onClick={() => {
-                if (!currentShift) {
+                if (!offlineGuard.isOfflinePermitted) {
+                  staffAudio.play('action');
+                  toast.error('عذراً، النظام متوقف لانتهاء فترة اشتراك المطعم. يرجى التجديد.');
+                  return;
+                }
+                const active = currentShift || getLocalActiveShift();
+                if (!active) {
                   staffAudio.play('action');
                   toast.error('يجب بدء الوردية واستلام العهدة أولاً قبل تسجيل أي طلب جديد.');
                   setIsShiftModalOpen(true);
@@ -1103,7 +1141,7 @@ export default function StaffDashboard() {
             {deferredPrompt && (
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={handleInstallClick}
+                onClick={handleInstallApp}
                 className="hidden sm:flex items-center gap-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-800 text-xs font-black px-3.5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer"
                 title="تثبيت التطبيق على الجهاز"
               >

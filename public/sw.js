@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tawla-cache-v12';
+const CACHE_NAME = 'tawla-cache-v13';
 const ASSETS_TO_CACHE = [
   '/staff',
   '/index.html',
@@ -9,7 +9,8 @@ const ASSETS_TO_CACHE = [
   '/favicon-192.png',
   '/favicon-512.png',
   '/icons.svg',
-  '/manifest.json'
+  '/manifest.json',
+  '/uploads/catalog/placeholder.webp'
 ];
 
 self.addEventListener('install', (event) => {

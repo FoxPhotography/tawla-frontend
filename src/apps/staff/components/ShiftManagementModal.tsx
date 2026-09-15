@@ -9,6 +9,17 @@ import { api } from '../../../shared/services/api';
 import { printReceiptIframe } from './ReceiptPrintTemplate';
 import { staffAudio } from '../services/staffAudio';
 
+import { useAuthStore } from '../../../shared/store/authStore';
+import { 
+  getLocalActiveShift, 
+  setLocalActiveShift, 
+  clearLocalActiveShift, 
+  getLastCarriedCash, 
+  startLocalShift, 
+  closeLocalShift, 
+  computeShiftLiveStats 
+} from '../../../shared/services/offlineShifts';
+
 export interface ShiftManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,6 +31,7 @@ export default function ShiftManagementModal({
   onClose,
   restaurant,
 }: ShiftManagementModalProps) {
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [startingCash, setStartingCash] = useState<string>('');
   const [actualEndingCash, setActualEndingCash] = useState<string>('');
@@ -27,12 +39,41 @@ export default function ShiftManagementModal({
   const [handoverMode, setHandoverMode] = useState<'drawer' | 'manager' | 'custom'>('drawer');
   const [shiftNotes, setShiftNotes] = useState<string>('');
 
-  // Fetch Current Shift Data
+  // Fetch Current Shift Data (with Offline/LAN fallback)
   const { data: shiftData } = useQuery({
     queryKey: ['current-shift'],
     queryFn: async () => {
-      const res = await api.get('/shifts/current');
-      return res.data.data;
+      try {
+        const res = await api.get('/shifts/current');
+        const data = res.data.data;
+        if (data?.shift) {
+          setLocalActiveShift(data.shift);
+        }
+        return data;
+      } catch (err) {
+        // Fallback to local active shift when offline or LAN
+        const localShift = getLocalActiveShift();
+        const lastCarried = getLastCarriedCash();
+        if (localShift) {
+          return {
+            shift: localShift,
+            lastCarriedCash: lastCarried,
+            liveStats: computeShiftLiveStats(localShift, []),
+          };
+        }
+        return {
+          shift: null,
+          lastCarriedCash: lastCarried,
+          liveStats: {
+            totalOrdersCount: 0,
+            totalCashSales: 0,
+            totalCardSales: 0,
+            totalWalletSales: 0,
+            expectedEndingCash: 0,
+            totalSales: 0,
+          },
+        };
+      }
     },
     enabled: isOpen,
   });
@@ -62,15 +103,40 @@ export default function ShiftManagementModal({
     }
   }, [currentShift, liveStats.expectedEndingCash, actualEndingCash]);
 
-  // Start Shift Mutation
+  // Start Shift Mutation (with Offline/LAN fallback)
   const startShiftMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await api.post('/shifts/start', payload);
-      return res.data;
+      try {
+        const res = await api.post('/shifts/start', payload);
+        if (res.data?.data) {
+          setLocalActiveShift(res.data.data);
+        }
+        return res.data;
+      } catch (err: any) {
+        // Fallback to offline/LAN shift if network fails
+        if (!navigator.onLine || !err.response) {
+          const localShift = startLocalShift({
+            startingCash: payload.startingCash,
+            notes: payload.notes,
+            user,
+            restaurantId: restaurant?.id || user?.restaurantId,
+          });
+          return {
+            success: true,
+            data: localShift,
+            isOffline: true,
+          };
+        }
+        throw err;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       staffAudio.play('success');
-      toast.success('تم بدء الورديّة وتسجيل توقيت البداية بنجاح 🟢');
+      if (data?.isOffline) {
+        toast.success('تم بدء الورديّة محلياً بنجاح (وضع LAN / الأوفلاين) 🟢');
+      } else {
+        toast.success('تم بدء الورديّة وتسجيل توقيت البداية بنجاح 🟢');
+      }
       queryClient.invalidateQueries({ queryKey: ['current-shift'] });
       onClose();
     },
@@ -79,15 +145,36 @@ export default function ShiftManagementModal({
     },
   });
 
-  // Close Shift Mutation
+  // Close Shift Mutation (with Offline/LAN fallback)
   const closeShiftMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await api.post('/shifts/close', payload);
-      return res.data;
+      try {
+        const res = await api.post('/shifts/close', payload);
+        clearLocalActiveShift();
+        return res.data;
+      } catch (err: any) {
+        if (!navigator.onLine || !err.response) {
+          const closedShift = closeLocalShift({
+            actualEndingCash: payload.actualEndingCash,
+            cashHandedToManager: payload.cashHandedToManager,
+            notes: payload.notes,
+          });
+          return {
+            success: true,
+            data: closedShift,
+            isOffline: true,
+          };
+        }
+        throw err;
+      }
     },
     onSuccess: (data: any) => {
       staffAudio.play('success');
-      toast.success('تم تقفيل الشيفت وتسليم العهدة بنجاح.');
+      if (data?.isOffline) {
+        toast.success('تم تقفيل الشيفت محلياً (وضع LAN / الأوفلاين) وطباعة التقرير.');
+      } else {
+        toast.success('تم تقفيل الشيفت وتسليم العهدة بنجاح.');
+      }
 
       // Print Z-Report
       const closedShift = data.data;
