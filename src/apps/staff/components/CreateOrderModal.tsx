@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   PlusCircle, ChevronDown, ChevronLeft, ChevronRight, ShoppingBag, Search, LayoutGrid, UtensilsCrossed, 
-  Printer, Plus, Minus, Trash2, User, Phone, MapPin, Gift, Trophy, X
+  Printer, Plus, Minus, Trash2, User, Phone, MapPin, Gift, Trophy, X, Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +24,8 @@ interface CreateOrderModalProps {
   onOrderCreated: () => void;
   defaultTableNumber?: number | '';
   orders?: any[];
+  hasActiveShift?: boolean;
+  onOpenShiftModal?: () => void;
 }
 
 export default function CreateOrderModal({
@@ -37,7 +39,9 @@ export default function CreateOrderModal({
   updateLocalTableStatus,
   onOrderCreated,
   defaultTableNumber,
-  orders
+  orders,
+  hasActiveShift = true,
+  onOpenShiftModal
 }: CreateOrderModalProps) {
   const [selectedTableNumber, setSelectedTableNumber] = useState<number | ''>('');
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
@@ -479,6 +483,15 @@ export default function CreateOrderModal({
   }, [menuData?.products, menuSearchQuery, menuSelectedCategory]);
 
   const handleCreateOrderSubmit = async () => {
+    if (hasActiveShift === false) {
+      staffAudio.play('action');
+      toast.error('لا يمكن إتمام الطلب: يجب بدء الوردية واستلام العهدة أولاً.');
+      if (onOpenShiftModal) {
+        onClose();
+        onOpenShiftModal();
+      }
+      return;
+    }
     if (orderType === 'dine_in' && !selectedTableNumber) {
       toast.error('يرجى اختيار رقم الطاولة.');
       return;
@@ -1357,16 +1370,49 @@ export default function CreateOrderModal({
                     {Math.max(0, newOrderCart.reduce((acc, item) => acc + item.calculatedPrice * item.quantity, 0) - discountAmount)} ج.م
                   </span>
                 </div>
+
+                {hasActiveShift === false && (
+                  <div className="bg-amber-50 border border-amber-200/90 rounded-2xl p-3 text-amber-900 flex items-center justify-between gap-2.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                      <div>
+                        <span className="font-bold block text-[11px]">الوردية غير مفتوحة حالياً</span>
+                        <span className="text-[10px] text-amber-700 block">يجب بدء الوردية أولاً لتسجيل الطلبات</span>
+                      </div>
+                    </div>
+                    {onOpenShiftModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onOpenShiftModal();
+                        }}
+                        className="px-2.5 py-1 bg-[#801B2C] hover:bg-[#962436] text-white rounded-xl text-[10px] font-bold shadow-xs whitespace-nowrap cursor-pointer transition-all"
+                      >
+                        بدء الوردية 🟢
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={hasActiveShift ? { scale: 1.01 } : {}}
+                whileTap={hasActiveShift ? { scale: 0.97 } : {}}
                 onClick={handleCreateOrderSubmit}
-                disabled={isSubmitting}
-                className="w-full bg-[#801B2C] hover:bg-[#962436] text-white font-black py-3.5 rounded-2xl transition-all shadow-md shadow-[#801B2C]/20 text-xs flex items-center justify-center gap-2 cursor-pointer border border-[#801B2C] font-body"
+                disabled={isSubmitting || hasActiveShift === false}
+                className={`w-full font-black py-3.5 rounded-2xl transition-all shadow-md text-xs flex items-center justify-center gap-2 font-body border ${
+                  hasActiveShift === false
+                    ? 'bg-zinc-200 border-zinc-300 text-zinc-400 cursor-not-allowed shadow-none'
+                    : 'bg-[#801B2C] hover:bg-[#962436] text-white shadow-[#801B2C]/20 cursor-pointer border-[#801B2C]'
+                }`}
               >
-                {orderType === 'takeaway' || orderType === 'delivery' ? (
+                {hasActiveShift === false ? (
+                  <>
+                    <Clock className="w-4 h-4" />
+                    <span>يجب بدء الوردية أولاً لتأكيد الطلب</span>
+                  </>
+                ) : orderType === 'takeaway' || orderType === 'delivery' ? (
                   <>
                     <Printer className="w-4 h-4" />
                     <span>{isSubmitting ? 'جاري التأكيد والطباعة...' : 'تأكيد وطباعة الطلب'}</span>

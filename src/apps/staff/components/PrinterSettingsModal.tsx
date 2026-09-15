@@ -38,6 +38,10 @@ export default function PrinterSettingsModal({
     return localStorage.getItem('tawla_auto_print_accept_orders') === 'true';
   });
 
+  const [autoPrintEmptyTable, setAutoPrintEmptyTable] = useState<boolean>(() => {
+    return localStorage.getItem('tawla_auto_print_empty_table') === 'true';
+  });
+
   if (!isOpen) return null;
 
   const handleSavePrinterIp = (val: string) => {
@@ -77,6 +81,17 @@ export default function PrinterSettingsModal({
       toast.success('تم تفعيل الطباعة التلقائية عند قبول الطلب.');
     } else {
       toast('تم إيقاف الطباعة التلقائية عند قبول الطلب.');
+    }
+  };
+
+  const handleToggleAutoPrintEmptyTable = (val: boolean) => {
+    setAutoPrintEmptyTable(val);
+    localStorage.setItem('tawla_auto_print_empty_table', val ? 'true' : 'false');
+    staffAudio.play('click');
+    if (val) {
+      toast.success('تم تفعيل الطباعة التلقائية فور تفريغ الطاولة.');
+    } else {
+      toast('تم إيقاف الطباعة التلقائية فور تفريغ الطاولة.');
     }
   };
 
@@ -275,6 +290,20 @@ export default function PrinterSettingsModal({
                   type="checkbox"
                   checked={autoPrintAcceptOrders}
                   onChange={(e) => handleToggleAutoPrintAccept(e.target.checked)}
+                  className="w-5 h-5 accent-[#801B2C] cursor-pointer"
+                />
+              </label>
+
+              {/* Toggle 3 */}
+              <label className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 border border-zinc-200/60 hover:bg-zinc-100/60 transition-colors cursor-pointer">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-zinc-800">طباعة الفاتورة فور تفريغ الطاولة</div>
+                  <div className="text-[11px] text-zinc-500">تُطبع الفاتورة تلقائياً عند تسوية الحساب وتفريغ الطاولة لإتاحتها للزبائن</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoPrintEmptyTable}
+                  onChange={(e) => handleToggleAutoPrintEmptyTable(e.target.checked)}
                   className="w-5 h-5 accent-[#801B2C] cursor-pointer"
                 />
               </label>

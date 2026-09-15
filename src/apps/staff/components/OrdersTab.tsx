@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { 
   LayoutGrid, List, Printer, XCircle, CloudOff, Play, Check, CheckCheck, AlertCircle,
-  Bike, User, Phone, MapPin, FileText, Search, X, RotateCcw, Clock
+  Bike, User, Phone, MapPin, FileText, Search, X, RotateCcw, Clock, Calendar, CalendarDays, Loader2
 } from 'lucide-react';
 import type { Order } from '../../../shared/types';
 import { staffAudio } from '../services/staffAudio';
@@ -50,6 +50,14 @@ const formatOrderTime = (dateString: string | Date) => {
   hours = hours ? hours : 12;
   const formattedHours = hours.toString().padStart(2, '0');
   return `${formattedHours}:${minutes} ${ampm}`;
+};
+
+const formatOrderDate = (dateString: string | Date) => {
+  const d = new Date(dateString);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}/${month}/${day}`;
 };
 
 const getStatusBadgeClass = (status: Order['status']) => {
@@ -122,11 +130,21 @@ export default function OrdersTab({
   isUpdatePending,
   isDeliveryEnabled = true
 }: OrdersTabProps) {
+  const queryClient = useQueryClient();
+
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [activeNavTab, setActiveNavTab] = useState<'all_active' | 'dine_in' | 'takeaway' | 'delivery' | 'archived'>('all_active');
   const [archiveViewMode, setArchiveViewMode] = useState<'table' | 'grid'>('table');
   const [archiveStatusFilter, setArchiveStatusFilter] = useState<'all' | 'delivered' | 'cancelled'>('all');
+  const [archiveDatePreset, setArchiveDatePreset] = useState<'today' | 'yesterday' | 'week' | 'custom'>('today');
+  const [customArchiveDate, setCustomArchiveDate] = useState(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   // Modal / Popup States
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
@@ -155,42 +173,110 @@ export default function OrdersTab({
 
   const currentShift = shiftData?.shift;
 
+  // Compute reference dates (local time)
+  const { todayStr, yesterdayStr, weekStartStr } = useMemo(() => {
+    const formatLocalDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const now = new Date();
+    const today = formatLocalDate(now);
+
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    const yesterday = formatLocalDate(y);
+
+    const w = new Date();
+    w.setDate(w.getDate() - 6);
+    const weekStart = formatLocalDate(w);
+
+    return { todayStr: today, yesterdayStr: yesterday, weekStartStr: weekStart };
+  }, []);
+
+  // Fetch archived orders on demand when viewing historical periods (yesterday, week, custom date)
+  const isHistorical = activeNavTab === 'archived' && archiveDatePreset !== 'today';
+
+  const { data: remoteArchiveOrders, isLoading: isArchiveLoading } = useQuery<Order[]>({
+    queryKey: ['archived-orders', archiveDatePreset, customArchiveDate],
+    queryFn: async () => {
+      let start = todayStr;
+      let end = todayStr;
+      if (archiveDatePreset === 'yesterday') {
+        start = yesterdayStr;
+        end = yesterdayStr;
+      } else if (archiveDatePreset === 'week') {
+        start = weekStartStr;
+        end = todayStr;
+      } else if (archiveDatePreset === 'custom') {
+        start = customArchiveDate;
+        end = customArchiveDate;
+      }
+      const res = await api.get(`/orders?status=delivered,cancelled&startDate=${start}&endDate=${end}`);
+      return res.data.data;
+    },
+    enabled: isHistorical,
+    staleTime: 5000,
+  });
+
+  // Pick data source: local orders (already containing today's orders) or historical query result
+  const currentArchivedOrders = useMemo(() => {
+    if (archiveDatePreset === 'today') {
+      return orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
+    }
+    return remoteArchiveOrders || [];
+  }, [archiveDatePreset, orders, remoteArchiveOrders]);
+
   const archiveStats = useMemo(() => {
-    const archived = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
-    const delivered = archived.filter(o => o.status === 'delivered');
-    const cancelled = archived.filter(o => o.status === 'cancelled');
+    const delivered = currentArchivedOrders.filter(o => o.status === 'delivered');
+    const cancelled = currentArchivedOrders.filter(o => o.status === 'cancelled');
 
-    // Filter delivered orders created during active shift (createdAt >= currentShift.startTime)
-    const shiftStartTime = currentShift?.startTime ? new Date(currentShift.startTime).getTime() : 0;
-    const shiftDelivered = delivered.filter(o => {
-      if (!shiftStartTime) return true;
-      return new Date(o.createdAt).getTime() >= shiftStartTime;
-    });
-
-    const shiftRevenue = shiftDelivered.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    let revenue = 0;
+    if (archiveDatePreset === 'today') {
+      // Filter delivered orders created during active shift (createdAt >= currentShift.startTime)
+      const shiftStartTime = currentShift?.startTime ? new Date(currentShift.startTime).getTime() : 0;
+      const shiftDelivered = delivered.filter(o => {
+        if (!shiftStartTime) return true;
+        return new Date(o.createdAt).getTime() >= shiftStartTime;
+      });
+      revenue = shiftDelivered.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    } else {
+      revenue = delivered.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    }
 
     return {
-      total: archived.length,
+      total: currentArchivedOrders.length,
       delivered: delivered.length,
       cancelled: cancelled.length,
-      revenue: shiftRevenue
+      revenue
     };
-  }, [orders, currentShift?.startTime]);
+  }, [currentArchivedOrders, archiveDatePreset, currentShift?.startTime]);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      // 1. Filter by Nav Tab
-      if (activeNavTab === 'archived') {
-        if (!['delivered', 'cancelled'].includes(o.status)) return false;
+    if (activeNavTab === 'archived') {
+      return currentArchivedOrders.filter(o => {
         if (archiveStatusFilter === 'delivered' && o.status !== 'delivered') return false;
         if (archiveStatusFilter === 'cancelled' && o.status !== 'cancelled') return false;
-      } else {
-        const isActive = ['pending', 'accepted', 'preparing', 'ready'].includes(o.status);
-        if (!isActive) return false;
-        if (activeNavTab !== 'all_active' && o.type !== activeNavTab) return false;
-      }
 
-      // 2. Filter by Search Query
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase().trim();
+        const matchId = o.id.toLowerCase().includes(q);
+        const matchTable = o.tableNumber ? String(o.tableNumber).includes(q) : false;
+        const matchCustomer = o.customerName ? o.customerName.toLowerCase().includes(q) : false;
+        const matchPhone = (o as any).customerPhone ? (o as any).customerPhone.includes(q) : false;
+        const matchItem = o.items ? o.items.some(i => i.name.toLowerCase().includes(q)) : false;
+
+        return matchId || matchTable || matchCustomer || matchPhone || matchItem;
+      });
+    }
+
+    return orders.filter(o => {
+      const isActive = ['pending', 'accepted', 'preparing', 'ready'].includes(o.status);
+      if (!isActive) return false;
+      if (activeNavTab !== 'all_active' && o.type !== activeNavTab) return false;
+
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
       const matchId = o.id.toLowerCase().includes(q);
@@ -201,7 +287,7 @@ export default function OrdersTab({
 
       return matchId || matchTable || matchCustomer || matchPhone || matchItem;
     });
-  }, [orders, activeNavTab, searchQuery, archiveStatusFilter]);
+  }, [orders, currentArchivedOrders, activeNavTab, searchQuery, archiveStatusFilter]);
 
   return (
     <div className="flex flex-col gap-5 h-full min-h-0 overflow-hidden text-right" dir="rtl">
@@ -289,7 +375,7 @@ export default function OrdersTab({
             <span className={`text-xs font-mono px-2 py-0.5 rounded-full font-bold ${
               activeNavTab === 'archived' ? 'bg-white/25 text-white' : 'bg-zinc-100 text-zinc-700'
             }`}>
-              {orders.filter(o => ['delivered', 'cancelled'].includes(o.status)).length}
+              {archiveStats.total}
             </span>
           </button>
         </div>
@@ -317,110 +403,217 @@ export default function OrdersTab({
 
       {/* Archive Metrics & View Controller Sub-bar */}
       {activeNavTab === 'archived' && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white border border-zinc-200/80 rounded-2xl p-3 shadow-xs font-cairo flex-shrink-0">
-          {/* Status Sub-filter pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-            <button
-              onClick={() => {
-                staffAudio.play('click');
-                setArchiveStatusFilter('all');
-              }}
-              className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                archiveStatusFilter === 'all'
-                  ? 'bg-zinc-900 text-white shadow-xs'
-                  : 'bg-zinc-100/80 text-zinc-600 hover:bg-zinc-200/70'
-              }`}
-            >
-              <span>جميع العمليات</span>
-              <span className="font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md font-black">{archiveStats.total}</span>
-            </button>
+        <div className="flex flex-col gap-3 bg-white border border-zinc-200/80 rounded-2xl p-3 shadow-xs font-cairo flex-shrink-0">
+          
+          {/* Top Row: Date Presets & Custom Date Picker */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-zinc-100">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+              <span className="text-xs font-bold text-zinc-500 flex items-center gap-1.5 pl-1">
+                <Calendar className="w-3.5 h-3.5 text-[#801B2C]" />
+                <span>فترة الأرشيف:</span>
+              </span>
 
-            <button
-              onClick={() => {
-                staffAudio.play('click');
-                setArchiveStatusFilter('delivered');
-              }}
-              className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                archiveStatusFilter === 'delivered'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100/70'
-              }`}
-            >
-              <span>مكتملة</span>
-              <span className="font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md font-black">{archiveStats.delivered}</span>
-            </button>
+              <button
+                onClick={() => {
+                  staffAudio.play('click');
+                  setArchiveDatePreset('today');
+                }}
+                className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  archiveDatePreset === 'today'
+                    ? 'bg-[#801B2C] text-white shadow-xs'
+                    : 'bg-zinc-100/80 text-zinc-600 hover:bg-zinc-200/70'
+                }`}
+              >
+                اليوم
+              </button>
 
-            <button
-              onClick={() => {
-                staffAudio.play('click');
-                setArchiveStatusFilter('cancelled');
-              }}
-              className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                archiveStatusFilter === 'cancelled'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-rose-50 text-rose-800 hover:bg-rose-100/70'
-              }`}
-            >
-              <span>ملغاة</span>
-              <span className="font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md font-black">{archiveStats.cancelled}</span>
-            </button>
-          </div>
+              <button
+                onClick={() => {
+                  staffAudio.play('click');
+                  setArchiveDatePreset('yesterday');
+                }}
+                className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  archiveDatePreset === 'yesterday'
+                    ? 'bg-[#801B2C] text-white shadow-xs'
+                    : 'bg-zinc-100/80 text-zinc-600 hover:bg-zinc-200/70'
+                }`}
+              >
+                أمس
+              </button>
 
-          {/* Revenue and View Mode Toggle */}
-          <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100">
-            {/* Total Revenue Pill - Current Shift */}
-            <div className="flex items-center gap-1.5 bg-[#801B2C]/5 border border-[#801B2C]/15 px-3 py-1.5 rounded-xl">
-              <span className="text-[11px] text-zinc-500 font-bold">مبيعات الشيفت الحالي:</span>
-              <strong className="text-[#801B2C] font-black font-mono text-xs">
-                {archiveStats.revenue.toLocaleString()} ج.م
-              </strong>
+              <button
+                onClick={() => {
+                  staffAudio.play('click');
+                  setArchiveDatePreset('week');
+                }}
+                className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  archiveDatePreset === 'week'
+                    ? 'bg-[#801B2C] text-white shadow-xs'
+                    : 'bg-zinc-100/80 text-zinc-600 hover:bg-zinc-200/70'
+                }`}
+              >
+                آخر 7 أيام
+              </button>
+
+              <button
+                onClick={() => {
+                  staffAudio.play('click');
+                  setArchiveDatePreset('custom');
+                }}
+                className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  archiveDatePreset === 'custom'
+                    ? 'bg-[#801B2C] text-white shadow-xs'
+                    : 'bg-zinc-100/80 text-zinc-600 hover:bg-zinc-200/70'
+                }`}
+              >
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span>تاريخ محدد</span>
+              </button>
             </div>
 
-            {/* View Mode Toggle: Table / Cards */}
-            <div className="flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200/70">
+            {/* Custom Date Input (Active when custom preset selected) */}
+            {archiveDatePreset === 'custom' && (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-zinc-500 font-bold">اختر اليوم:</span>
+                <input
+                  type="date"
+                  value={customArchiveDate}
+                  max={todayStr}
+                  onChange={(e) => {
+                    staffAudio.play('click');
+                    setCustomArchiveDate(e.target.value);
+                  }}
+                  className="bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 py-1 text-xs font-bold font-mono text-zinc-800 outline-none focus:border-[#801B2C] focus:ring-1 focus:ring-[#801B2C]"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Row: Status Sub-filter pills + Revenue & View Mode */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Status Sub-filter pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
               <button
                 onClick={() => {
                   staffAudio.play('click');
-                  setArchiveViewMode('table');
+                  setArchiveStatusFilter('all');
                 }}
-                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  archiveViewMode === 'table'
-                    ? 'bg-white text-[#801B2C] shadow-xs'
-                    : 'text-zinc-500 hover:text-zinc-800'
+                className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  archiveStatusFilter === 'all'
+                    ? 'bg-zinc-900 text-white shadow-xs'
+                    : 'bg-zinc-100/80 text-zinc-600 hover:bg-zinc-200/70'
                 }`}
-                title="عرض الجدول المنظم"
               >
-                <List className="w-4 h-4" />
-                <span className="hidden md:inline text-[11px]">جدول</span>
+                <span>جميع العمليات</span>
+                <span className="font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md font-black">{archiveStats.total}</span>
               </button>
+
               <button
                 onClick={() => {
                   staffAudio.play('click');
-                  setArchiveViewMode('grid');
+                  setArchiveStatusFilter('delivered');
                 }}
-                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  archiveViewMode === 'grid'
-                    ? 'bg-white text-[#801B2C] shadow-xs'
-                    : 'text-zinc-500 hover:text-zinc-800'
+                className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  archiveStatusFilter === 'delivered'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100/70'
                 }`}
-                title="عرض البطاقات"
               >
-                <LayoutGrid className="w-4 h-4" />
-                <span className="hidden md:inline text-[11px]">بطاقات</span>
+                <span>مكتملة</span>
+                <span className="font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md font-black">{archiveStats.delivered}</span>
               </button>
+
+              <button
+                onClick={() => {
+                  staffAudio.play('click');
+                  setArchiveStatusFilter('cancelled');
+                }}
+                className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  archiveStatusFilter === 'cancelled'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-rose-50 text-rose-800 hover:bg-rose-100/70'
+                }`}
+              >
+                <span>ملغاة</span>
+                <span className="font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md font-black">{archiveStats.cancelled}</span>
+              </button>
+
+              {isArchiveLoading && (
+                <div className="flex items-center gap-1.5 text-xs text-[#801B2C] bg-[#801B2C]/5 px-2.5 py-1 rounded-lg">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>جاري استدعاء الأرشيف...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Revenue and View Mode Toggle */}
+            <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100">
+              {/* Total Revenue Pill */}
+              <div className="flex items-center gap-1.5 bg-[#801B2C]/5 border border-[#801B2C]/15 px-3 py-1.5 rounded-xl">
+                <span className="text-[11px] text-zinc-500 font-bold">
+                  {archiveDatePreset === 'today' ? 'مبيعات الشيفت الحالي:' : 'إجمالي مبيعات الفترة:'}
+                </span>
+                <strong className="text-[#801B2C] font-black font-mono text-xs">
+                  {archiveStats.revenue.toLocaleString()} ج.م
+                </strong>
+              </div>
+
+              {/* View Mode Toggle: Table / Cards */}
+              <div className="flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200/70">
+                <button
+                  onClick={() => {
+                    staffAudio.play('click');
+                    setArchiveViewMode('table');
+                  }}
+                  className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    archiveViewMode === 'table'
+                      ? 'bg-white text-[#801B2C] shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-800'
+                  }`}
+                  title="عرض الجدول المنظم"
+                >
+                  <List className="w-4 h-4" />
+                  <span className="hidden md:inline text-[11px]">جدول</span>
+                </button>
+                <button
+                  onClick={() => {
+                    staffAudio.play('click');
+                    setArchiveViewMode('grid');
+                  }}
+                  className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    archiveViewMode === 'grid'
+                      ? 'bg-white text-[#801B2C] shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-800'
+                  }`}
+                  title="عرض البطاقات"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span className="hidden md:inline text-[11px]">بطاقات</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Orders List / Table */}
-      {filteredOrders.length === 0 ? (
+      {isArchiveLoading ? (
+        <div className="flex-1 flex flex-col items-center justify-center bg-white border border-zinc-200/80 rounded-3xl p-16 text-center shadow-sm">
+          <Loader2 className="w-8 h-8 text-[#801B2C] animate-spin mb-3" />
+          <p className="text-zinc-800 font-black text-sm font-cairo">جاري تحميل طلبات الأرشيف...</p>
+          <p className="text-xs text-zinc-500 mt-1 font-body">يتم استدعاء بيانات التاريخ المحدد من السيرفر.</p>
+        </div>
+      ) : filteredOrders.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center bg-white border border-zinc-200/80 rounded-3xl p-16 text-center shadow-sm">
           <div className="w-16 h-16 rounded-2xl bg-zinc-50 border border-zinc-200/80 flex items-center justify-center mb-4 text-zinc-400 shadow-inner">
             <LayoutGrid className="w-7 h-7" />
           </div>
           <p className="text-zinc-800 font-black text-sm font-cairo">لا توجد طلبات تطابق العرض الحالي</p>
-          <p className="text-xs text-zinc-500 mt-1 font-body">ستظهر الطلبات فور تسجيلها في النظام.</p>
+          <p className="text-xs text-zinc-500 mt-1 font-body">
+            {activeNavTab === 'archived'
+              ? 'لم يتم تسجيل أي طلبات مكتملة أو ملغاة في هذا التاريخ المحدد.'
+              : 'ستظهر الطلبات فور تسجيلها في النظام.'}
+          </p>
         </div>
       ) : activeNavTab === 'archived' && archiveViewMode === 'table' ? (
         /* Luxury Structured Archive Data Table */
@@ -468,9 +661,16 @@ export default function OrdersTab({
 
                   {/* Time */}
                   <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1.5 text-zinc-600">
-                      <Clock className="w-3.5 h-3.5 text-[#801B2C]" />
-                      <span>{formatOrderTime(order.createdAt)}</span>
+                    <div className="flex flex-col gap-0.5 text-zinc-600">
+                      <div className="flex items-center gap-1.5 font-mono">
+                        <Clock className="w-3.5 h-3.5 text-[#801B2C]" />
+                        <span>{formatOrderTime(order.createdAt)}</span>
+                      </div>
+                      {archiveDatePreset !== 'today' && (
+                        <span className="text-[10px] text-zinc-500 font-mono pr-5">
+                          {formatOrderDate(order.createdAt)}
+                        </span>
+                      )}
                     </div>
                   </td>
 
@@ -627,7 +827,12 @@ export default function OrdersTab({
                           )}
                           <span className="text-xs font-bold text-zinc-700 font-cairo flex items-center gap-1.5 bg-zinc-100/90 border border-zinc-200/80 px-2.5 py-0.5 rounded-lg shadow-2xs">
                             <Clock className="w-3.5 h-3.5 text-[#801B2C]" />
-                            <span className="tracking-wide">{formatOrderTime(order.createdAt)}</span>
+                            <span className="tracking-wide font-mono">{formatOrderTime(order.createdAt)}</span>
+                            {activeNavTab === 'archived' && archiveDatePreset !== 'today' && (
+                              <span className="text-[10px] text-zinc-500 font-mono border-r border-zinc-300 pr-1.5 mr-0.5">
+                                {formatOrderDate(order.createdAt)}
+                              </span>
+                            )}
                           </span>
                         </div>
                       </div>
@@ -860,8 +1065,18 @@ export default function OrdersTab({
                 </button>
                 <button
                   onClick={async () => {
-                    onUpdateStatus(cancelOrderId, 'cancelled');
-                    setCancelOrderId(null);
+                    if (cancelOrderId) {
+                      queryClient.setQueriesData({ queryKey: ['archived-orders'] }, (old: any) => {
+                        if (!old || !Array.isArray(old)) return old;
+                        return old.map((o: any) => o.id === cancelOrderId ? { ...o, status: 'cancelled' } : o);
+                      });
+                      queryClient.setQueryData(['staff-orders'], (old: any) => {
+                        if (!old || !Array.isArray(old)) return old;
+                        return old.map((o: any) => o.id === cancelOrderId ? { ...o, status: 'cancelled' } : o);
+                      });
+                      onUpdateStatus(cancelOrderId, 'cancelled');
+                      setCancelOrderId(null);
+                    }
                   }}
                   disabled={isStatusPending}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl transition-all text-xs cursor-pointer font-body shadow-md shadow-red-600/20"
@@ -970,14 +1185,40 @@ export default function OrdersTab({
                   </button>
                   <button
                     onClick={async () => {
+                      if (!returnOrder) return;
                       const filteredItems = returnItems.filter(item => item.quantity > 0);
-                      await onUpdateOrder(returnOrder.id, filteredItems, returnOrder.status);
+                      const targetId = returnOrder.id;
+
+                      if (filteredItems.length === 0) {
+                        // All items returned/reduced to 0: mark order as cancelled
+                        queryClient.setQueriesData({ queryKey: ['archived-orders'] }, (old: any) => {
+                          if (!old || !Array.isArray(old)) return old;
+                          return old.map((o: any) => o.id === targetId ? { ...o, status: 'cancelled' } : o);
+                        });
+                        queryClient.setQueryData(['staff-orders'], (old: any) => {
+                          if (!old || !Array.isArray(old)) return old;
+                          return old.map((o: any) => o.id === targetId ? { ...o, status: 'cancelled' } : o);
+                        });
+                        await onUpdateStatus(targetId, 'cancelled');
+                      } else {
+                        // Partial return / items updated
+                        const newTotal = filteredItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+                        queryClient.setQueriesData({ queryKey: ['archived-orders'] }, (old: any) => {
+                          if (!old || !Array.isArray(old)) return old;
+                          return old.map((o: any) => o.id === targetId ? { ...o, items: filteredItems, totalAmount: newTotal } : o);
+                        });
+                        queryClient.setQueryData(['staff-orders'], (old: any) => {
+                          if (!old || !Array.isArray(old)) return old;
+                          return old.map((o: any) => o.id === targetId ? { ...o, items: filteredItems, totalAmount: newTotal } : o);
+                        });
+                        await onUpdateOrder(targetId, filteredItems, returnOrder.status);
+                      }
                       setReturnOrder(null);
                     }}
-                    disabled={isUpdatePending}
+                    disabled={isUpdatePending || isStatusPending}
                     className="flex-1 bg-[#801B2C] hover:bg-[#962436] text-white font-black py-3 rounded-xl transition-all text-xs cursor-pointer shadow-md shadow-[#801B2C]/20 font-body"
                   >
-                    {isUpdatePending ? 'جاري الحفظ...' : 'تأكيد وحفظ التغيير'}
+                    {(isUpdatePending || isStatusPending) ? 'جاري الحفظ...' : 'تأكيد وحفظ التغيير'}
                   </button>
                 </div>
               </div>

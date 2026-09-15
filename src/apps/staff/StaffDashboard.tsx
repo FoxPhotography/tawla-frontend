@@ -92,6 +92,12 @@ export default function StaffDashboard() {
   const [checkoutTable, setCheckoutTable] = useState<Table | null>(null);
 
   const handleStartOrderForTable = (tableNumber: number) => {
+    if (!currentShift) {
+      staffAudio.play('action');
+      toast.error('يجب بدء الوردية واستلام العهدة أولاً قبل تسجيل أي طلب جديد.');
+      setIsShiftModalOpen(true);
+      return;
+    }
     staffAudio.play('click');
     setPreselectedTableNumber(tableNumber);
     setIsCreateOrderOpen(true);
@@ -153,7 +159,7 @@ export default function StaffDashboard() {
     queryKey: ['staff-orders'],
     queryFn: async () => {
       try {
-        const response = await api.get('/orders');
+        const response = await api.get('/orders?recentOnly=true');
         const list = response.data.data as Order[];
         localStorage.setItem('tawla_cached_orders', JSON.stringify(list));
         return list;
@@ -164,7 +170,7 @@ export default function StaffDashboard() {
       }
     },
     enabled: !!user,
-    staleTime: Infinity,
+    staleTime: 5000,
   });
 
   // Fetch Tables
@@ -246,43 +252,69 @@ export default function StaffDashboard() {
     mutationFn: async ({ orderId, nextStatus }: { orderId: string; nextStatus: string }) => {
       staffAudio.play('action');
       if (orderId.startsWith('offline_')) {
+        const list = getOfflineOrders();
+        let updatedOrder: any = null;
+        const updated = list.map((o: any) => {
+          if (o.id === orderId) {
+            updatedOrder = { ...o, status: nextStatus };
+            return updatedOrder;
+          }
+          return o;
+        });
+        localStorage.setItem('tawla_offline_orders', JSON.stringify(updated));
+        setOfflineOrders(getOfflineOrders());
+
         if (nextStatus === 'cancelled') {
-          const list = getOfflineOrders();
-          const updated = list.filter((o: any) => o.id !== orderId);
-          localStorage.setItem('tawla_offline_orders', JSON.stringify(updated));
-          setOfflineOrders(getOfflineOrders());
           toast.success('تم إلغاء الطلب المحلي بنجاح.');
-          
           const targetOrder = offlineOrders.find(o => o.id === orderId);
           if (targetOrder) {
             updateLocalTableStatus(targetOrder.tableNumber, 'empty', null);
           }
-          return null;
         } else {
-          const list = getOfflineOrders();
-          let updatedOrder: any = null;
-          const updated = list.map((o: any) => {
-            if (o.id === orderId) {
-              updatedOrder = { ...o, status: nextStatus };
-              return updatedOrder;
-            }
-            return o;
-          });
-          localStorage.setItem('tawla_offline_orders', JSON.stringify(updated));
-          setOfflineOrders(getOfflineOrders());
           toast.success('تم تحديث حالة الطلب محلياً.');
-          return updatedOrder;
         }
+        return updatedOrder;
       }
       const res = await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
       return res.data.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (_resData, variables) => {
       if (!variables.orderId.startsWith('offline_')) {
         staffAudio.play('success');
         toast.success('تم تحديث حالة الطلب بنجاح.');
+
+        // 1. Optimistically update staff-orders cache
+        queryClient.setQueryData(['staff-orders'], (old: any) => {
+          const list = old ? [...old] : [];
+          return list.map((o: any) => 
+            o.id === variables.orderId ? { ...o, status: variables.nextStatus } : o
+          );
+        });
+
+        // 2. Optimistically update all archived-orders queries
+        queryClient.setQueriesData({ queryKey: ['archived-orders'] }, (old: any) => {
+          if (!old || !Array.isArray(old)) return old;
+          return old.map((o: any) => 
+            o.id === variables.orderId ? { ...o, status: variables.nextStatus } : o
+          );
+        });
+
+        // 3. Keep localStorage fresh
+        const cached = localStorage.getItem('tawla_cached_orders');
+        if (cached) {
+          try {
+            const list = JSON.parse(cached);
+            const updated = list.map((o: any) => 
+              o.id === variables.orderId ? { ...o, status: variables.nextStatus } : o
+            );
+            localStorage.setItem('tawla_cached_orders', JSON.stringify(updated));
+          } catch (e) {}
+        }
+
         queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
         queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
+        queryClient.invalidateQueries({ queryKey: ['current-shift'] });
 
         if (localStorage.getItem('tawla_auto_print_accept_orders') === 'true' && (variables.nextStatus === 'accepted' || variables.nextStatus === 'preparing')) {
           const orderToPrint = combinedOrders.find((o: any) => o.id === variables.orderId);
@@ -313,6 +345,8 @@ export default function StaffDashboard() {
       setCheckoutTable(null);
       queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
       queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['current-shift'] });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'فشل تفريغ الطاولة.');
@@ -323,13 +357,75 @@ export default function StaffDashboard() {
   const updateOrderMutation = useMutation({
     mutationFn: async ({ orderId, items, specialNotes, status }: { orderId: string; items: any[]; specialNotes?: string; status?: string }) => {
       staffAudio.play('action');
-      await api.put(`/orders/${orderId}`, { items, specialNotes, status });
+      if (orderId.startsWith('offline_')) {
+        const list = getOfflineOrders();
+        let updatedOrder: any = null;
+        const isAllReturned = items.length === 0;
+        const newStatus = isAllReturned ? 'cancelled' : (status || 'delivered');
+        const newTotal = items.reduce((sum: number, it: any) => sum + (it.price * it.quantity), 0);
+        const updated = list.map((o: any) => {
+          if (o.id === orderId) {
+            updatedOrder = {
+              ...o,
+              items: isAllReturned ? o.items : items,
+              specialNotes: specialNotes !== undefined ? specialNotes : o.specialNotes,
+              totalAmount: isAllReturned ? (o.totalAmount || 0) : newTotal,
+              status: newStatus
+            };
+            return updatedOrder;
+          }
+          return o;
+        });
+        localStorage.setItem('tawla_offline_orders', JSON.stringify(updated));
+        setOfflineOrders(getOfflineOrders());
+        return updatedOrder;
+      }
+      const res = await api.put(`/orders/${orderId}`, { items, specialNotes, status });
+      return res.data.data;
     },
-    onSuccess: () => {
+    onSuccess: (updatedOrder, variables) => {
       staffAudio.play('success');
       toast.success('تم تعديل الطلب وتحديث الحساب بنجاح.');
+
+      const targetOrder = updatedOrder || {
+        id: variables.orderId,
+        items: variables.items,
+        status: variables.status || (variables.items.length === 0 ? 'cancelled' : 'delivered'),
+        totalAmount: variables.items.reduce((sum: number, it: any) => sum + (it.price * it.quantity), 0)
+      };
+
+      // 1. Optimistically update staff-orders query cache immediately
+      queryClient.setQueryData(['staff-orders'], (old: any) => {
+        const list = old ? [...old] : [];
+        return list.map((o: any) => 
+          o.id === variables.orderId ? { ...o, ...targetOrder } : o
+        );
+      });
+
+      // 2. Optimistically update all archived-orders queries immediately
+      queryClient.setQueriesData({ queryKey: ['archived-orders'] }, (old: any) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map((o: any) => 
+          o.id === variables.orderId ? { ...o, ...targetOrder } : o
+        );
+      });
+
+      // 3. Keep localStorage fresh
+      const cached = localStorage.getItem('tawla_cached_orders');
+      if (cached) {
+        try {
+          const list = JSON.parse(cached);
+          const updated = list.map((o: any) => 
+            o.id === variables.orderId ? { ...o, ...targetOrder } : o
+          );
+          localStorage.setItem('tawla_cached_orders', JSON.stringify(updated));
+        } catch (e) {}
+      }
+
       queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
       queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
+      queryClient.invalidateQueries({ queryKey: ['current-shift'] });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'فشل تعديل الطلب.');
@@ -431,8 +527,16 @@ export default function StaffDashboard() {
           o.id === data.orderId ? { ...o, status: data.status } : o
         );
       });
+      queryClient.setQueriesData({ queryKey: ['archived-orders'] }, (old: any) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map((o: any) => 
+          o.id === data.orderId ? { ...o, status: data.status } : o
+        );
+      });
       queryClient.invalidateQueries({ queryKey: ['staff-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
       queryClient.invalidateQueries({ queryKey: ['staff-tables'] });
+      queryClient.invalidateQueries({ queryKey: ['current-shift'] });
 
       // Audio & Toast Alert for Kitchen KDS Ready Orders
       if (data.status === 'ready') {
@@ -980,6 +1084,12 @@ export default function StaffDashboard() {
               whileHover={{ scale: 1.02, boxShadow: '0 8px 20px -4px rgba(128, 27, 44, 0.25)' }}
               whileTap={{ scale: 0.96 }}
               onClick={() => {
+                if (!currentShift) {
+                  staffAudio.play('action');
+                  toast.error('يجب بدء الوردية واستلام العهدة أولاً قبل تسجيل أي طلب جديد.');
+                  setIsShiftModalOpen(true);
+                  return;
+                }
                 staffAudio.play('click');
                 setIsCreateOrderOpen(true);
               }}
@@ -1201,6 +1311,8 @@ export default function StaffDashboard() {
             onOrderCreated={handleOrderCreated}
             defaultTableNumber={preselectedTableNumber}
             orders={combinedOrders}
+            hasActiveShift={!!currentShift}
+            onOpenShiftModal={() => setIsShiftModalOpen(true)}
           />
         )}
       </AnimatePresence>

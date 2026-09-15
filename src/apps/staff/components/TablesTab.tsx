@@ -439,23 +439,41 @@ export default function TablesTab({
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-5 border-t border-zinc-100 bg-zinc-50/80 flex gap-3">
+                <div className="p-5 border-t border-zinc-100 bg-zinc-50/80 flex items-center gap-2.5">
                   <button
+                    type="button"
                     onClick={() => setCheckoutTable(null)}
-                    className="flex-1 bg-white border border-zinc-200 hover:bg-zinc-100 text-zinc-700 font-bold py-3.5 px-4 rounded-2xl transition-all text-xs cursor-pointer font-body"
+                    className="px-4 py-3.5 bg-white border border-zinc-200 hover:bg-zinc-100 text-zinc-700 font-bold rounded-2xl transition-all text-xs cursor-pointer font-body"
                   >
                     إلغاء
                   </button>
+
                   <button
+                    type="button"
                     onClick={() => {
+                      staffAudio.play('action');
                       if (combinedCheckoutOrder || activeOrder) {
+                        onPrintReceipt(combinedCheckoutOrder || activeOrder);
+                      }
+                    }}
+                    className="p-3.5 rounded-2xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 hover:text-zinc-950 transition-all shadow-xs flex items-center justify-center cursor-pointer flex-shrink-0"
+                    title="طباعة الفاتورة"
+                  >
+                    <Printer className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const shouldAutoPrint = localStorage.getItem('tawla_auto_print_empty_table') === 'true';
+                      if (shouldAutoPrint && (combinedCheckoutOrder || activeOrder)) {
                         onPrintReceipt(combinedCheckoutOrder || activeOrder);
                       }
                       onEmptyTable(checkoutTable.id, paymentMethod);
                       setCheckoutTable(null);
                     }}
                     disabled={isEmptyTablePending}
-                    className="flex-1 bg-[#801B2C] hover:bg-[#962436] text-white font-bold py-3.5 px-4 rounded-2xl transition-all text-xs cursor-pointer font-body shadow-md shadow-[#801B2C]/20"
+                    className="flex-1 bg-[#801B2C] hover:bg-[#962436] text-white font-bold py-3.5 px-4 rounded-2xl transition-all text-xs cursor-pointer font-body shadow-md shadow-[#801B2C]/20 text-center"
                   >
                     {isEmptyTablePending ? 'جاري الإنهاء...' : 'تأكيد الدفع وإتاحة الطاولة'}
                   </button>
