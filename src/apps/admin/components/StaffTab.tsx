@@ -387,7 +387,7 @@ export default function StaffTab() {
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button 
-                            onClick={() => { if (confirm('حذف هذا الحساب نهائياً؟')) deleteStaffMutation.mutate(staffMember.id); }} 
+                            onClick={() => setStaffToDelete({ id: staffMember.id, name: staffMember.name })} 
                             className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-red-650 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

@@ -162,7 +162,7 @@ export default function TablesTab() {
                     </div>
 
                     <button
-                      onClick={() => { if (confirm(`هل أنت متأكد من حذف طاولة رقم ${table.number}؟`)) deleteTableMutation.mutate(table.id); }}
+                      onClick={() => setTableToDelete({ id: table.id, number: table.number })}
                       className="p-2 text-admin-text-secondary hover:text-red-500 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
                       title="حذف الطاولة"
                     >

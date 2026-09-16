@@ -450,8 +450,9 @@ export default function CategoriesTab() {
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => { if (confirm('هل تريد حذف هذا القسم؟ سيتم إلغاء تصنيف منتجاته.')) deleteCatMutation.mutate(category.id); }}
+                          onClick={() => setCategoryToDelete({ id: category.id, name: category.name })}
                           className="p-2 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-red-650 transition-colors cursor-pointer"
+                          title="حذف القسم"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

@@ -985,7 +985,7 @@ export default function ProductsTab() {
                                       <Edit2 className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                      onClick={() => { if (confirm('هل تريد حذف هذا المنتج؟')) deleteProdMutation.mutate(prod.id); }}
+                                      onClick={() => setProductToDelete({ id: prod.id, name: prod.name })}
                                       className="p-1.5 rounded-lg border border-admin-border bg-white text-admin-text-secondary hover:text-red-500 transition-colors cursor-pointer"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />

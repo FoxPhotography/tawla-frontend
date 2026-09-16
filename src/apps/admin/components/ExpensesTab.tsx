@@ -1,3 +1,4 @@
+import ConfirmModal from '../../../shared/components/ConfirmModal.js';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -63,6 +64,7 @@ const categoryNames: Record<string, { label: string; icon: any; color: string }>
 };
 
 export default function ExpensesTab() {
+  const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; title: string; amount: number } | null>(null);
   const queryClient = useQueryClient();
   
   // Expense Entry Form State
@@ -471,11 +473,7 @@ export default function ExpensesTab() {
                         </td>
                         <td className="p-3 text-center">
                           <button
-                            onClick={() => {
-                              if (confirm('هل أنت تأكد من حذف هذا المصروف؟')) {
-                                deleteExpenseMutation.mutate(exp._id);
-                              }
-                            }}
+                            onClick={() => setExpenseToDelete({ id: exp._id, title: exp.title, amount: exp.amount })}
                             className="w-7 h-7 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-600 inline-flex items-center justify-center transition-colors cursor-pointer"
                             title="حذف"
                           >
@@ -492,6 +490,25 @@ export default function ExpensesTab() {
         </div>
 
       </div>
+    
+      {/* Expense Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!expenseToDelete}
+        onClose={() => setExpenseToDelete(null)}
+        onConfirm={() => {
+          if (expenseToDelete) {
+            deleteExpenseMutation.mutate(expenseToDelete.id, {
+              onSettled: () => setExpenseToDelete(null),
+            });
+          }
+        }}
+        title="حذف قيد المصروف"
+        message={`هل أنت متأكد من حذف مصروف "${expenseToDelete?.title || ''}" بقيمة ${expenseToDelete?.amount || 0} ج.م؟ سيتم تحديث صافي الأرباح فوراً.`}
+        confirmText="نعم، احذف المصروف"
+        cancelText="إلغاء"
+        variant="danger"
+        isLoading={deleteExpenseMutation.isPending}
+      />
     </div>
   );
 }
